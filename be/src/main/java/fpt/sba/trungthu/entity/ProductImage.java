@@ -30,6 +30,9 @@ public class ProductImage extends CreatedEntity {
     @Column(name = "image_url", nullable = false, length = 2048)
     private String imageUrl;
 
+    @Column(name = "cloudinary_public_id", length = 500)
+    private String cloudinaryPublicId;
+
     @Builder.Default
     @ColumnDefault("0")
     @Column(name = "is_primary", nullable = false)
