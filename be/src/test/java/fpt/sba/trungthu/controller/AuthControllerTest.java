@@ -18,7 +18,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@SpringBootTest
+@SpringBootTest(properties = "spring.datasource.url=jdbc:h2:mem:${random.uuid};DB_CLOSE_DELAY=-1")
 @AutoConfigureMockMvc
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class AuthControllerTest {
@@ -35,7 +35,7 @@ class AuthControllerTest {
                 .password("Password123!")
                 .fullName("New Buyer")
                 .phone("0912345678")
-                .role(UserRole.BUYER)
+                .role(UserRole.CUSTOMER)
                 .build();
 
         mockMvc.perform(post("/api/auth/register")
@@ -45,7 +45,7 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.status").value(201))
                 .andExpect(jsonPath("$.message").value("User registered successfully"))
                 .andExpect(jsonPath("$.data.email").value("newbuyer@example.com"))
-                .andExpect(jsonPath("$.data.role").value("BUYER"));
+                .andExpect(jsonPath("$.data.role").value("CUSTOMER"));
     }
 
     @Test
@@ -55,7 +55,7 @@ class AuthControllerTest {
                 .password("Password123!")
                 .fullName("New Seller")
                 .phone("0912345679")
-                .role(UserRole.SELLER)
+                .role(UserRole.PROVIDER)
                 .storeName("")
                 .build();
 
