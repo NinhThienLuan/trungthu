@@ -6,6 +6,7 @@ import lombok.*;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Getter
 @Setter
@@ -15,15 +16,14 @@ import java.time.LocalDateTime;
 public class UserResponse implements Serializable {
     private static final long serialVersionUID = 1L;
 
-    private Long id;
+    private UUID id;
     private String email;
     private String fullName;
     private String phone;
     private UserRole role;
     private String storeName;
-    private boolean complianceApproved;
-    private boolean seasonActive;
-    private boolean status;
+    private String address;
+    private String status;
     private LocalDateTime createdAt;
 
     public static UserResponse fromEntity(User user) {
@@ -37,9 +37,8 @@ public class UserResponse implements Serializable {
                 .phone(user.getPhone())
                 .role(user.getRole())
                 .storeName(user.getStoreName())
-                .complianceApproved(user.isComplianceApproved())
-                .seasonActive(user.isSeasonActive())
-                .status(user.isStatus())
+                .address(user.getAddress())
+                .status(user.getStatus())
                 .createdAt(user.getCreatedAt())
                 .build();
     }

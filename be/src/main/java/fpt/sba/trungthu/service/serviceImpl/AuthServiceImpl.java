@@ -43,12 +43,12 @@ public class AuthServiceImpl implements AuthService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "User already exists with this email");
         }
 
-        if (userRepository.existsByPhone(request.getPhone())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Phone number is already registered");
+        if (request.getRole() == UserRole.PLATFORM_ADMIN) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Platform admin cannot self-register");
         }
 
-        if (request.getRole() == UserRole.SELLER && !StringUtils.hasText(request.getStoreName())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Store name is required for Seller account");
+        if (request.getRole() == UserRole.PROVIDER && !StringUtils.hasText(request.getStoreName())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Store name is required for Provider account");
         }
 
         User user = request.toUserEntity(passwordEncoder);
@@ -65,7 +65,7 @@ public class AuthServiceImpl implements AuthService {
         User user = userRepository.findByEmail(request.getEmail().trim().toLowerCase())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email or password"));
 
-        if (!user.isStatus()) {
+        if (!"ACTIVE".equals(user.getStatus())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Account has been disabled");
         }
 
@@ -99,7 +99,7 @@ public class AuthServiceImpl implements AuthService {
             }
 
             String email = claims.getSubject();
-            User user = userRepository.findByEmailAndStatusTrue(email)
+            User user = userRepository.findByEmailAndStatus(email, "ACTIVE")
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
             authCookieHelper.attachAccessCookie(response, user);
@@ -116,7 +116,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public UserResponse getCurrentUser(String email) {
-        User user = userRepository.findByEmailAndStatusTrue(email)
+        User user = userRepository.findByEmailAndStatus(email, "ACTIVE")
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
         return UserResponse.fromUserEntity(user);
     }

@@ -29,14 +29,13 @@ public class RegisterRequest implements Serializable {
     private String password;
 
     @NotBlank(message = "Full name cannot be blank")
-    @Size(max = 100, message = "Full name cannot exceed 100 characters")
+    @Size(max = 255, message = "Full name cannot exceed 255 characters")
     private String fullName;
 
-    @NotBlank(message = "Phone number cannot be blank")
     @Pattern(regexp = "(84|0[3|5|7|8|9])+([0-9]{8})\\b", message = "Phone number is not a valid Vietnamese format")
     private String phone;
 
-    @NotNull(message = "User role is required (BUYER, SELLER)")
+    @NotNull(message = "User role is required (CUSTOMER, PROVIDER)")
     private UserRole role;
 
     private String storeName;
@@ -48,10 +47,8 @@ public class RegisterRequest implements Serializable {
                 .fullName(this.fullName != null ? this.fullName.trim() : null)
                 .phone(this.phone != null ? this.phone.trim() : null)
                 .role(this.role)
-                .storeName(this.role == UserRole.SELLER && this.storeName != null ? this.storeName.trim() : null)
-                .isComplianceApproved(false)
-                .isSeasonActive(true)
-                .status(true)
+                .storeName(this.role == UserRole.PROVIDER && this.storeName != null ? this.storeName.trim() : null)
+                .status("ACTIVE")
                 .build();
     }
 }

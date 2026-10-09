@@ -5,9 +5,13 @@ import fpt.sba.trungthu.entity.enumeration.UserRole;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.Check;
+
+import java.util.UUID;
 
 @Entity
-@Table(name = "users")
+@Table(name = "`USER`", uniqueConstraints = @UniqueConstraint(name = "UQ_USER_email", columnNames = "email"))
+@Check(name = "CK_USER_role", constraints = "role IN ('CUSTOMER', 'PROVIDER', 'PLATFORM_ADMIN')")
 @Getter
 @Setter
 @SuperBuilder
@@ -16,37 +20,33 @@ import lombok.experimental.SuperBuilder;
 public class User extends BaseEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "user_id", nullable = false, updatable = false)
+    private UUID id;
 
-    @Column(name = "email", unique = true, nullable = false, length = 255)
+    @Column(name = "email", nullable = false, length = 254)
     private String email;
 
     @Column(name = "password", nullable = false, length = 255)
     private String password;
 
-    @Column(name = "full_name", nullable = false, length = 100)
+    @Column(name = "full_name", nullable = false, length = 255)
     private String fullName;
 
-    @Column(name = "phone", nullable = false, length = 20)
+    @Column(name = "phone", length = 20)
     private String phone;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "role", nullable = false, length = 20)
+    @Column(name = "role", nullable = false, length = 30)
     private UserRole role;
 
-    @Column(name = "store_name", length = 150)
+    @Column(name = "store_name", length = 255)
     private String storeName;
 
-    @Builder.Default
-    @Column(name = "is_compliance_approved", nullable = false)
-    private boolean isComplianceApproved = false;
+    @Column(name = "address", length = 100000)
+    private String address;
 
     @Builder.Default
-    @Column(name = "is_season_active", nullable = false)
-    private boolean isSeasonActive = true;
-
-    @Builder.Default
-    @Column(name = "status", nullable = false)
-    private boolean status = true;
+    @Column(name = "status", nullable = false, length = 30)
+    private String status = "ACTIVE";
 }

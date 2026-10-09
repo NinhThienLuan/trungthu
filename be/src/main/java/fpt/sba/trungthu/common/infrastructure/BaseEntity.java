@@ -10,6 +10,8 @@ import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDateTime;
+import org.hibernate.annotations.FractionalSeconds;
+import java.time.ZoneOffset;
 
 @Getter
 @Setter
@@ -19,19 +21,21 @@ import java.time.LocalDateTime;
 public abstract class BaseEntity {
 
     @Column(name = "created_at", nullable = false, updatable = false)
+    @FractionalSeconds(0)
     private LocalDateTime createdAt;
 
-    @Column(name = "updated_at")
+    @Column(name = "updated_at", nullable = false)
+    @FractionalSeconds(0)
     private LocalDateTime updatedAt;
 
     @PrePersist
     protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
+        this.createdAt = LocalDateTime.now(ZoneOffset.UTC);
+        this.updatedAt = this.createdAt;
     }
 
     @PreUpdate
     protected void onUpdate() {
-        this.updatedAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now(ZoneOffset.UTC);
     }
 }

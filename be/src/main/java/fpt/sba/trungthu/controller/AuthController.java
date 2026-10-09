@@ -30,7 +30,7 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/register")
-    @Operation(summary = "Register a new User (BUYER or SELLER)")
+    @Operation(summary = "Register a new User (CUSTOMER or PROVIDER)")
     public ResponseEntity<ApiResponseDTO<UserResponse>> register(@Valid @RequestBody RegisterRequest request) {
         UserResponse response = authService.register(request);
         return ResponseEntity.status(HttpStatus.CREATED)

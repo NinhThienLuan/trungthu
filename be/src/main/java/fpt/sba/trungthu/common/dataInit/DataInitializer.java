@@ -22,8 +22,8 @@ public class DataInitializer implements CommandLineRunner {
     @Override
     public void run(String... args) {
         seedPlatformAdmin();
-        seedSampleSeller();
-        seedSampleBuyer();
+        seedSampleProvider();
+        seedSampleCustomer();
     }
 
     private void seedPlatformAdmin() {
@@ -35,16 +35,14 @@ public class DataInitializer implements CommandLineRunner {
                     .fullName("Platform Administrator")
                     .phone("0901000001")
                     .role(UserRole.PLATFORM_ADMIN)
-                    .isComplianceApproved(true)
-                    .isSeasonActive(true)
-                    .status(true)
+                    .status("ACTIVE")
                     .build();
             userRepository.save(admin);
             log.info("Default Platform Admin seeded: {}", adminEmail);
         }
     }
 
-    private void seedSampleSeller() {
+    private void seedSampleProvider() {
         String sellerEmail = "seller@kinhdo.vn";
         if (userRepository.findByEmail(sellerEmail).isEmpty()) {
             User seller = User.builder()
@@ -52,18 +50,16 @@ public class DataInitializer implements CommandLineRunner {
                     .password(passwordEncoder.encode(defaultPassword))
                     .fullName("Kinh Do Mooncake Store")
                     .phone("0902000002")
-                    .role(UserRole.SELLER)
+                    .role(UserRole.PROVIDER)
                     .storeName("Bánh Trung Thu Kinh Đô")
-                    .isComplianceApproved(true)
-                    .isSeasonActive(true)
-                    .status(true)
+                    .status("ACTIVE")
                     .build();
             userRepository.save(seller);
-            log.info("Default Seller seeded: {}", sellerEmail);
+            log.info("Default Provider seeded: {}", sellerEmail);
         }
     }
 
-    private void seedSampleBuyer() {
+    private void seedSampleCustomer() {
         String buyerEmail = "buyer@gmail.com";
         if (userRepository.findByEmail(buyerEmail).isEmpty()) {
             User buyer = User.builder()
@@ -71,13 +67,11 @@ public class DataInitializer implements CommandLineRunner {
                     .password(passwordEncoder.encode(defaultPassword))
                     .fullName("Nguyễn Văn Mua")
                     .phone("0903000003")
-                    .role(UserRole.BUYER)
-                    .isComplianceApproved(false)
-                    .isSeasonActive(true)
-                    .status(true)
+                    .role(UserRole.CUSTOMER)
+                    .status("ACTIVE")
                     .build();
             userRepository.save(buyer);
-            log.info("Default Buyer seeded: {}", buyerEmail);
+            log.info("Default Customer seeded: {}", buyerEmail);
         }
     }
 }
