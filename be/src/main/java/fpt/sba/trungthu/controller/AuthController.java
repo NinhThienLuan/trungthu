@@ -2,6 +2,7 @@ package fpt.sba.trungthu.controller;
 
 import fpt.sba.trungthu.dto.request.ChangePasswordRequest;
 import fpt.sba.trungthu.dto.request.ForgotPasswordRequest;
+import fpt.sba.trungthu.dto.request.GoogleLoginRequest;
 import fpt.sba.trungthu.dto.request.LoginRequest;
 import fpt.sba.trungthu.dto.request.RefreshTokenRequest;
 import fpt.sba.trungthu.dto.request.RegisterRequest;
@@ -50,6 +51,15 @@ public class AuthController {
             @Valid @RequestBody LoginRequest request,
             HttpServletResponse response) {
         AuthResponse authResponse = authService.login(request, response);
+        return ResponseEntity.ok(ApiResponseDTO.success("Login successful", authResponse));
+    }
+
+    @PostMapping("/google")
+    @Operation(summary = "Login with a Google ID token (from the Google Sign-In button on the frontend)")
+    public ResponseEntity<ApiResponseDTO<AuthResponse>> loginWithGoogle(
+            @Valid @RequestBody GoogleLoginRequest request,
+            HttpServletResponse response) {
+        AuthResponse authResponse = authService.loginWithGoogleIdToken(request.getIdToken(), response);
         return ResponseEntity.ok(ApiResponseDTO.success("Login successful", authResponse));
     }
 
