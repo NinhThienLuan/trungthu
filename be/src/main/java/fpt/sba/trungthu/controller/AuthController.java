@@ -1,5 +1,6 @@
 package fpt.sba.trungthu.controller;
 
+import fpt.sba.trungthu.dto.request.ChangePasswordRequest;
 import fpt.sba.trungthu.dto.request.LoginRequest;
 import fpt.sba.trungthu.dto.request.RefreshTokenRequest;
 import fpt.sba.trungthu.dto.request.RegisterRequest;
@@ -69,6 +70,15 @@ public class AuthController {
         }
         UserResponse userResponse = authService.getCurrentUser(authentication.getName());
         return ResponseEntity.ok(ApiResponseDTO.success(userResponse));
+    }
+
+    @PostMapping("/change-password")
+    @Operation(summary = "Change password of the currently authenticated user")
+    public ResponseEntity<ApiResponseDTO<String>> changePassword(
+            @Valid @RequestBody ChangePasswordRequest request,
+            Authentication authentication) {
+        authService.changePassword(authentication.getName(), request);
+        return ResponseEntity.ok(ApiResponseDTO.success("Password changed successfully", null));
     }
 
     @PostMapping("/logout")

@@ -8,7 +8,6 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.*;
-import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.io.Serializable;
 
@@ -24,10 +23,6 @@ public class RegisterRequest implements Serializable {
     @Email(message = "Email should be valid")
     private String email;
 
-    @NotBlank(message = "Password cannot be blank")
-    @Size(min = 6, max = 50, message = "Password must be between 6 and 50 characters")
-    private String password;
-
     @NotBlank(message = "Full name cannot be blank")
     @Size(max = 255, message = "Full name cannot exceed 255 characters")
     private String fullName;
@@ -40,10 +35,10 @@ public class RegisterRequest implements Serializable {
 
     private String storeName;
 
-    public User toUserEntity(PasswordEncoder passwordEncoder) {
+    public User toUserEntity(String encodedPassword) {
         return User.builder()
                 .email(this.email != null ? this.email.trim().toLowerCase() : null)
-                .password(passwordEncoder != null ? passwordEncoder.encode(this.password) : this.password)
+                .password(encodedPassword)
                 .fullName(this.fullName != null ? this.fullName.trim() : null)
                 .phone(this.phone != null ? this.phone.trim() : null)
                 .role(this.role)

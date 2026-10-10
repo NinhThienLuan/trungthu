@@ -3,6 +3,7 @@ package fpt.sba.trungthu.service.serviceImpl;
 import fpt.sba.trungthu.common.security.JwtProperties;
 import fpt.sba.trungthu.common.security.JwtService;
 import fpt.sba.trungthu.common.util.AuthCookieHelper;
+import fpt.sba.trungthu.dto.request.ChangePasswordRequest;
 import fpt.sba.trungthu.dto.request.LoginRequest;
 import fpt.sba.trungthu.dto.request.RegisterRequest;
 import fpt.sba.trungthu.dto.response.AuthResponse;
@@ -16,12 +17,18 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.mail.MailException;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.security.SecureRandom;
 
 @Slf4j
 @Service
@@ -33,6 +40,14 @@ public class AuthServiceImpl implements AuthService {
     private final JwtService jwtService;
     private final JwtProperties jwtProperties;
     private final AuthCookieHelper authCookieHelper;
+    private final JavaMailSender mailSender;
+
+    @Value("${spring.mail.username}")
+    private String mailFrom;
+
+    private static final SecureRandom RANDOM = new SecureRandom();
+    private static final String PASSWORD_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
+    private static final int PASSWORD_LENGTH = 10;
 
     @Override
     @Transactional
@@ -51,11 +66,72 @@ public class AuthServiceImpl implements AuthService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Store name is required for Provider account");
         }
 
-        User user = request.toUserEntity(passwordEncoder);
-        User savedUser = userRepository.save(user);
-        log.info("Successfully registered user id: {}, email: {}", savedUser.getId(), savedUser.getEmail());
+        String rawPassword = randomPassword();
+        User savedUser = userRepository.save(request.toUserEntity(passwordEncoder.encode(rawPassword)));
 
+        // Throwing here rolls back the insert, so a user never exists without having received their password
+        try {
+            SimpleMailMessage mail = new SimpleMailMessage();
+            mail.setFrom(mailFrom);
+            mail.setTo(savedUser.getEmail());
+            mail.setSubject("Your Trung Thu account password");
+            mail.setText("Hello " + savedUser.getFullName() + ",\n\n"
+                    + "Your account has been created.\n"
+                    + "Email: " + savedUser.getEmail() + "\n"
+                    + "Password: " + rawPassword + "\n\n"
+                    + "Please log in and change your password (POST /api/auth/change-password).");
+            mailSender.send(mail);
+        } catch (MailException e) {
+            log.error("Failed to send password email to {}: {}", savedUser.getEmail(), e.getMessage());
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Could not send password email, please try again later");
+        }
+
+        log.info("Successfully registered user id: {}, email: {}", savedUser.getId(), savedUser.getEmail());
         return UserResponse.fromUserEntity(savedUser);
+    }
+
+    @Override
+    @Transactional
+    public void changePassword(String email, ChangePasswordRequest request) {
+        User user = userRepository.findByEmailAndStatus(email, "ACTIVE")
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+        if (!passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Old password is incorrect");
+        }
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+    }
+
+    @Override
+    @Transactional
+    public void loginWithGoogle(String email, String fullName, HttpServletResponse response) {
+        String normalizedEmail = email.trim().toLowerCase();
+
+        // First Google login auto-creates a CUSTOMER; the random password is unusable until they reset it
+        User user = userRepository.findByEmail(normalizedEmail)
+                .orElseGet(() -> userRepository.save(User.builder()
+                        .email(normalizedEmail)
+                        .password(passwordEncoder.encode(randomPassword()))
+                        .fullName(StringUtils.hasText(fullName) ? fullName : normalizedEmail)
+                        .role(UserRole.CUSTOMER)
+                        .status("ACTIVE")
+                        .build()));
+
+        if (!"ACTIVE".equals(user.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Account has been disabled");
+        }
+
+        authCookieHelper.attachAuthCookies(response, user);
+    }
+
+    private static String randomPassword() {
+        StringBuilder sb = new StringBuilder(PASSWORD_LENGTH);
+        for (int i = 0; i < PASSWORD_LENGTH; i++) {
+            sb.append(PASSWORD_CHARS.charAt(RANDOM.nextInt(PASSWORD_CHARS.length())));
+        }
+        return sb.toString();
     }
 
     @Override

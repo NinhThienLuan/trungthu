@@ -1,5 +1,6 @@
 package fpt.sba.trungthu.service;
 
+import fpt.sba.trungthu.dto.request.ChangePasswordRequest;
 import fpt.sba.trungthu.dto.request.LoginRequest;
 import fpt.sba.trungthu.dto.request.RegisterRequest;
 import fpt.sba.trungthu.dto.response.AuthResponse;
@@ -13,4 +14,6 @@ public interface AuthService {
     AuthResponse refresh(HttpServletRequest request, HttpServletResponse response, String explicitRefreshToken);
     UserResponse getCurrentUser(String email);
     void logout(HttpServletResponse response);
+    void changePassword(String email, ChangePasswordRequest request);
+    void loginWithGoogle(String email, String fullName, HttpServletResponse response);
 }
