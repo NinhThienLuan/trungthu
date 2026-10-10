@@ -1,8 +1,10 @@
 package fpt.sba.trungthu.service;
 
 import fpt.sba.trungthu.dto.request.ChangePasswordRequest;
+import fpt.sba.trungthu.dto.request.ForgotPasswordRequest;
 import fpt.sba.trungthu.dto.request.LoginRequest;
 import fpt.sba.trungthu.dto.request.RegisterRequest;
+import fpt.sba.trungthu.dto.request.ResetPasswordRequest;
 import fpt.sba.trungthu.dto.response.AuthResponse;
 import fpt.sba.trungthu.dto.response.UserResponse;
 import jakarta.servlet.http.HttpServletRequest;
@@ -16,4 +18,6 @@ public interface AuthService {
     void logout(HttpServletResponse response);
     void changePassword(String email, ChangePasswordRequest request);
     void loginWithGoogle(String email, String fullName, HttpServletResponse response);
+    void forgotPassword(ForgotPasswordRequest request);
+    void resetPassword(ResetPasswordRequest request);
 }

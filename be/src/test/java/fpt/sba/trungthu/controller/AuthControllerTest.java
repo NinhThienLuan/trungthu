@@ -29,6 +29,7 @@ import static org.hamcrest.Matchers.startsWith;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -159,6 +160,48 @@ class AuthControllerTest {
         assertThat(userRepository.count()).isEqualTo(4); // 3 seeded + 1
         authService.loginWithGoogle("seller@kinhdo.vn", "Seller", new MockHttpServletResponse());
         assertThat(userRepository.findByEmail("seller@kinhdo.vn").orElseThrow().getRole()).isEqualTo(UserRole.PROVIDER);
+    }
+
+    @Test
+    void testForgotPasswordResetTokenWorksOnce() throws Exception {
+        // Unknown email: same 200, no mail sent
+        mockMvc.perform(post("/api/auth/forgot-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"nobody@example.com\"}"))
+                .andExpect(status().isOk());
+        verifyNoInteractions(mailSender);
+
+        mockMvc.perform(post("/api/auth/forgot-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"Buyer@Gmail.com\"}"))
+                .andExpect(status().isOk());
+
+        ArgumentCaptor<SimpleMailMessage> mail = ArgumentCaptor.forClass(SimpleMailMessage.class);
+        verify(mailSender).send(mail.capture());
+        assertThat(mail.getValue().getTo()).containsExactly("buyer@gmail.com");
+        String token = mail.getValue().getText().lines()
+                .filter(l -> l.startsWith("Reset token: ")).findFirst().orElseThrow().substring("Reset token: ".length());
+
+        // Requesting a reset does not change the password by itself
+        loginAndGetToken("buyer@gmail.com", "12345678");
+
+        String resetBody = "{\"token\":\"" + token + "\",\"newPassword\":\"ResetPass1\"}";
+        mockMvc.perform(post("/api/auth/reset-password").contentType(MediaType.APPLICATION_JSON).content(resetBody))
+                .andExpect(status().isOk());
+        loginAndGetToken("buyer@gmail.com", "ResetPass1");
+
+        // Same token again -> rejected (password already changed)
+        mockMvc.perform(post("/api/auth/reset-password").contentType(MediaType.APPLICATION_JSON).content(resetBody))
+                .andExpect(status().isBadRequest());
+
+        // Garbage token and an access token are not reset tokens
+        mockMvc.perform(post("/api/auth/reset-password").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"abc\",\"newPassword\":\"Hacked123\"}"))
+                .andExpect(status().isBadRequest());
+        String accessToken = loginAndGetToken("buyer@gmail.com", "ResetPass1");
+        mockMvc.perform(post("/api/auth/reset-password").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"" + accessToken + "\",\"newPassword\":\"Hacked123\"}"))
+                .andExpect(status().isBadRequest());
     }
 
     private String loginAndGetToken(String email, String password) throws Exception {

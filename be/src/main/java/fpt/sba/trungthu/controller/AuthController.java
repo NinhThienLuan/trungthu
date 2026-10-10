@@ -1,9 +1,11 @@
 package fpt.sba.trungthu.controller;
 
 import fpt.sba.trungthu.dto.request.ChangePasswordRequest;
+import fpt.sba.trungthu.dto.request.ForgotPasswordRequest;
 import fpt.sba.trungthu.dto.request.LoginRequest;
 import fpt.sba.trungthu.dto.request.RefreshTokenRequest;
 import fpt.sba.trungthu.dto.request.RegisterRequest;
+import fpt.sba.trungthu.dto.request.ResetPasswordRequest;
 import fpt.sba.trungthu.dto.response.ApiResponseDTO;
 import fpt.sba.trungthu.dto.response.AuthResponse;
 import fpt.sba.trungthu.dto.response.UserResponse;
@@ -79,6 +81,21 @@ public class AuthController {
             Authentication authentication) {
         authService.changePassword(authentication.getName(), request);
         return ResponseEntity.ok(ApiResponseDTO.success("Password changed successfully", null));
+    }
+
+    @PostMapping("/forgot-password")
+    @Operation(summary = "Email a one-time password reset token (always 200, even for unknown emails)")
+    public ResponseEntity<ApiResponseDTO<String>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        authService.forgotPassword(request);
+        return ResponseEntity.ok(ApiResponseDTO.success(
+                "If this email is registered, a password reset token has been sent", null));
+    }
+
+    @PostMapping("/reset-password")
+    @Operation(summary = "Set a new password using the reset token from the email")
+    public ResponseEntity<ApiResponseDTO<String>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(request);
+        return ResponseEntity.ok(ApiResponseDTO.success("Password has been reset successfully", null));
     }
 
     @PostMapping("/logout")

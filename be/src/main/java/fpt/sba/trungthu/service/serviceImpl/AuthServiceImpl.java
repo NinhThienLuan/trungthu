@@ -4,8 +4,10 @@ import fpt.sba.trungthu.common.security.JwtProperties;
 import fpt.sba.trungthu.common.security.JwtService;
 import fpt.sba.trungthu.common.util.AuthCookieHelper;
 import fpt.sba.trungthu.dto.request.ChangePasswordRequest;
+import fpt.sba.trungthu.dto.request.ForgotPasswordRequest;
 import fpt.sba.trungthu.dto.request.LoginRequest;
 import fpt.sba.trungthu.dto.request.RegisterRequest;
+import fpt.sba.trungthu.dto.request.ResetPasswordRequest;
 import fpt.sba.trungthu.dto.response.AuthResponse;
 import fpt.sba.trungthu.dto.response.UserResponse;
 import fpt.sba.trungthu.entity.User;
@@ -13,6 +15,7 @@ import fpt.sba.trungthu.entity.enumeration.UserRole;
 import fpt.sba.trungthu.repository.UserRepository;
 import fpt.sba.trungthu.service.AuthService;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -28,7 +31,11 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.util.HexFormat;
 
 @Slf4j
 @Service
@@ -70,21 +77,12 @@ public class AuthServiceImpl implements AuthService {
         User savedUser = userRepository.save(request.toUserEntity(passwordEncoder.encode(rawPassword)));
 
         // Throwing here rolls back the insert, so a user never exists without having received their password
-        try {
-            SimpleMailMessage mail = new SimpleMailMessage();
-            mail.setFrom(mailFrom);
-            mail.setTo(savedUser.getEmail());
-            mail.setSubject("Your Trung Thu account password");
-            mail.setText("Hello " + savedUser.getFullName() + ",\n\n"
-                    + "Your account has been created.\n"
-                    + "Email: " + savedUser.getEmail() + "\n"
-                    + "Password: " + rawPassword + "\n\n"
-                    + "Please log in and change your password (POST /api/auth/change-password).");
-            mailSender.send(mail);
-        } catch (MailException e) {
-            log.error("Failed to send password email to {}: {}", savedUser.getEmail(), e.getMessage());
-            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Could not send password email, please try again later");
-        }
+        sendMail(savedUser.getEmail(), "Your Trung Thu account password",
+                "Hello " + savedUser.getFullName() + ",\n\n"
+                        + "Your account has been created.\n"
+                        + "Email: " + savedUser.getEmail() + "\n"
+                        + "Password: " + rawPassword + "\n\n"
+                        + "Please log in and change your password (POST /api/auth/change-password).");
 
         log.info("Successfully registered user id: {}, email: {}", savedUser.getId(), savedUser.getEmail());
         return UserResponse.fromUserEntity(savedUser);
@@ -124,6 +122,70 @@ public class AuthServiceImpl implements AuthService {
         }
 
         authCookieHelper.attachAuthCookies(response, user);
+    }
+
+    @Override
+    public void forgotPassword(ForgotPasswordRequest request) {
+        // Unknown/disabled emails get the same silent 200, so this endpoint can't be used to discover accounts
+        userRepository.findByEmailAndStatus(request.getEmail().trim().toLowerCase(), "ACTIVE").ifPresent(user -> {
+            String token = jwtService.generatePasswordResetToken(user, passwordFingerprint(user));
+            sendMail(user.getEmail(), "Reset your Trung Thu password",
+                    "Hello " + user.getFullName() + ",\n\n"
+                            + "We received a request to reset your password.\n"
+                            + "Reset token: " + token + "\n\n"
+                            + "Send it to POST /api/auth/reset-password together with your new password.\n"
+                            + "The token expires in " + JwtService.PASSWORD_RESET_EXP_MINUTES + " minutes and works only once.\n"
+                            + "If you did not request this, ignore this email - your password stays the same.");
+            log.info("Password reset email sent to {}", user.getEmail());
+        });
+    }
+
+    @Override
+    @Transactional
+    public void resetPassword(ResetPasswordRequest request) {
+        Claims claims;
+        try {
+            claims = jwtService.parseClaims(request.getToken());
+        } catch (JwtException | IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Reset token is invalid or expired");
+        }
+        if (!"reset".equals(claims.get("typ", String.class))) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Reset token is invalid or expired");
+        }
+
+        User user = userRepository.findByEmailAndStatus(claims.getSubject(), "ACTIVE")
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Reset token is invalid or expired"));
+
+        if (!passwordFingerprint(user).equals(claims.get("pwd", String.class))) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Reset token has already been used");
+        }
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+    }
+
+    private void sendMail(String to, String subject, String text) {
+        try {
+            SimpleMailMessage mail = new SimpleMailMessage();
+            mail.setFrom(mailFrom);
+            mail.setTo(to);
+            mail.setSubject(subject);
+            mail.setText(text);
+            mailSender.send(mail);
+        } catch (MailException e) {
+            log.error("Failed to send email to {}: {}", to, e.getMessage());
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Could not send email, please try again later");
+        }
+    }
+
+    // Short hash of the stored BCrypt hash: changes whenever the password changes, reveals nothing usable
+    private static String passwordFingerprint(User user) {
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256").digest(user.getPassword().getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(digest, 0, 8);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     private static String randomPassword() {
