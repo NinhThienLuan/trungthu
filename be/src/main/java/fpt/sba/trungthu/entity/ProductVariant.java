@@ -13,7 +13,8 @@ import java.math.BigDecimal;
 
 @Entity
 @Table(name = "PRODUCT_VARIANT", indexes = {@Index(name = "IX_PRODUCT_VARIANT_product_id", columnList = "product_id")}, uniqueConstraints = {@UniqueConstraint(name = "UQ_PRODUCT_VARIANT_sku", columnNames = {"sku"})})
-@Checks({@Check(name = "CK_PRODUCT_VARIANT_price", constraints = "price >= 0"), @Check(name = "CK_PRODUCT_VARIANT_stock_quantity", constraints = "stock_quantity >= 0")})
+@Checks({@Check(name = "CK_PRODUCT_VARIANT_price", constraints = "price >= 0"), @Check(name = "CK_PRODUCT_VARIANT_stock_quantity", constraints = "stock_quantity >= 0"),
+        @Check(name = "CK_PRODUCT_VARIANT_box_capacity", constraints = "box_capacity IS NULL OR box_capacity IN (2, 4, 6)")})
 @Getter
 @Setter
 @SuperBuilder
@@ -42,6 +43,14 @@ public class ProductVariant extends BaseEntity {
     @ColumnDefault("0")
     @Column(name = "stock_quantity", nullable = false)
     private Integer stockQuantity = 0;
+
+    // Chỉ dùng cho LOOSE_CAKE (150/200/250g)
+    @Column(name = "weight_gram")
+    private Integer weightGram;
+
+    // Chỉ dùng cho BOX_SHELL: số ô bánh trong hộp (2/4/6)
+    @Column(name = "box_capacity")
+    private Integer boxCapacity;
 
     @Column(name = "status", nullable = false, length = 30)
     private String status;

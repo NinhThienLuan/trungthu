@@ -6,6 +6,8 @@ import io.jsonwebtoken.Claims;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.UUID;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class JwtServiceTest {
@@ -26,10 +28,10 @@ class JwtServiceTest {
     @Test
     void testGenerateAndParseAccessToken() {
         User user = User.builder()
-                .id(1L)
+                .id(UUID.fromString("00000000-0000-0000-0000-000000000001"))
                 .email("buyer@test.com")
                 .fullName("Test Buyer")
-                .role(UserRole.BUYER)
+                .role(UserRole.CUSTOMER)
                 .build();
 
         String token = jwtService.generateAccessToken(user);
@@ -37,8 +39,8 @@ class JwtServiceTest {
 
         Claims claims = jwtService.parseClaims(token);
         assertEquals("buyer@test.com", claims.getSubject());
-        assertEquals("1", claims.get("uid"));
-        assertEquals("ROLE_BUYER", claims.get("role"));
+        assertEquals("00000000-0000-0000-0000-000000000001", claims.get("uid"));
+        assertEquals("ROLE_CUSTOMER", claims.get("role"));
         assertEquals("access", claims.get("typ"));
         assertTrue(jwtService.validateToken(token));
     }
@@ -46,10 +48,10 @@ class JwtServiceTest {
     @Test
     void testGenerateRefreshToken() {
         User user = User.builder()
-                .id(2L)
+                .id(UUID.fromString("00000000-0000-0000-0000-000000000002"))
                 .email("seller@test.com")
                 .fullName("Test Seller")
-                .role(UserRole.SELLER)
+                .role(UserRole.PROVIDER)
                 .build();
 
         String token = jwtService.generateRefreshToken(user);
