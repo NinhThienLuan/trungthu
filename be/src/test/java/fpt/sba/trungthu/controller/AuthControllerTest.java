@@ -1,6 +1,7 @@
 package fpt.sba.trungthu.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import fpt.sba.trungthu.common.security.GoogleIdTokenVerifier;
 import fpt.sba.trungthu.common.util.AuthCookieHelper;
 import fpt.sba.trungthu.dto.request.LoginRequest;
 import fpt.sba.trungthu.dto.request.RegisterRequest;
@@ -14,7 +15,10 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.mail.MailSendException;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.mail.SimpleMailMessage;
@@ -30,6 +34,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -43,6 +48,9 @@ class AuthControllerTest {
 
     @MockitoBean
     private JavaMailSender mailSender;
+
+    @MockitoBean
+    private GoogleIdTokenVerifier googleIdTokenVerifier;
 
     @Autowired
     private AuthService authService;
@@ -160,6 +168,34 @@ class AuthControllerTest {
         assertThat(userRepository.count()).isEqualTo(4); // 3 seeded + 1
         authService.loginWithGoogle("seller@kinhdo.vn", "Seller", new MockHttpServletResponse());
         assertThat(userRepository.findByEmail("seller@kinhdo.vn").orElseThrow().getRole()).isEqualTo(UserRole.PROVIDER);
+    }
+
+    @Test
+    void testGoogleIdTokenApi() throws Exception {
+        when(googleIdTokenVerifier.verify("good")).thenReturn(googleJwt("Api.User@Gmail.com", true));
+        when(googleIdTokenVerifier.verify("unverified")).thenReturn(googleJwt("x@gmail.com", false));
+        when(googleIdTokenVerifier.verify("bad"))
+                .thenThrow(new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid Google ID token"));
+
+        mockMvc.perform(post("/api/auth/google").contentType(MediaType.APPLICATION_JSON).content("{\"idToken\":\"good\"}"))
+                .andExpect(status().isOk())
+                .andExpect(cookie().exists(AuthCookieHelper.ACCESS_COOKIE))
+                .andExpect(jsonPath("$.data.accessToken").isNotEmpty())
+                .andExpect(jsonPath("$.data.user.email").value("api.user@gmail.com"))
+                .andExpect(jsonPath("$.data.user.role").value("CUSTOMER"));
+
+        mockMvc.perform(post("/api/auth/google").contentType(MediaType.APPLICATION_JSON).content("{\"idToken\":\"unverified\"}"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/auth/google").contentType(MediaType.APPLICATION_JSON).content("{\"idToken\":\"bad\"}"))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(post("/api/auth/google").contentType(MediaType.APPLICATION_JSON).content("{\"idToken\":\"\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    private Jwt googleJwt(String email, boolean emailVerified) {
+        return Jwt.withTokenValue("t").header("alg", "RS256")
+                .claim("email", email).claim("email_verified", emailVerified).claim("name", "Api User")
+                .build();
     }
 
     @Test

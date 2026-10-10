@@ -52,6 +52,7 @@ public class WebSecurityConfig {
             "/api/auth/logout",
             "/api/auth/register",
             "/api/auth/refresh",
+            "/api/auth/google",
             "/api/auth/forgot-password",
             "/api/auth/reset-password",
             "/api/public/**"

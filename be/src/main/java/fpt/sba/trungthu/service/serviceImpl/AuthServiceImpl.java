@@ -1,5 +1,6 @@
 package fpt.sba.trungthu.service.serviceImpl;
 
+import fpt.sba.trungthu.common.security.GoogleIdTokenVerifier;
 import fpt.sba.trungthu.common.security.JwtProperties;
 import fpt.sba.trungthu.common.security.JwtService;
 import fpt.sba.trungthu.common.util.AuthCookieHelper;
@@ -26,6 +27,7 @@ import org.springframework.mail.MailException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -48,6 +50,7 @@ public class AuthServiceImpl implements AuthService {
     private final JwtProperties jwtProperties;
     private final AuthCookieHelper authCookieHelper;
     private final JavaMailSender mailSender;
+    private final GoogleIdTokenVerifier googleIdTokenVerifier;
 
     @Value("${spring.mail.username}")
     private String mailFrom;
@@ -104,7 +107,17 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
-    public void loginWithGoogle(String email, String fullName, HttpServletResponse response) {
+    public AuthResponse loginWithGoogleIdToken(String idToken, HttpServletResponse response) {
+        Jwt googleToken = googleIdTokenVerifier.verify(idToken);
+        if (!Boolean.TRUE.equals(googleToken.getClaimAsBoolean("email_verified"))) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Google email is not verified");
+        }
+        return loginWithGoogle(googleToken.getClaimAsString("email"), googleToken.getClaimAsString("name"), response);
+    }
+
+    @Override
+    @Transactional
+    public AuthResponse loginWithGoogle(String email, String fullName, HttpServletResponse response) {
         String normalizedEmail = email.trim().toLowerCase();
 
         // First Google login auto-creates a CUSTOMER; the random password is unusable until they reset it
@@ -122,6 +135,8 @@ public class AuthServiceImpl implements AuthService {
         }
 
         authCookieHelper.attachAuthCookies(response, user);
+        String accessToken = jwtService.generateAccessToken(user);
+        return AuthResponse.from(accessToken, jwtProperties.accessTokenExpMinutes() * 60, user);
     }
 
     @Override
