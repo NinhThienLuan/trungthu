@@ -20,7 +20,11 @@ public class OpenApiConfig {
         return new OpenAPI()
                 .info(new Info()
                         .title("Mooncake SaaS Marketplace API")
-                        .description("API Documentation for Mooncake Platform (SaaS Provider Model)")
+                        .description("""
+                                API Documentation for Mooncake Platform (SaaS Provider Model)
+
+                                **[Login with Google](/oauth2/authorization/google)** — after login you land on `/api/auth/me`; \
+                                come back here and requests are authenticated via the `access_token` cookie.""")
                         .version("1.0.0")
                         .contact(new Contact()
                                 .name("Development Team")
