@@ -4,17 +4,32 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import fpt.sba.trungthu.common.util.AuthCookieHelper;
 import fpt.sba.trungthu.dto.request.LoginRequest;
 import fpt.sba.trungthu.dto.request.RegisterRequest;
+import fpt.sba.trungthu.entity.User;
 import fpt.sba.trungthu.entity.enumeration.UserRole;
+import fpt.sba.trungthu.repository.UserRepository;
+import fpt.sba.trungthu.service.AuthService;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.mail.MailSendException;
+import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.startsWith;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -26,14 +41,22 @@ class AuthControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
+    @MockitoBean
+    private JavaMailSender mailSender;
+
+    @Autowired
+    private AuthService authService;
+
+    @Autowired
+    private UserRepository userRepository;
+
     private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
     @Test
     void testRegisterBuyerSuccess() throws Exception {
         RegisterRequest request = RegisterRequest.builder()
                 .email("newbuyer@example.com")
-                .password("Password123!")
-                .fullName("New Buyer")
+                    .fullName("New Buyer")
                 .phone("0912345678")
                 .role(UserRole.CUSTOMER)
                 .build();
@@ -49,10 +72,152 @@ class AuthControllerTest {
     }
 
     @Test
+    void testRegisterMailsRandomPasswordThenUserChangesIt() throws Exception {
+        RegisterRequest request = RegisterRequest.builder()
+                .email("Mailed@Example.com")
+                .fullName("Mailed User")
+                .role(UserRole.CUSTOMER)
+                .build();
+
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated());
+
+        ArgumentCaptor<SimpleMailMessage> mail = ArgumentCaptor.forClass(SimpleMailMessage.class);
+        verify(mailSender).send(mail.capture());
+        assertThat(mail.getValue().getTo()).containsExactly("mailed@example.com");
+        String mailedPassword = mail.getValue().getText().lines()
+                .filter(l -> l.startsWith("Password: ")).findFirst().orElseThrow().substring("Password: ".length());
+        assertThat(mailedPassword).hasSize(10);
+
+        String token = loginAndGetToken("mailed@example.com", mailedPassword);
+
+        // Wrong old password is rejected
+        mockMvc.perform(post("/api/auth/change-password")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"oldPassword\":\"wrong\",\"newPassword\":\"MyNewPass1\"}"))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(post("/api/auth/change-password")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"oldPassword\":\"" + mailedPassword + "\",\"newPassword\":\"MyNewPass1\"}"))
+                .andExpect(status().isOk());
+
+        loginAndGetToken("mailed@example.com", "MyNewPass1");
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                LoginRequest.builder().email("mailed@example.com").password(mailedPassword).build())))
+                .andExpect(status().isUnauthorized());
+
+        // Not logged in -> cannot change password
+        mockMvc.perform(post("/api/auth/change-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"oldPassword\":\"x\",\"newPassword\":\"MyNewPass2\"}"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void testRegisterRollsBackWhenMailFails() throws Exception {
+        doThrow(new MailSendException("SMTP down")).when(mailSender).send(any(SimpleMailMessage.class));
+        RegisterRequest request = RegisterRequest.builder()
+                .email("nomail@example.com")
+                .fullName("No Mail")
+                .role(UserRole.CUSTOMER)
+                .build();
+        String body = objectMapper.writeValueAsString(request);
+
+        mockMvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isServiceUnavailable());
+
+        // User was not saved, so registering again is not a "duplicate email" conflict
+        mockMvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isServiceUnavailable());
+    }
+
+    @Test
+    void testGoogleLoginRedirectsToGoogle() throws Exception {
+        mockMvc.perform(get("/oauth2/authorization/google"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(header().string("Location", startsWith("https://accounts.google.com/o/oauth2/v2/auth")));
+    }
+
+    @Test
+    void testGoogleLoginCreatesCustomerOnceAndSetsCookies() throws Exception {
+        MockHttpServletResponse first = new MockHttpServletResponse();
+        authService.loginWithGoogle("New.Google@Gmail.com", "Google User", first);
+        assertThat(first.getHeaders("Set-Cookie")).anyMatch(c -> c.startsWith(AuthCookieHelper.ACCESS_COOKIE + "="));
+
+        User created = userRepository.findByEmail("new.google@gmail.com").orElseThrow();
+        assertThat(created.getRole()).isEqualTo(UserRole.CUSTOMER);
+        assertThat(created.getFullName()).isEqualTo("Google User");
+
+        // Second login reuses the account; existing seeded users can also sign in with Google
+        authService.loginWithGoogle("new.google@gmail.com", "Google User", new MockHttpServletResponse());
+        assertThat(userRepository.count()).isEqualTo(4); // 3 seeded + 1
+        authService.loginWithGoogle("seller@kinhdo.vn", "Seller", new MockHttpServletResponse());
+        assertThat(userRepository.findByEmail("seller@kinhdo.vn").orElseThrow().getRole()).isEqualTo(UserRole.PROVIDER);
+    }
+
+    @Test
+    void testForgotPasswordResetTokenWorksOnce() throws Exception {
+        // Unknown email: same 200, no mail sent
+        mockMvc.perform(post("/api/auth/forgot-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"nobody@example.com\"}"))
+                .andExpect(status().isOk());
+        verifyNoInteractions(mailSender);
+
+        mockMvc.perform(post("/api/auth/forgot-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"Buyer@Gmail.com\"}"))
+                .andExpect(status().isOk());
+
+        ArgumentCaptor<SimpleMailMessage> mail = ArgumentCaptor.forClass(SimpleMailMessage.class);
+        verify(mailSender).send(mail.capture());
+        assertThat(mail.getValue().getTo()).containsExactly("buyer@gmail.com");
+        String token = mail.getValue().getText().lines()
+                .filter(l -> l.startsWith("Reset token: ")).findFirst().orElseThrow().substring("Reset token: ".length());
+
+        // Requesting a reset does not change the password by itself
+        loginAndGetToken("buyer@gmail.com", "12345678");
+
+        String resetBody = "{\"token\":\"" + token + "\",\"newPassword\":\"ResetPass1\"}";
+        mockMvc.perform(post("/api/auth/reset-password").contentType(MediaType.APPLICATION_JSON).content(resetBody))
+                .andExpect(status().isOk());
+        loginAndGetToken("buyer@gmail.com", "ResetPass1");
+
+        // Same token again -> rejected (password already changed)
+        mockMvc.perform(post("/api/auth/reset-password").contentType(MediaType.APPLICATION_JSON).content(resetBody))
+                .andExpect(status().isBadRequest());
+
+        // Garbage token and an access token are not reset tokens
+        mockMvc.perform(post("/api/auth/reset-password").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"abc\",\"newPassword\":\"Hacked123\"}"))
+                .andExpect(status().isBadRequest());
+        String accessToken = loginAndGetToken("buyer@gmail.com", "ResetPass1");
+        mockMvc.perform(post("/api/auth/reset-password").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"" + accessToken + "\",\"newPassword\":\"Hacked123\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    private String loginAndGetToken(String email, String password) throws Exception {
+        String json = mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                LoginRequest.builder().email(email).password(password).build())))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        return objectMapper.readTree(json).get("data").get("accessToken").asText();
+    }
+
+    @Test
     void testRegisterSellerRequiresStoreName() throws Exception {
         RegisterRequest request = RegisterRequest.builder()
                 .email("newseller@example.com")
-                .password("Password123!")
                 .fullName("New Seller")
                 .phone("0912345679")
                 .role(UserRole.PROVIDER)

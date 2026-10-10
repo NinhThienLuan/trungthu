@@ -8,16 +8,21 @@ import fpt.sba.trungthu.dto.request.RegisterRequest;
 import fpt.sba.trungthu.entity.enumeration.ProductType;
 import fpt.sba.trungthu.entity.enumeration.UserRole;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 
 import java.math.BigDecimal;
 
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -31,6 +36,9 @@ class ProductControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @MockitoBean
+    private JavaMailSender mailSender;
 
     private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
@@ -124,13 +132,19 @@ class ProductControllerTest {
 
         // Provider khác không sửa được sản phẩm của shop này
         RegisterRequest other = RegisterRequest.builder()
-                .email("other@shop.vn").password("12345678").fullName("Other Shop")
+                .email("other@shop.vn").fullName("Other Shop")
                 .phone("0912345670").role(UserRole.PROVIDER).storeName("Other Shop").build();
         mockMvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(other)))
                 .andExpect(status().isCreated());
 
-        send(post("/api/provider/products/" + productId + "/variants"), login("other@shop.vn"),
+        // Password is random and only delivered by mail
+        ArgumentCaptor<SimpleMailMessage> mail = ArgumentCaptor.forClass(SimpleMailMessage.class);
+        verify(mailSender).send(mail.capture());
+        String otherPassword = mail.getValue().getText().lines()
+                .filter(l -> l.startsWith("Password: ")).findFirst().orElseThrow().substring("Password: ".length());
+
+        send(post("/api/provider/products/" + productId + "/variants"), login("other@shop.vn", otherPassword),
                 cakeVariant("HACK-150G", 150))
                 .andExpect(status().isNotFound());
 
@@ -140,10 +154,14 @@ class ProductControllerTest {
     }
 
     private String login(String email) throws Exception {
+        return login(email, "12345678");
+    }
+
+    private String login(String email, String password) throws Exception {
         String json = mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
-                                LoginRequest.builder().email(email).password("12345678").build())))
+                                LoginRequest.builder().email(email).password(password).build())))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
         return objectMapper.readTree(json).get("data").get("accessToken").asText();

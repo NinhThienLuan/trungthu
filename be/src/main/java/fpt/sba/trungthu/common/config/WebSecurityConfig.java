@@ -2,9 +2,14 @@ package fpt.sba.trungthu.common.config;
 
 import fpt.sba.trungthu.common.security.JwtAuthenticationFilter;
 import fpt.sba.trungthu.common.security.JwtProperties;
+import fpt.sba.trungthu.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -43,17 +48,36 @@ public class WebSecurityConfig {
             "/v3/api-docs.yaml",
             "/swagger-resources/**",
             "/webjars/**",
-            "/h2-console/**",
             "/api/auth/login",
             "/api/auth/logout",
             "/api/auth/register",
             "/api/auth/refresh",
+            "/api/auth/forgot-password",
+            "/api/auth/reset-password",
             "/api/public/**"
     };
 
+    @Value("${app.oauth2.success-redirect}")
+    private String oauth2SuccessRedirect;
+
+    // AuthService injected here (not via constructor) to avoid a cycle: it depends on the PasswordEncoder bean below
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, AuthService authService) throws Exception {
         http
+                // Google login: browser opens /oauth2/authorization/google, comes back with our JWT cookies set
+                .oauth2Login(oauth -> oauth.successHandler((request, response, authentication) -> {
+                    OidcUser googleUser = (OidcUser) authentication.getPrincipal();
+                    if (!Boolean.TRUE.equals(googleUser.getEmailVerified())) {
+                        response.sendError(HttpStatus.FORBIDDEN.value(), "Google email is not verified");
+                        return;
+                    }
+                    try {
+                        authService.loginWithGoogle(googleUser.getEmail(), googleUser.getFullName(), response);
+                        response.sendRedirect(oauth2SuccessRedirect);
+                    } catch (ResponseStatusException e) {
+                        response.sendError(e.getStatusCode().value(), e.getReason());
+                    }
+                }))
                 .cors(Customizer.withDefaults())
                 .csrf(csrf -> csrf.disable())
                 .headers(headers -> headers.frameOptions(frameOptions -> frameOptions.sameOrigin())) // For H2 console
