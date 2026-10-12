@@ -1,19 +1,21 @@
 package fpt.sba.trungthu.entity;
 
 import fpt.sba.trungthu.common.infrastructure.CreatedEntity;
+import fpt.sba.trungthu.entity.enumeration.PaymentMethod;
+import fpt.sba.trungthu.entity.enumeration.PaymentStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.Check;
 
-import java.util.UUID;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import org.hibernate.annotations.FractionalSeconds;
-import java.time.ZoneOffset;
 
 @Entity
-@Table(name = "PAYMENT_TRANSACTION", indexes = {@Index(name = "IX_PAYMENT_TRANSACTION_order_id", columnList = "order_id")}, uniqueConstraints = {@UniqueConstraint(name = "UQ_PAYMENT_TRANSACTION_transaction_code", columnNames = {"transaction_code"})})
+@Table(name = "PAYMENT_TRANSACTION", indexes = {
+        @Index(name = "IX_PAYMENT_TRANSACTION_order_id", columnList = "order_id") }, uniqueConstraints = {
+                @UniqueConstraint(name = "UQ_PAYMENT_TRANSACTION_transaction_code", columnNames = {
+                        "transaction_code" }) })
 @Check(name = "CK_PAYMENT_TRANSACTION_amount", constraints = "amount >= 0")
 @Getter
 @Setter
@@ -21,10 +23,6 @@ import java.time.ZoneOffset;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PaymentTransaction extends CreatedEntity {
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "payment_id", nullable = false, updatable = false)
-    private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "order_id", nullable = false, foreignKey = @ForeignKey(name = "FK_PAYMENT_TRANSACTION_order_id"))
@@ -36,16 +34,26 @@ public class PaymentTransaction extends CreatedEntity {
     @Column(name = "amount", nullable = false, precision = 18, scale = 2)
     private BigDecimal amount;
 
-    @Column(name = "payment_method", nullable = false, length = 255)
-    private String paymentMethod;
+    // Phương thức thanh toán: CASH, BANK_TRANSFER, MOMO, VNPAY, ...
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_method", nullable = false, length = 30)
+    private PaymentMethod paymentMethod;
 
+    // Trạng thái giao dịch: PENDING → COMPLETED / FAILED / REFUNDED
+    @Enumerated(EnumType.STRING)
     @Column(name = "payment_status", nullable = false, length = 30)
-    private String paymentStatus;
+    private PaymentStatus paymentStatus;
 
     @Column(name = "gateway_transaction_id", length = 255)
     private String gatewayTransactionId;
 
     @Column(name = "paid_at")
-    @FractionalSeconds(0)
     private LocalDateTime paidAt;
+
+    // Chuyển trạng thái thanh toán với validation
+    public void transitionPaymentStatus(PaymentStatus newStatus) {
+        this.paymentStatus.validateTransition(newStatus);
+        this.paymentStatus = newStatus;
+    }
 }
+

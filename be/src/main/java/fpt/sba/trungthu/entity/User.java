@@ -7,8 +7,6 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.Check;
 
-import java.util.UUID;
-
 @Entity
 @Table(name = "`USER`", uniqueConstraints = @UniqueConstraint(name = "UQ_USER_email", columnNames = "email"))
 @Check(name = "CK_USER_role", constraints = "role IN ('CUSTOMER', 'PROVIDER', 'PLATFORM_ADMIN')")
@@ -18,11 +16,6 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class User extends BaseEntity {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "user_id", nullable = false, updatable = false)
-    private UUID id;
 
     @Column(name = "email", nullable = false, length = 254)
     private String email;
@@ -47,6 +40,15 @@ public class User extends BaseEntity {
     private String address;
 
     @Builder.Default
+    @Column(name = "is_compliance_approved", nullable = false)
+    private Boolean isComplianceApproved = false;
+
+    @Builder.Default
+    @Column(name = "is_season_active", nullable = false)
+    private Boolean isSeasonActive = true;
+
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 30)
-    private String status = "ACTIVE";
+    private fpt.sba.trungthu.entity.enumeration.UserStatus status = fpt.sba.trungthu.entity.enumeration.UserStatus.ACTIVE;
 }

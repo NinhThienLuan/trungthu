@@ -19,7 +19,7 @@ public class ProductVariantResponse {
     private Integer stockQuantity;
     private Integer weightGram;
     private Integer boxCapacity;
-    private String status;
+    private fpt.sba.trungthu.entity.enumeration.ProductStatus status;
 
     public static ProductVariantResponse fromEntity(ProductVariant variant) {
         return ProductVariantResponse.builder()

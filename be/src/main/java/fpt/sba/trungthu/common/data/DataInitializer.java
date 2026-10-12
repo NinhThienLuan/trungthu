@@ -1,7 +1,8 @@
-package fpt.sba.trungthu.common.dataInit;
+package fpt.sba.trungthu.common.data;
 
 import fpt.sba.trungthu.entity.User;
 import fpt.sba.trungthu.entity.enumeration.UserRole;
+import fpt.sba.trungthu.entity.enumeration.UserStatus;
 import fpt.sba.trungthu.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,7 +36,7 @@ public class DataInitializer implements CommandLineRunner {
                     .fullName("Platform Administrator")
                     .phone("0901000001")
                     .role(UserRole.PLATFORM_ADMIN)
-                    .status("ACTIVE")
+                    .status(UserStatus.ACTIVE)
                     .build();
             userRepository.save(admin);
             log.info("Default Platform Admin seeded: {}", adminEmail);
@@ -52,7 +53,7 @@ public class DataInitializer implements CommandLineRunner {
                     .phone("0902000002")
                     .role(UserRole.PROVIDER)
                     .storeName("Bánh Trung Thu Kinh Đô")
-                    .status("ACTIVE")
+                    .status(UserStatus.ACTIVE)
                     .build();
             userRepository.save(seller);
             log.info("Default Provider seeded: {}", sellerEmail);
@@ -68,7 +69,7 @@ public class DataInitializer implements CommandLineRunner {
                     .fullName("Nguyễn Văn Mua")
                     .phone("0903000003")
                     .role(UserRole.CUSTOMER)
-                    .status("ACTIVE")
+                    .status(UserStatus.ACTIVE)
                     .build();
             userRepository.save(buyer);
             log.info("Default Customer seeded: {}", buyerEmail);

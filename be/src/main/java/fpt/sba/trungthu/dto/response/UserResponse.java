@@ -23,7 +23,9 @@ public class UserResponse implements Serializable {
     private UserRole role;
     private String storeName;
     private String address;
-    private String status;
+    private fpt.sba.trungthu.entity.enumeration.UserStatus status;
+    private Boolean isComplianceApproved;
+    private Boolean isSeasonActive;
     private LocalDateTime createdAt;
 
     public static UserResponse fromEntity(User user) {
@@ -39,6 +41,8 @@ public class UserResponse implements Serializable {
                 .storeName(user.getStoreName())
                 .address(user.getAddress())
                 .status(user.getStatus())
+                .isComplianceApproved(user.getIsComplianceApproved())
+                .isSeasonActive(user.getIsSeasonActive())
                 .createdAt(user.getCreatedAt())
                 .build();
     }

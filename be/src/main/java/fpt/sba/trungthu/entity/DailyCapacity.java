@@ -9,22 +9,22 @@ import org.hibernate.annotations.Check;
 import org.hibernate.annotations.Checks;
 import org.hibernate.annotations.GeneratedColumn;
 
-import java.util.UUID;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "DAILY_CAPACITY", indexes = {@Index(name = "IX_DAILY_CAPACITY_provider_id", columnList = "provider_id")}, uniqueConstraints = {@UniqueConstraint(name = "UQ_DAILY_CAPACITY_provider_date", columnNames = {"provider_id", "capacity_date"})})
-@Checks({@Check(name = "CK_DAILY_CAPACITY_max_quantity", constraints = "max_quantity >= 0"), @Check(name = "CK_DAILY_CAPACITY_reserved_quantity", constraints = "reserved_quantity >= 0"), @Check(name = "CK_DAILY_CAPACITY_reserved", constraints = "reserved_quantity <= max_quantity")})
+@Table(name = "DAILY_CAPACITY", indexes = {
+        @Index(name = "IX_DAILY_CAPACITY_provider_id", columnList = "provider_id") }, uniqueConstraints = {
+                @UniqueConstraint(name = "UQ_DAILY_CAPACITY_provider_date", columnNames = { "provider_id",
+                        "capacity_date" }) })
+@Checks({ @Check(name = "CK_DAILY_CAPACITY_max_quantity", constraints = "max_quantity >= 0"),
+        @Check(name = "CK_DAILY_CAPACITY_reserved_quantity", constraints = "reserved_quantity >= 0"),
+        @Check(name = "CK_DAILY_CAPACITY_reserved", constraints = "reserved_quantity <= max_quantity") })
 @Getter
 @Setter
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
 public class DailyCapacity extends BaseEntity {
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "capacity_id", nullable = false, updatable = false)
-    private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "provider_id", nullable = false, foreignKey = @ForeignKey(name = "FK_DAILY_CAPACITY_provider_id"))

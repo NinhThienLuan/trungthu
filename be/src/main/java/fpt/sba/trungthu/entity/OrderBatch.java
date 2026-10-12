@@ -6,12 +6,13 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.Check;
 
-import java.util.UUID;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "ORDER_BATCH", indexes = {@Index(name = "IX_ORDER_BATCH_order_id", columnList = "order_id"), @Index(name = "IX_ORDER_BATCH_provider_id", columnList = "provider_id"), @Index(name = "IX_ORDER_BATCH_capacity_id", columnList = "capacity_id")})
+@Table(name = "ORDER_BATCH", indexes = { @Index(name = "IX_ORDER_BATCH_order_id", columnList = "order_id"),
+        @Index(name = "IX_ORDER_BATCH_provider_id", columnList = "provider_id"),
+        @Index(name = "IX_ORDER_BATCH_capacity_id", columnList = "capacity_id") })
 @Check(name = "CK_ORDER_BATCH_subtotal", constraints = "subtotal >= 0")
 @Getter
 @Setter
@@ -19,10 +20,6 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 public class OrderBatch extends BaseEntity {
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "order_batch_id", nullable = false, updatable = false)
-    private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "order_id", nullable = false, foreignKey = @ForeignKey(name = "FK_ORDER_BATCH_order_id"))
@@ -42,6 +39,17 @@ public class OrderBatch extends BaseEntity {
     @Column(name = "subtotal", nullable = false, precision = 18, scale = 2)
     private BigDecimal subtotal;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "batch_status", nullable = false, length = 30)
-    private String batchStatus;
+    private fpt.sba.trungthu.entity.enumeration.OrderBatchStatus batchStatus;
+
+    /**
+     * Chuyển đổi trạng thái đợt bánh có kiểm tra switch-case
+     */
+    public void transitionBatchStatus(fpt.sba.trungthu.entity.enumeration.OrderBatchStatus targetStatus) {
+        if (this.batchStatus != null) {
+            this.batchStatus.validateTransition(targetStatus);
+        }
+        this.batchStatus = targetStatus;
+    }
 }

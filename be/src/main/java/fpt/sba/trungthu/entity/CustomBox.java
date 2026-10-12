@@ -6,11 +6,10 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.Check;
 
-import java.util.UUID;
 import java.math.BigDecimal;
 
 @Entity
-@Table(name = "CUSTOM_BOX", indexes = {@Index(name = "IX_CUSTOM_BOX_order_batch_id", columnList = "order_batch_id")})
+@Table(name = "CUSTOM_BOX", indexes = { @Index(name = "IX_CUSTOM_BOX_order_batch_id", columnList = "order_batch_id") })
 @Check(name = "CK_CUSTOM_BOX_box_price", constraints = "box_price >= 0")
 @Getter
 @Setter
@@ -18,10 +17,6 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 public class CustomBox extends CreatedEntity {
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "custom_box_id", nullable = false, updatable = false)
-    private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "order_batch_id", nullable = false, foreignKey = @ForeignKey(name = "FK_CUSTOM_BOX_order_batch_id"))

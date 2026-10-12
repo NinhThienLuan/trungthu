@@ -73,15 +73,28 @@ class ProductControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data[0].variants.length()").value(2));
 
+        // Provider lấy danh sách có phân trang (PageResponse)
+        mockMvc.perform(get("/api/provider/products")
+                        .param("page", "0")
+                        .param("size", "10")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content.length()").value(1))
+                .andExpect(jsonPath("$.data.totalElements").value(1))
+                .andExpect(jsonPath("$.data.page").value(0))
+                .andExpect(jsonPath("$.data.size").value(10));
+
         mockMvc.perform(get("/api/public/products/" + productId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.storeName").value("Bánh Trung Thu Kinh Đô"))
                 .andExpect(jsonPath("$.data.variants.length()").value(1))
                 .andExpect(jsonPath("$.data.variants[0].sku").value("BAKED-GAQUAY-150G"));
 
-        mockMvc.perform(get("/api/public/products").param("type", "BOX_SHELL"))
+        // Kiểm tra API /api/products có phân trang, trả về PageResponse
+        mockMvc.perform(get("/api/products").param("type", "BOX_SHELL"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.length()").value(0));
+                .andExpect(jsonPath("$.data.content.length()").value(0))
+                .andExpect(jsonPath("$.data.totalElements").value(0));
     }
 
     @Test
@@ -94,18 +107,21 @@ class ProductControllerTest {
         send(post("/api/provider/products/" + cakeId + "/variants"), token, cakeVariant("CAKE-NOWEIGHT", null))
                 .andExpect(status().isBadRequest());
 
-        // Vỏ hộp chỉ nhận 2/4/6 ô
-        ProductVariantRequest box = ProductVariantRequest.builder()
-                .variantName("Set 5").sku("BOX-SET5").price(new BigDecimal("150000")).stockQuantity(10).boxCapacity(5).build();
-        send(post("/api/provider/products/" + boxId + "/variants"), token, box)
+        // Vỏ hộp dung tích <= 0 sẽ bị từ chối
+        ProductVariantRequest invalidBox = ProductVariantRequest.builder()
+                .variantName("Set 0").sku("BOX-SET0").price(new BigDecimal("150000")).stockQuantity(10).boxCapacity(0).build();
+        send(post("/api/provider/products/" + boxId + "/variants"), token, invalidBox)
                 .andExpect(status().isBadRequest());
 
-        box.setBoxCapacity(4);
-        send(post("/api/provider/products/" + boxId + "/variants"), token, box)
-                .andExpect(status().isCreated());
+        // Dung tích linh hoạt (không hardcode 2/4/6): Set 5 hợp lệ
+        ProductVariantRequest box5 = ProductVariantRequest.builder()
+                .variantName("Set 5").sku("BOX-SET5").price(new BigDecimal("150000")).stockQuantity(10).boxCapacity(5).build();
+        send(post("/api/provider/products/" + boxId + "/variants"), token, box5)
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.boxCapacity").value(5));
 
         // Trùng SKU
-        send(post("/api/provider/products/" + boxId + "/variants"), token, box)
+        send(post("/api/provider/products/" + boxId + "/variants"), token, box5)
                 .andExpect(status().isConflict());
 
         // Giá âm

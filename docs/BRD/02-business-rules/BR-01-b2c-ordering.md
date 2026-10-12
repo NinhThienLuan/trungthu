@@ -1,70 +1,76 @@
-# 📜 Business Rule: BR-01 - Đặt Hàng Cá Nhân & Tùy Chỉnh Hộp Quà (B2C Custom Box Ordering)
+# 📜 Business Rule: BR-01 - Đặt Hàng B2C & Giỏ Hàng Tách Đơn Theo Provider (B2C Ordering & Split Orders)
 
 ## 1. Goal (Mục tiêu)
-Cho phép khách hàng cá nhân (B2C) dễ dàng lựa chọn mua các biến thể bánh lẻ (`LOOSE_CAKE` variants: 150g, 200g, 250g) hoặc tự cấu hình bộ hộp quà Trung Thu (`BOX_SHELL` variants: Set 2, 4, 6 bánh), điền thông tin in ấn/tùy chỉnh tên tổ chức/lời chúc lên vỏ hộp, **lựa chọn đợt giao bánh tươi ra lò (`order_batches`)** và thực hiện đặt hàng trực tuyến.
+Cho phép khách hàng cá nhân (B2C) lựa chọn mua các sản phẩm bánh lẻ (`LOOSE_CAKE`) hoặc các set hộp quà Trung Thu đóng sẵn tiêu chuẩn (`BOX_SHELL`) từ nhiều xưởng khác nhau. Hệ thống hỗ trợ **Giỏ Hàng Chung Đa Provider**, và tự động tách thành các Đơn Hàng con độc lập theo từng Provider lúc Checkout (**Hướng A**), chọn ngày nhận bánh tươi và đặt hàng trực tuyến với quy tắc đặt cọc VietQR trực tiếp.
 
 ---
 
 ## 2. Core Rules (Quy tắc nghiệp vụ cốt lõi)
 
-### 2.1. Quy tắc Biến Thể Sản Phẩm & Hạn Sử Dụng Bánh Tươi (Product Variant & Fresh Shelf Life Rule)
+### 2.1. Quy tắc Giỏ Hàng Đa Provider & Tách Đơn Lúc Checkout (Approach A - Split Orders)
+- **Giỏ Hàng Chung**: Khách hàng được tự do duyệt sản phẩm trên sàn và nhặt sản phẩm của nhiều xưởng (Provider A, Provider B) vào chung một Giỏ Hàng (`Cart`).
+- **Tự Động Tách Đơn Lúc Checkout**:
+  - Khi khách nhấn "Tiến Hành Đặt Hàng", hệ thống tự động phân tách giỏ hàng thành các **Đơn Hàng con độc lập (`Order`)** theo từng `provider_id`.
+  - Mỗi Đơn Hàng con vận hành độc lập:
+    - Có mã đơn hàng riêng (`order_code`).
+    - Tính phí vận chuyển riêng theo xưởng (`shipping_fee`).
+    - Tính số tiền cọc riêng (`deposit_amount`).
+    - Hiển thị mã ảnh VietQR chuyển tiền trực tiếp tới số tài khoản ngân hàng của Provider đó.
+
+### 2.2. Quy tắc Biến Thể Sản Phẩm & Hạn Sử Dụng Bánh Tươi (Product Variant & Fresh Shelf Life)
 - Sản phẩm được quản lý theo mô hình **Product & ProductVariant**:
-  - `Product`: Tên dòng sản phẩm ("Bánh Thập Cẩm Gà Quay", "Thiệp Ép Kim"), loại sản phẩm/dịch vụ (`LOOSE_CAKE`, `BOX_SHELL`, `GREETING_CARD`, `ADDON_SERVICE`), HSD bánh tươi (`shelf_life_days`).
-  - `ProductVariant`: Mã SKU, biến thể trọng lượng (150g, 200g, 250g), dung tích vỏ hộp (Set 2, 4, 6), mẫu thiệp hoặc phí dịch vụ đi kèm (thắt nơ/gói quà), giá bán (`price`), tồn kho (`stock_quantity`).
+  - `Product`: Dòng sản phẩm ("Bánh Thập Cẩm Gà Quay", "Hộp Quà Đoàn Viên"), loại sản phẩm (`LOOSE_CAKE`, `BOX_SHELL`, `GREETING_CARD`, `ADDON_SERVICE`), HSD bánh tươi (`shelf_life_days`).
+  - `ProductVariant`: Mã SKU, trọng lượng (150g, 200g, 250g), dung tích vỏ hộp (Set 2, 4, 6), đơn giá (`price`), tồn kho (`stock_quantity`).
 - **Hiển thị Hạn Sử Dụng (Shelf Life Display)**:
-  - Mọi bánh tươi hiển thị rõ HSD tính từ ngày ra lò sản xuất:
-    - Bánh dẻo tươi: **7 - 10 ngày**.
-    - Bánh nướng tươi: **10 - 15 ngày**.
-  - Ngày giao bánh Dương lịch phải đảm bảo cách ngày sản xuất không quá 24-48 giờ để giữ độ tươi ngon nhất.
+  - Bánh dẻo tươi: **7 - 10 ngày**.
+  - Bánh nướng tươi: **10 - 15 ngày**.
+  - Luôn hiển thị khuyến cáo HSD tính từ **Ngày Ra Lò (`bake_date`)**.
 
-### 2.2. Quy tắc Tùy Chỉnh Hộp Quà Biến Thể (Custom Box Rule)
-- **Chọn Vỏ Hộp Biến Thể**: Khách chọn 1 trong các dung tích vỏ hộp biến thể cố định:
-  - `BOX-SET-2`: Hộp chứa đúng 2 chiếc bánh (hỗ trợ bánh 150g-200g).
-  - `BOX-SET-4`: Hộp chứa đúng 4 chiếc bánh (hỗ trợ bánh 150g-250g).
-  - `BOX-SET-6`: Hộp chứa đúng 6 chiếc bánh (hỗ trợ bánh 150g-200g).
-- **Ghép Biến Thể Bánh Vào Ô Slot Hộp**:
-  - Khách hàng phải chọn đủ số lượng biến thể bánh tương ứng với dung tích vỏ hộp (`custom_box_items`).
-  - Cho phép chọn trùng biến thể bánh (VD: 4 chiếc biến thể 200g Thập Cẩm trong 1 hộp 4).
-- **Tính Giá Hộp Quà**:
-  $$\text{Tổng giá Hộp Quà} = \text{Giá Vỏ Hộp Variant} + \sum (\text{Giá các Biến Thể Bánh Lẻ}) + \text{Phí Personalize (nếu có)}$$
+### 2.3. Quy tắc Hộp Quà Chuẩn Trong MVP vs Tự Phối Custom Box Trong Phase 2
+- **Trong MVP**: Khách hàng mua các Set hộp quà đóng sẵn tiêu chuẩn (sản phẩm hoàn chỉnh) hoặc bánh lẻ mua theo số lượng thông qua bảng `order_items`.
+- **Trong Phase 2 (`custom_boxes`, `custom_box_items`)**: Mở rộng tính năng tự phối hộp quà (khách chọn vỏ hộp 2, 4, 6 ô rồi tự gắp từng vị bánh vào ô slot) và Live Preview in tên/lời chúc lên vỏ hộp bằng CSS Absolute Overlay.
 
-### 2.3. Quy tắc In Tên Tổ Chức / Cá Nhân Lên Vỏ Hộp (Box Personalization & Live Preview)
-- Cung cấp ô nhập liệu **"Nội dung in lên vỏ hộp"** (tối đa 50 ký tự) và **"Thiệp chúc mừng"** (tối đa 150 ký tự).
-- **CSS Absolute Overlay Live Preview**: Hiển thị dòng chữ in đè trực tiếp lên ảnh phôi vỏ hộp PNG bằng vị trí tọa độ tuyệt đối CSS (`position: absolute`), mượt mà 60fps trên di động.
-- **Validation Tồn Kho 2 Cấp Tại Bước Checkout**: Hệ thống validate tồn kho biến thể 2 cấp (`Vỏ Hộp Variant > 0` AND `Bánh Lẻ Variant >= N`) tại thời điểm bấm Checkout.
+### 2.4. Quy tắc Ngày Ra Lò & Lịch Giao Bánh Tươi (Bake Date vs Delivery Date Rule)
+- **Ràng buộc Ngày Nhận (Delivery Lead-Time)**:
+  - Ngày nhận bánh Dương lịch (`expected_delivery_date`) phải sau ngày đặt hàng tối thiểu **3 ngày** (`expected_delivery_date >= CURRENT_DATE + 3`).
+  - **MVP Chặn Cứng**: Tuyệt đối **không nhận đơn giao khẩn cấp $< 3$ ngày** (chặn cứng tại cả Frontend lẫn Backend). Không có đơn same-day/rush trong MVP.
+- **Quy tắc Tính Ngày Ra Lò (Bake Date Calculation)**:
+  $$\text{bake\_date} = \text{expected\_delivery\_date} - 1$$
+  - Xưởng nướng bánh trước ngày khách nhận đúng 1 ngày.
+  - Slot hạn ngạch nướng xưởng (`daily_capacities`) và Phiếu Ra Lò (Daily Production Sheet) được tính toán, kiểm tra và trừ trực tiếp vào ngày **`bake_date`**.
+  - Nếu ngày `bake_date` của xưởng đã kín 100% hạn ngạch (`capacity_cap`), ngày nhận tương ứng của xưởng đó sẽ bị mờ trên giao diện chọn ngày.
 
-### 2.4. Quy tắc Tách Đợt Giao Hàng & Chọn Ngày Giao Bánh Tươi (Order Batching & Schedule Rule)
-- Đơn hàng B2C có thể bao gồm **1 hoặc nhiều Đợt giao hàng (`order_batches`)** tới các ngày Dương lịch khác nhau hoặc địa điểm nhận khác nhau.
-- Đối với mỗi đợt giao:
-  - **Điều kiện ngày giao**: Ngày nhận bánh Dương lịch (`expected_delivery_date`) phải nằm trong mùa vụ Trung Thu và cách ngày đặt tối thiểu **3 ngày** để xưởng xếp lịch nướng bánh (`daily_capacities`).
-  - Hệ thống tự động quy đổi và hiển thị nhãn Âm Lịch tham khảo: `[Ngày Dương] (Tham khảo: [Ngày Âm])`.
+### 2.5. Quy tắc Giữ Chỗ 15 Phút & Tự Động Hoàn Trả (Hold Reservation & Auto-Release)
+- Khi khách bấm tạo đơn hàng con, đơn chuyển sang trạng thái `PENDING_DEPOSIT` và hệ thống tạm giữ tồn kho cũng như cộng dồn `daily_capacities.reserved_quantity` theo `bake_date`.
+- Thời gian giữ chỗ tối đa là **15 phút**.
+- Nếu sau 15 phút Seller chưa bấm xác nhận cọc hoặc khi đơn bị hủy (`CANCELLED`):
+  - Tiến trình `@Scheduled` tự động chuyển trạng thái đơn sang `CANCELLED`.
+  - Tự động hoàn trả số lượng tồn kho của các biến thể bánh.
+  - Tự động giảm trừ số lượng đã đặt trên hạn ngạch xưởng của ngày `bake_date`.
 
 ---
 
-## 3. Data Flow (Luồng dữ liệu)
+## 3. Data Flow (Luồng Đặt Hàng & Tách Đơn Hướng A)
 
 ```
-[Khách Hàng B2C] 
+[Khách Hàng Chọn Sản Phẩm Đa Xưởng Vào Cart]
     │
-    ├─► Chọn Biến Thể Bánh Lẻ (150g/200g/250g) hoặc Vỏ Hộp (Set 2/4/6)
-    ├─► Ghép các biến thể bánh vào ô slot Hộp Custom (nếu chọn mua hộp)
-    ├─► Nhập Văn Bản In Tên Vỏ Hộp / Thiệp Chúc (Live Preview CSS 60fps)
+    ▼ Khách Bấm "Tiến Hành Đặt Hàng"
+[Hệ Thống Tự Động Tách Giỏ Hàng (Split Orders)]
     │
-    ▼
-[Chia Đợt Giao Hàng (Order Batches)]
+    ├─► Đơn Hàng Con 1 (Provider A):
+    │      ├─► Tính Ngày Nướng bake_date = delivery_date - 1
+    │      ├─► Giữ chỗ 15 phút tại DailyCapacity của Provider A
+    │      └─► Sinh ảnh VietQR trực tiếp tới STK Ngân Hàng của Provider A
     │
-    ├─► Chọn Ngày Nhận Bánh Tươi Dương Lịch (Min: Current + 3 days)
-    ├─► Hiển thị nhãn Âm Lịch tham khảo
-    │
-    ▼
-[Checkout & Validate Tồn Kho 2 Cấp Biến Thể]
-    │
-    ├─► Đặt cọc 50% / Thanh toán qua VietQR / PayOS
-    └─► Giữ chỗ Hạn ngạch nướng (DailyCapacity) theo từng Đợt giao hàng
+    └─► Đơn Hàng Con 2 (Provider B):
+           ├─► Tính Ngày Nướng bake_date = delivery_date - 1
+           ├─► Giữ chỗ 15 phút tại DailyCapacity của Provider B
+           └─► Sinh ảnh VietQR trực tiếp tới STK Ngân Hàng của Provider B
 ```
 
 ---
 
 ## 4. Non-goals (Phạm vi không thực hiện trong BR này)
-- Không giao bánh tươi ngay trong ngày (Same-day delivery) do bánh tươi sản xuất theo đợt ra lò thủ công.
-- Không áp dụng chính sách chiết khấu sỉ cho đơn B2C lẻ dưới 20 hộp.
+- Không gộp nhiều xưởng vào chung 1 đơn con (tránh xung đột nướng và xung đột tài khoản nhận tiền).
+- Tính năng tự gắp bánh vào ô slot Custom Box dời sang Phase 2.

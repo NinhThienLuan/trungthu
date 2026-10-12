@@ -12,7 +12,14 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     Optional<User> findByEmail(String email);
 
-    Optional<User> findByEmailAndStatus(String email, String status);
+    Optional<User> findByEmailAndStatus(String email, fpt.sba.trungthu.entity.enumeration.UserStatus status);
+
+    default Optional<User> findByEmailAndStatus(String email, String status) {
+        if (status == null) {
+            return Optional.empty();
+        }
+        return findByEmailAndStatus(email, fpt.sba.trungthu.entity.enumeration.UserStatus.valueOf(status.toUpperCase()));
+    }
 
     boolean existsByEmail(String email);
 

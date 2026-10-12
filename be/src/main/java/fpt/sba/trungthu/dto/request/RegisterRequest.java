@@ -2,6 +2,7 @@ package fpt.sba.trungthu.dto.request;
 
 import fpt.sba.trungthu.entity.User;
 import fpt.sba.trungthu.entity.enumeration.UserRole;
+import fpt.sba.trungthu.entity.enumeration.UserStatus;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -43,7 +44,7 @@ public class RegisterRequest implements Serializable {
                 .phone(this.phone != null ? this.phone.trim() : null)
                 .role(this.role)
                 .storeName(this.role == UserRole.PROVIDER && this.storeName != null ? this.storeName.trim() : null)
-                .status("ACTIVE")
+                .status(UserStatus.ACTIVE)
                 .build();
     }
 }

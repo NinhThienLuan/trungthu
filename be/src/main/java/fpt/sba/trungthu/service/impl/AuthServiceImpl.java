@@ -1,4 +1,4 @@
-package fpt.sba.trungthu.service.serviceImpl;
+package fpt.sba.trungthu.service.impl;
 
 import fpt.sba.trungthu.common.security.GoogleIdTokenVerifier;
 import fpt.sba.trungthu.common.security.JwtProperties;
@@ -13,6 +13,7 @@ import fpt.sba.trungthu.dto.response.AuthResponse;
 import fpt.sba.trungthu.dto.response.UserResponse;
 import fpt.sba.trungthu.entity.User;
 import fpt.sba.trungthu.entity.enumeration.UserRole;
+import fpt.sba.trungthu.entity.enumeration.UserStatus;
 import fpt.sba.trungthu.repository.UserRepository;
 import fpt.sba.trungthu.service.AuthService;
 import io.jsonwebtoken.Claims;
@@ -33,11 +34,17 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.server.ResponseStatusException;
 
+import fpt.sba.trungthu.dto.request.AuthGatewayRequest;
+import fpt.sba.trungthu.dto.response.AuthUserProfile;
+import fpt.sba.trungthu.entity.enumeration.AuthProviderType;
+import fpt.sba.trungthu.service.gateway.AuthGateway;
+
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.HexFormat;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -45,12 +52,13 @@ import java.util.HexFormat;
 public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
+    private final fpt.sba.trungthu.repository.UserSocialAccountRepository userSocialAccountRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final JwtProperties jwtProperties;
     private final AuthCookieHelper authCookieHelper;
     private final JavaMailSender mailSender;
-    private final GoogleIdTokenVerifier googleIdTokenVerifier;
+    private final Map<String, AuthGateway> gateways;
 
     @Value("${spring.mail.username}")
     private String mailFrom;
@@ -79,7 +87,8 @@ public class AuthServiceImpl implements AuthService {
         String rawPassword = randomPassword();
         User savedUser = userRepository.save(request.toUserEntity(passwordEncoder.encode(rawPassword)));
 
-        // Throwing here rolls back the insert, so a user never exists without having received their password
+        // Throwing here rolls back the insert, so a user never exists without having
+        // received their password
         sendMail(savedUser.getEmail(), "Your Trung Thu account password",
                 "Hello " + savedUser.getFullName() + ",\n\n"
                         + "Your account has been created.\n"
@@ -94,7 +103,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public void changePassword(String email, ChangePasswordRequest request) {
-        User user = userRepository.findByEmailAndStatus(email, "ACTIVE")
+        User user = userRepository.findByEmailAndStatus(email, UserStatus.ACTIVE)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
         if (!passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
@@ -107,30 +116,34 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
-    public AuthResponse loginWithGoogleIdToken(String idToken, HttpServletResponse response) {
-        Jwt googleToken = googleIdTokenVerifier.verify(idToken);
-        if (!Boolean.TRUE.equals(googleToken.getClaimAsBoolean("email_verified"))) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Google email is not verified");
+    public AuthResponse authenticate(AuthGatewayRequest request, HttpServletResponse response) {
+        if (request.getProvider() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Provider type is required");
         }
-        return loginWithGoogle(googleToken.getClaimAsString("email"), googleToken.getClaimAsString("name"), response);
-    }
 
-    @Override
-    @Transactional
-    public AuthResponse loginWithGoogle(String email, String fullName, HttpServletResponse response) {
-        String normalizedEmail = email.trim().toLowerCase();
+        String gatewayBeanName = switch (request.getProvider()) {
+            case LOCAL -> "localAuthGateway";
+            case GOOGLE -> "googleAuthGateway";
+        };
 
-        // First Google login auto-creates a CUSTOMER; the random password is unusable until they reset it
-        User user = userRepository.findByEmail(normalizedEmail)
-                .orElseGet(() -> userRepository.save(User.builder()
-                        .email(normalizedEmail)
-                        .password(passwordEncoder.encode(randomPassword()))
-                        .fullName(StringUtils.hasText(fullName) ? fullName : normalizedEmail)
-                        .role(UserRole.CUSTOMER)
-                        .status("ACTIVE")
-                        .build()));
+        AuthGateway gateway = gateways.get(gatewayBeanName);
+        if (gateway == null) {
+            log.error("Auth gateway bean not found for: {}", gatewayBeanName);
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unsupported auth provider");
+        }
 
-        if (!"ACTIVE".equals(user.getStatus())) {
+        AuthUserProfile profile = gateway.authenticate(request);
+
+        User user;
+        if (profile.getProvider() == AuthProviderType.LOCAL) {
+            user = userRepository.findByEmail(profile.getEmail().trim().toLowerCase())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email or password"));
+        } else {
+            // Social Auth (GOOGLE, FACEBOOK, etc.) using UserSocialAccount mapping
+            user = resolveSocialUser(profile);
+        }
+
+        if (user.getStatus() != UserStatus.ACTIVE) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Account has been disabled");
         }
 
@@ -139,17 +152,51 @@ public class AuthServiceImpl implements AuthService {
         return AuthResponse.from(accessToken, jwtProperties.accessTokenExpMinutes() * 60, user);
     }
 
+    private User resolveSocialUser(AuthUserProfile profile) {
+        // 1. Check if this social identity is already linked to an existing user
+        return userSocialAccountRepository
+                .findByProviderAndProviderUserId(profile.getProvider(), profile.getProviderUserId())
+                .map(fpt.sba.trungthu.entity.UserSocialAccount::getUser)
+                .orElseGet(() -> {
+                    // 2. Not linked yet. Find user by email or auto-provision a new CUSTOMER
+                    String normalizedEmail = profile.getEmail().trim().toLowerCase();
+                    User targetUser = userRepository.findByEmail(normalizedEmail)
+                            .orElseGet(() -> userRepository.save(User.builder()
+                                    .email(normalizedEmail)
+                                    .password(passwordEncoder.encode(randomPassword()))
+                                    .fullName(StringUtils.hasText(profile.getFullName()) ? profile.getFullName() : normalizedEmail)
+                                    .role(UserRole.CUSTOMER)
+                                    .status(UserStatus.ACTIVE)
+                                    .build()));
+
+                    // 3. Link this social identity to the user
+                    fpt.sba.trungthu.entity.UserSocialAccount socialAccount = fpt.sba.trungthu.entity.UserSocialAccount.builder()
+                            .user(targetUser)
+                            .provider(profile.getProvider())
+                            .providerUserId(profile.getProviderUserId())
+                            .providerEmail(profile.getEmail())
+                            .build();
+                    userSocialAccountRepository.save(socialAccount);
+                    log.info("Linked social account ({}: {}) to user: {}", 
+                            profile.getProvider(), profile.getProviderUserId(), targetUser.getEmail());
+
+                    return targetUser;
+                });
+    }
+
     @Override
     public void forgotPassword(ForgotPasswordRequest request) {
-        // Unknown/disabled emails get the same silent 200, so this endpoint can't be used to discover accounts
-        userRepository.findByEmailAndStatus(request.getEmail().trim().toLowerCase(), "ACTIVE").ifPresent(user -> {
+        // Unknown/disabled emails get the same silent 200, so this endpoint can't be
+        // used to discover accounts
+        userRepository.findByEmailAndStatus(request.getEmail().trim().toLowerCase(), UserStatus.ACTIVE).ifPresent(user -> {
             String token = jwtService.generatePasswordResetToken(user, passwordFingerprint(user));
             sendMail(user.getEmail(), "Reset your Trung Thu password",
                     "Hello " + user.getFullName() + ",\n\n"
                             + "We received a request to reset your password.\n"
                             + "Reset token: " + token + "\n\n"
                             + "Send it to POST /api/auth/reset-password together with your new password.\n"
-                            + "The token expires in " + JwtService.PASSWORD_RESET_EXP_MINUTES + " minutes and works only once.\n"
+                            + "The token expires in " + JwtService.PASSWORD_RESET_EXP_MINUTES
+                            + " minutes and works only once.\n"
                             + "If you did not request this, ignore this email - your password stays the same.");
             log.info("Password reset email sent to {}", user.getEmail());
         });
@@ -168,8 +215,9 @@ public class AuthServiceImpl implements AuthService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Reset token is invalid or expired");
         }
 
-        User user = userRepository.findByEmailAndStatus(claims.getSubject(), "ACTIVE")
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Reset token is invalid or expired"));
+        User user = userRepository.findByEmailAndStatus(claims.getSubject(), UserStatus.ACTIVE)
+                .orElseThrow(
+                        () -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Reset token is invalid or expired"));
 
         if (!passwordFingerprint(user).equals(claims.get("pwd", String.class))) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Reset token has already been used");
@@ -189,14 +237,17 @@ public class AuthServiceImpl implements AuthService {
             mailSender.send(mail);
         } catch (MailException e) {
             log.error("Failed to send email to {}: {}", to, e.getMessage());
-            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Could not send email, please try again later");
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+                    "Could not send email, please try again later");
         }
     }
 
-    // Short hash of the stored BCrypt hash: changes whenever the password changes, reveals nothing usable
+    // Short hash of the stored BCrypt hash: changes whenever the password changes,
+    // reveals nothing usable
     private static String passwordFingerprint(User user) {
         try {
-            byte[] digest = MessageDigest.getInstance("SHA-256").digest(user.getPassword().getBytes(StandardCharsets.UTF_8));
+            byte[] digest = MessageDigest.getInstance("SHA-256")
+                    .digest(user.getPassword().getBytes(StandardCharsets.UTF_8));
             return HexFormat.of().formatHex(digest, 0, 8);
         } catch (NoSuchAlgorithmException e) {
             throw new IllegalStateException(e);
@@ -214,22 +265,12 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public AuthResponse login(LoginRequest request, HttpServletResponse response) {
         log.info("Processing login request for email: {}", request.getEmail());
-
-        User user = userRepository.findByEmail(request.getEmail().trim().toLowerCase())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email or password"));
-
-        if (!"ACTIVE".equals(user.getStatus())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Account has been disabled");
-        }
-
-        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email or password");
-        }
-
-        authCookieHelper.attachAuthCookies(response, user);
-        String accessToken = jwtService.generateAccessToken(user);
-
-        return AuthResponse.from(accessToken, jwtProperties.accessTokenExpMinutes() * 60, user);
+        AuthGatewayRequest gatewayRequest = AuthGatewayRequest.builder()
+                .provider(AuthProviderType.LOCAL)
+                .email(request.getEmail())
+                .password(request.getPassword())
+                .build();
+        return authenticate(gatewayRequest, response);
     }
 
     @Override
@@ -252,7 +293,7 @@ public class AuthServiceImpl implements AuthService {
             }
 
             String email = claims.getSubject();
-            User user = userRepository.findByEmailAndStatus(email, "ACTIVE")
+            User user = userRepository.findByEmailAndStatus(email, UserStatus.ACTIVE)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
             authCookieHelper.attachAccessCookie(response, user);
@@ -269,7 +310,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public UserResponse getCurrentUser(String email) {
-        User user = userRepository.findByEmailAndStatus(email, "ACTIVE")
+        User user = userRepository.findByEmailAndStatus(email, UserStatus.ACTIVE)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
         return UserResponse.fromUserEntity(user);
     }

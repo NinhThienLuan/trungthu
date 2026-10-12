@@ -45,6 +45,24 @@ public class AuthController {
                         .build());
     }
 
+    @PostMapping("/authenticate/{provider}")
+    @Operation(summary = "Unified authentication gateway endpoint (local, google, etc.)")
+    public ResponseEntity<ApiResponseDTO<AuthResponse>> authenticate(
+            @PathVariable("provider") String providerStr,
+            @RequestBody fpt.sba.trungthu.dto.request.AuthGatewayRequest request,
+            HttpServletResponse response) {
+        fpt.sba.trungthu.entity.enumeration.AuthProviderType provider;
+        try {
+            provider = fpt.sba.trungthu.entity.enumeration.AuthProviderType.valueOf(providerStr.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid auth provider: " + providerStr);
+        }
+
+        request.setProvider(provider);
+        AuthResponse authResponse = authService.authenticate(request, response);
+        return ResponseEntity.ok(ApiResponseDTO.success("Login successful", authResponse));
+    }
+
     @PostMapping("/login")
     @Operation(summary = "Login with Email & Password")
     public ResponseEntity<ApiResponseDTO<AuthResponse>> login(
@@ -59,7 +77,12 @@ public class AuthController {
     public ResponseEntity<ApiResponseDTO<AuthResponse>> loginWithGoogle(
             @Valid @RequestBody GoogleLoginRequest request,
             HttpServletResponse response) {
-        AuthResponse authResponse = authService.loginWithGoogleIdToken(request.getIdToken(), response);
+        AuthResponse authResponse = authService.authenticate(
+                fpt.sba.trungthu.dto.request.AuthGatewayRequest.builder()
+                        .provider(fpt.sba.trungthu.entity.enumeration.AuthProviderType.GOOGLE)
+                        .idToken(request.getIdToken())
+                        .build(),
+                response);
         return ResponseEntity.ok(ApiResponseDTO.success("Login successful", authResponse));
     }
 

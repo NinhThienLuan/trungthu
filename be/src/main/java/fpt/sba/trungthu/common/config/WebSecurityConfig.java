@@ -53,32 +53,16 @@ public class WebSecurityConfig {
             "/api/auth/register",
             "/api/auth/refresh",
             "/api/auth/google",
+            "/api/auth/authenticate/**",
             "/api/auth/forgot-password",
             "/api/auth/reset-password",
+            "/api/products/**",
             "/api/public/**"
     };
 
-    @Value("${app.oauth2.success-redirect}")
-    private String oauth2SuccessRedirect;
-
-    // AuthService injected here (not via constructor) to avoid a cycle: it depends on the PasswordEncoder bean below
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, AuthService authService) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // Google login: browser opens /oauth2/authorization/google, comes back with our JWT cookies set
-                .oauth2Login(oauth -> oauth.successHandler((request, response, authentication) -> {
-                    OidcUser googleUser = (OidcUser) authentication.getPrincipal();
-                    if (!Boolean.TRUE.equals(googleUser.getEmailVerified())) {
-                        response.sendError(HttpStatus.FORBIDDEN.value(), "Google email is not verified");
-                        return;
-                    }
-                    try {
-                        authService.loginWithGoogle(googleUser.getEmail(), googleUser.getFullName(), response);
-                        response.sendRedirect(oauth2SuccessRedirect);
-                    } catch (ResponseStatusException e) {
-                        response.sendError(e.getStatusCode().value(), e.getReason());
-                    }
-                }))
                 .cors(Customizer.withDefaults())
                 .csrf(csrf -> csrf.disable())
                 .headers(headers -> headers.frameOptions(frameOptions -> frameOptions.sameOrigin())) // For H2 console

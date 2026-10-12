@@ -1,6 +1,7 @@
 package fpt.sba.trungthu.common.security;
 
 import fpt.sba.trungthu.entity.User;
+import fpt.sba.trungthu.entity.enumeration.UserStatus;
 import fpt.sba.trungthu.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -19,13 +20,13 @@ public class CustomUserDetailService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        User user = userRepository.findByEmailAndStatus(email, "ACTIVE")
+        User user = userRepository.findByEmailAndStatus(email, UserStatus.ACTIVE)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
 
         return new org.springframework.security.core.userdetails.User(
                 user.getEmail(),
                 user.getPassword(),
-                "ACTIVE".equals(user.getStatus()),
+                UserStatus.ACTIVE == user.getStatus(),   // enabled
                 true,
                 true,
                 true,

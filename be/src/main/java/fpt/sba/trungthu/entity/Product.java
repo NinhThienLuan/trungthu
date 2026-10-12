@@ -9,10 +9,9 @@ import org.hibernate.annotations.Check;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 @Entity
-@Table(name = "PRODUCT", indexes = {@Index(name = "IX_PRODUCT_provider_id", columnList = "provider_id")})
+@Table(name = "PRODUCT", indexes = { @Index(name = "IX_PRODUCT_provider_id", columnList = "provider_id") })
 @Check(name = "CK_PRODUCT_shelf_life_days", constraints = "shelf_life_days IS NULL OR shelf_life_days > 0")
 @Getter
 @Setter
@@ -20,10 +19,6 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Product extends BaseEntity {
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "product_id", nullable = false, updatable = false)
-    private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "provider_id", nullable = false, foreignKey = @ForeignKey(name = "FK_PRODUCT_provider_id"))
@@ -43,8 +38,9 @@ public class Product extends BaseEntity {
     @Column(name = "shelf_life_days")
     private Integer shelfLifeDays;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 30)
-    private String status;
+    private fpt.sba.trungthu.entity.enumeration.ProductStatus status;
 
     @Builder.Default
     @OneToMany(mappedBy = "product")

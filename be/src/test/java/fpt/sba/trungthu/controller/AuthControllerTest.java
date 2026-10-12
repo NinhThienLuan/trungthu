@@ -58,6 +58,9 @@ class AuthControllerTest {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private fpt.sba.trungthu.repository.UserSocialAccountRepository userSocialAccountRepository;
+
     private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
     @Test
@@ -147,26 +150,35 @@ class AuthControllerTest {
     }
 
     @Test
-    void testGoogleLoginRedirectsToGoogle() throws Exception {
-        mockMvc.perform(get("/oauth2/authorization/google"))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(header().string("Location", startsWith("https://accounts.google.com/o/oauth2/v2/auth")));
-    }
-
-    @Test
     void testGoogleLoginCreatesCustomerOnceAndSetsCookies() throws Exception {
-        MockHttpServletResponse first = new MockHttpServletResponse();
-        authService.loginWithGoogle("New.Google@Gmail.com", "Google User", first);
-        assertThat(first.getHeaders("Set-Cookie")).anyMatch(c -> c.startsWith(AuthCookieHelper.ACCESS_COOKIE + "="));
+        when(googleIdTokenVerifier.verify("token1")).thenReturn(googleJwt("new.google@gmail.com", true));
+        when(googleIdTokenVerifier.verify("token2")).thenReturn(googleJwt("new.google@gmail.com", true));
+        when(googleIdTokenVerifier.verify("seller_token")).thenReturn(googleJwt("seller@kinhdo.vn", true));
+
+        // First login: auto-provisions CUSTOMER and creates UserSocialAccount
+        mockMvc.perform(post("/api/auth/authenticate/google")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"idToken\":\"token1\"}"))
+                .andExpect(status().isOk())
+                .andExpect(cookie().exists(AuthCookieHelper.ACCESS_COOKIE));
 
         User created = userRepository.findByEmail("new.google@gmail.com").orElseThrow();
         assertThat(created.getRole()).isEqualTo(UserRole.CUSTOMER);
-        assertThat(created.getFullName()).isEqualTo("Google User");
+        assertThat(created.getFullName()).isEqualTo("Api User");
+        assertThat(userSocialAccountRepository.existsByProviderAndProviderUserId(fpt.sba.trungthu.entity.enumeration.AuthProviderType.GOOGLE, "google-sub-12345")).isTrue();
 
-        // Second login reuses the account; existing seeded users can also sign in with Google
-        authService.loginWithGoogle("new.google@gmail.com", "Google User", new MockHttpServletResponse());
+        // Second login reuses the account and social identity
+        mockMvc.perform(post("/api/auth/authenticate/google")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"idToken\":\"token2\"}"))
+                .andExpect(status().isOk());
         assertThat(userRepository.count()).isEqualTo(4); // 3 seeded + 1
-        authService.loginWithGoogle("seller@kinhdo.vn", "Seller", new MockHttpServletResponse());
+
+        // Seeded user can also link Google account
+        mockMvc.perform(post("/api/auth/authenticate/google")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"idToken\":\"seller_token\"}"))
+                .andExpect(status().isOk());
         assertThat(userRepository.findByEmail("seller@kinhdo.vn").orElseThrow().getRole()).isEqualTo(UserRole.PROVIDER);
     }
 
@@ -194,6 +206,7 @@ class AuthControllerTest {
 
     private Jwt googleJwt(String email, boolean emailVerified) {
         return Jwt.withTokenValue("t").header("alg", "RS256")
+                .subject("google-sub-12345")
                 .claim("email", email).claim("email_verified", emailVerified).claim("name", "Api User")
                 .build();
     }

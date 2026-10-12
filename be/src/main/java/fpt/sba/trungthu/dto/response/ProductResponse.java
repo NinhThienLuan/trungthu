@@ -21,7 +21,7 @@ public class ProductResponse {
     private String description;
     private ProductType productType;
     private Integer shelfLifeDays;
-    private String status;
+    private fpt.sba.trungthu.entity.enumeration.ProductStatus status;
     private LocalDateTime createdAt;
     private List<ProductVariantResponse> variants;
 
@@ -40,7 +40,7 @@ public class ProductResponse {
                 .status(product.getStatus())
                 .createdAt(product.getCreatedAt())
                 .variants(product.getVariants().stream()
-                        .filter(v -> !activeVariantsOnly || "ACTIVE".equals(v.getStatus()))
+                        .filter(v -> !activeVariantsOnly || fpt.sba.trungthu.entity.enumeration.ProductStatus.ACTIVE == v.getStatus())
                         .map(ProductVariantResponse::fromEntity)
                         .toList())
                 .build();
