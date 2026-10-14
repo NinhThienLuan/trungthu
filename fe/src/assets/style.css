@@ -1,0 +1,348 @@
+/*
+ * Design system duy nhất của FE (Tailwind v4, CSS-first).
+ * Mọi màu / font / cỡ chữ / bo góc / đổ bóng chỉ được khai báo ở đây.
+ * Bảng màu mặc định của Tailwind đã bị tắt (--color-*: initial) để không ai
+ * dùng nhầm `bg-blue-500`, `text-gray-600`... ngoài bộ màu thương hiệu.
+ */
+@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap");
+@import "tailwindcss";
+
+@theme {
+  /* ---------- Màu ---------- */
+  --color-*: initial;
+  --color-transparent: transparent;
+  --color-current: currentColor;
+  --color-white: #ffffff;
+
+  --color-navy: #092441;        /* thương hiệu chính: header, nút chính, tiêu đề */
+  --color-navy-deep: #051322;   /* hover của nút chính, footer */
+  --color-gold: #d6a75c;        /* điểm nhấn trên nền tối, viền, icon */
+  --color-gold-ink: #7c5713;    /* chữ vàng trên nền sáng (đủ tương phản) */
+  --color-champagne: #f3e8d2;   /* nền nhạt cho badge, ô chọn (= champagne-light) */
+  --color-ivory: #fcf9f4;       /* nền trang (= surface của Stitch) */
+  --color-jade: #142818;        /* chỉ dùng cho khu vực B2B */
+
+  --color-ink: #1c1c19;         /* chữ chính */
+  --color-muted: #43474d;       /* chữ phụ (= on-surface-variant) */
+  --color-line: #e5e2dd;        /* viền mảnh (= surface-variant) */
+
+  --color-success: #2f6b3a;
+  --color-success-soft: #e3efe3;
+  --color-danger: #ba1a1a;
+  --color-danger-soft: #ffdad6;
+
+  /* ---------- Font ---------- */
+  --font-serif: "Playfair Display", Georgia, serif;
+  --font-sans: "Plus Jakarta Sans", system-ui, sans-serif;
+
+  /* ---------- Cỡ chữ: 7 bậc, khớp thang chữ của Stitch ---------- */
+  --text-display: 3rem;         /* 48px = headline-xl */
+  --text-display--line-height: 1.2;
+  --text-h1: 2.25rem;           /* 36px = headline-lg */
+  --text-h1--line-height: 1.28;
+  --text-h2: 1.5rem;            /* 24px = headline-md */
+  --text-h2--line-height: 1.3;
+  --text-h3: 1.25rem;           /* 20px = headline-sm */
+  --text-h3--line-height: 1.4;
+  --text-body: 0.875rem;        /* 14px = body-md */
+  --text-body--line-height: 1.57;
+  --text-small: 0.75rem;        /* 12px = body-sm */
+  --text-small--line-height: 1.5;
+  --text-label: 0.6875rem;      /* 11px - nhãn in hoa */
+  --text-label--line-height: 1.4;
+  --text-label--letter-spacing: 0.12em;
+
+  /* ---------- Hình khối ---------- */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --shadow-card: 0 1px 2px rgb(9 36 65 / 0.04), 0 4px 16px rgb(9 36 65 / 0.06);
+  --shadow-card-hover: 0 8px 24px rgb(214 167 92 / 0.18);
+
+  --container-page: 80rem;      /* 1280px */
+
+  /* =====================================================================
+   * Token của bản thiết kế Stitch (artisanal_confectionery_luxury/DESIGN.md).
+   * Các trang chuyển từ Stitch dùng tên này; cùng bảng màu với token phía trên.
+   * ===================================================================== */
+  --color-primary: #000e21;
+  --color-primary-container: #092441;
+  --color-on-primary: #ffffff;
+  --color-on-primary-container: #758cae;
+  --color-primary-fixed: #d4e3ff;
+  --color-primary-fixed-dim: #b1c8ed;
+  --color-on-primary-fixed: #001c39;
+  --color-on-primary-fixed-variant: #314867;
+  --color-inverse-primary: #b1c8ed;
+  --color-secondary: #7c5713;
+  --color-secondary-container: #ffcc7d;
+  --color-on-secondary: #ffffff;
+  --color-on-secondary-container: #795510;
+  --color-secondary-fixed: #ffdeae;
+  --color-secondary-fixed-dim: #f0be71;
+  --color-on-secondary-fixed: #281800;
+  --color-on-secondary-fixed-variant: #604100;
+  --color-tertiary: #011205;
+  --color-tertiary-container: #142818;
+  --color-on-tertiary: #ffffff;
+  --color-on-tertiary-container: #7a917b;
+  --color-tertiary-fixed: #d0e9d0;
+  --color-tertiary-fixed-dim: #b5cdb5;
+  --color-on-tertiary-fixed: #0c2011;
+  --color-on-tertiary-fixed-variant: #374c3a;
+  --color-error: #ba1a1a;
+  --color-on-error: #ffffff;
+  --color-error-container: #ffdad6;
+  --color-on-error-container: #93000a;
+  --color-background: #fcf9f4;
+  --color-on-background: #1c1c19;
+  --color-surface: #fcf9f4;
+  --color-surface-bright: #fcf9f4;
+  --color-surface-dim: #dcdad5;
+  --color-surface-tint: #496080;
+  --color-surface-variant: #e5e2dd;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f6f3ee;
+  --color-surface-container: #f0ede9;
+  --color-surface-container-high: #ebe8e3;
+  --color-surface-container-highest: #e5e2dd;
+  --color-on-surface: #1c1c19;
+  --color-on-surface-variant: #43474d;
+  --color-inverse-surface: #31302d;
+  --color-inverse-on-surface: #f3f0eb;
+  --color-outline: #74777e;
+  --color-outline-variant: #c4c6ce;
+  --color-champagne-light: #f3e8d2;
+  --color-gold-burnished: #b88636;
+  --color-cream-base: #fcfaf6;
+  --color-ink-dark: #051322;
+  --color-border-gold-subtle: rgb(214 167 92 / 0.28);
+  --color-emerald-shadow: #0f1e14;
+
+  --font-headline-xl: "Playfair Display", Georgia, serif;
+  --font-headline-xl-mobile: "Playfair Display", Georgia, serif;
+  --font-headline-lg: "Playfair Display", Georgia, serif;
+  --font-headline-lg-mobile: "Playfair Display", Georgia, serif;
+  --font-headline-md: "Playfair Display", Georgia, serif;
+  --font-headline-sm: "Playfair Display", Georgia, serif;
+  --font-imperial-title: "Playfair Display", Georgia, serif;
+  --font-body: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-body-lg: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-body-md: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-body-sm: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-label-lg: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-label-md: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-label-sm: "Plus Jakarta Sans", system-ui, sans-serif;
+
+  --text-headline-xl: 48px;
+  --text-headline-xl--line-height: 58px;
+  --text-headline-xl--letter-spacing: -0.01em;
+  --text-headline-xl--font-weight: 600;
+  --text-headline-xl-mobile: 34px;
+  --text-headline-xl-mobile--line-height: 42px;
+  --text-headline-xl-mobile--letter-spacing: -0.01em;
+  --text-headline-xl-mobile--font-weight: 600;
+  --text-headline-lg: 36px;
+  --text-headline-lg--line-height: 46px;
+  --text-headline-lg--font-weight: 500;
+  --text-headline-lg-mobile: 26px;
+  --text-headline-lg-mobile--line-height: 34px;
+  --text-headline-lg-mobile--font-weight: 500;
+  --text-headline-md: 24px;
+  --text-headline-md--line-height: 32px;
+  --text-headline-md--letter-spacing: 0.01em;
+  --text-headline-md--font-weight: 500;
+  --text-headline-sm: 20px;
+  --text-headline-sm--line-height: 28px;
+  --text-headline-sm--letter-spacing: 0.01em;
+  --text-headline-sm--font-weight: 600;
+  --text-body-lg: 16px;
+  --text-body-lg--line-height: 26px;
+  --text-body-lg--letter-spacing: 0.01em;
+  --text-body-md: 14px;
+  --text-body-md--line-height: 22px;
+  --text-body-md--letter-spacing: 0.01em;
+  --text-body-sm: 12px;
+  --text-body-sm--line-height: 18px;
+  --text-body-sm--letter-spacing: 0.02em;
+  --text-label-lg: 13px;
+  --text-label-lg--line-height: 18px;
+  --text-label-lg--letter-spacing: 0.12em;
+  --text-label-lg--font-weight: 600;
+  --text-label-md: 11px;
+  --text-label-md--line-height: 16px;
+  --text-label-md--letter-spacing: 0.14em;
+  --text-label-md--font-weight: 600;
+  --text-label-sm: 10px;
+  --text-label-sm--line-height: 14px;
+  --text-label-sm--letter-spacing: 0.16em;
+  --text-label-sm--font-weight: 700;
+
+  --spacing-space-xs: 0.25rem;
+  --spacing-space-sm: 0.5rem;
+  --spacing-space-md: 1rem;
+  --spacing-space-lg: 1.5rem;
+  --spacing-space-xl: 2.5rem;
+  --spacing-gutter: 1.5rem;
+  --spacing-gutter-mobile: 1rem;
+  --spacing-margin: 3rem;
+  --spacing-margin-mobile: 1.25rem;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-ivory font-sans text-body text-ink antialiased;
+  }
+  /* Trang chuyển từ Stitch (.stitch) tự khai báo font/màu tiêu đề -> không áp rule này */
+  h1:not(.stitch *), h2:not(.stitch *), h3:not(.stitch *) {
+    @apply font-serif text-navy;
+    text-wrap: balance;
+  }
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-gold;
+  }
+  ::selection {
+    @apply bg-champagne text-navy;
+  }
+}
+
+@layer components {
+  /* Khung trang: max 1280px, lề 16px mobile / 32px desktop */
+  .page {
+    @apply mx-auto w-full max-w-(--container-page) px-4 md:px-8;
+  }
+  /* Khoảng cách dọc giữa các khu vực lớn */
+  .section {
+    @apply py-12 md:py-20;
+  }
+
+  .eyebrow {
+    @apply text-label font-semibold uppercase text-gold-ink;
+  }
+
+  .card {
+    @apply rounded-md border border-line bg-white shadow-card;
+  }
+
+  /* Nút: 3 kiểu, 2 cỡ */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-sm border px-5 h-11
+      text-small font-semibold uppercase tracking-wider transition-colors
+      disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-sm {
+    @apply h-9 px-3;
+  }
+  .btn-primary {
+    @apply border-navy bg-navy text-gold hover:bg-navy-deep;
+  }
+  .btn-outline {
+    @apply border-gold bg-transparent text-navy hover:bg-champagne/50;
+  }
+  .btn-ghost {
+    @apply border-transparent bg-transparent text-navy hover:bg-champagne/50;
+  }
+
+  /* Form */
+  .field-label {
+    @apply mb-1.5 block text-small font-semibold text-ink;
+  }
+  .input {
+    @apply h-11 w-full rounded-sm border border-line bg-ivory px-3 text-body text-ink
+      placeholder:text-muted/70 focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold;
+  }
+  textarea.input {
+    @apply h-auto py-2.5;
+  }
+  .field-error {
+    @apply mt-1 text-small text-danger;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full border border-line bg-ivory px-3 py-1
+      text-label font-semibold uppercase text-navy;
+  }
+  .chip-active {
+    @apply border-navy bg-navy text-gold;
+  }
+
+  /* Icon (thay Material Symbols): mặc định 24px như Material, class text-* ghi đè được */
+  .icon {
+    display: inline-block;
+    font-size: 24px;
+    width: 1em;
+    height: 1em;
+    flex-shrink: 0;
+    vertical-align: -0.125em;
+  }
+
+  /* Class riêng của trang chủ Stitch */
+  .gold-border-subtle {
+    border: 1px solid rgb(212 175 55 / 0.28);
+  }
+  .gold-gradient-text {
+    background: linear-gradient(135deg, #fff0cc 0%, #d4af37 50%, #b88636 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .badge-blur-mordan {
+    background: rgb(9 36 65 / 0.75);
+    backdrop-filter: blur(10px);
+  }
+  .sheen-gold-btn {
+    background: linear-gradient(135deg, #f0c45b 0%, #d4af37 50%, #b88636 100%);
+    transition: all 0.3s ease;
+  }
+  .sheen-gold-btn:hover {
+    box-shadow: 0 4px 20px rgb(212 175 55 / 0.35);
+    filter: brightness(1.05);
+  }
+
+  /* Nền hero dạng video lặp: 4 ảnh x 6s = vòng 24s; mỗi ảnh hiện dần, zoom/lia chậm rồi mờ đi */
+  .hero-motion-slide {
+    opacity: 0;
+    animation: hero-kenburns 24s linear infinite backwards;
+    will-change: opacity, transform;
+  }
+}
+
+@keyframes hero-kenburns {
+  0% {
+    opacity: 0;
+    transform: scale(1.05) translate3d(0, 0, 0);
+  }
+  5% {
+    opacity: 1;
+  }
+  25% {
+    opacity: 1;
+  }
+  31% {
+    opacity: 0;
+    transform: scale(1.16) translate3d(-2%, -1%, 0);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.16) translate3d(-2%, -1%, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-motion-slide {
+    animation: none;
+  }
+  .hero-motion-slide:first-child {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+@media print {
+  header, footer, .no-print {
+    display: none !important;
+  }
+}
