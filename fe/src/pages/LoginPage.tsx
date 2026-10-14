@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { errorMessage } from '../apis/http'
+import { USE_MOCK } from '../apis/mock'
 import { useAuthStore } from '../stores/authStore'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { fieldErrors, loginSchema } from '../schemas'
@@ -47,6 +48,11 @@ export function LoginPage() {
       {params.get('registered') && (
         <div className="mt-4">
           <Notice tone="success">Đăng ký thành công. Mật khẩu đã được gửi tới email của bạn.</Notice>
+        </div>
+      )}
+      {USE_MOCK.auth && (
+        <div className="mt-4">
+          <Notice>Chế độ demo: đăng nhập bằng <strong>demo@buyer.vn</strong> / <strong>12345678</strong></Notice>
         </div>
       )}
       <form noValidate onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">

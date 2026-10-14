@@ -8,6 +8,7 @@ import { cn } from '../lib/format'
 
 const NAV = [
   { to: ROUTES.products, label: 'Bộ sưu tập' },
+  { to: ROUTES.boxBuilder, label: 'Tự phối hộp quà' },
   { to: ROUTES.rfq, label: 'Đặt hàng doanh nghiệp' },
   { to: ROUTES.policy, label: 'Chính sách' },
 ]

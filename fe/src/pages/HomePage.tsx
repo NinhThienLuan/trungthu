@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { ArrowRight, CalendarCheck, QrCode, Store } from 'lucide-react'
 import { productApi } from '../apis/products'
+import { HERO_IMAGE } from '../apis/mockData'
 import { useApi } from '../hooks/useApi'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { MIN_LEAD_DAYS, ROUTES, RFQ_MIN_QUANTITY } from '../constants'
@@ -20,7 +21,8 @@ export function HomePage() {
   return (
     <>
       <section className="bg-navy">
-        <div className="page section">
+        <div className="page section grid items-center gap-10 md:grid-cols-[1.1fr_1fr]">
+          <div>
           <p className="eyebrow text-gold">Mùa trăng 2026</p>
           <h1 className="mt-4 max-w-2xl text-display text-white">
             Bánh Trung Thu thủ công, <span className="text-gold">nướng mới theo ngày bạn chọn</span>
@@ -36,6 +38,12 @@ export function HomePage() {
               Đặt hàng doanh nghiệp
             </Link>
           </div>
+          </div>
+          <img
+            src={HERO_IMAGE}
+            alt="Bánh nướng trứng muối cắt đôi, nhân lava chảy"
+            className="hidden aspect-[4/3] w-full rounded-md border border-gold/30 object-cover md:block"
+          />
         </div>
       </section>
 

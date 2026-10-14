@@ -14,7 +14,7 @@ export function ProductCard({ product }: { product: Product }) {
       to={ROUTES.product(product.id)}
       className="card group flex flex-col p-3 transition-shadow hover:shadow-card-hover"
     >
-      <ProductThumb type={product.productType} name={product.name} className="transition-transform group-hover:scale-[1.02]" />
+      <ProductThumb type={product.productType} name={product.name} src={product.imageUrl} className="transition-transform group-hover:scale-[1.02]" />
       <div className="flex flex-1 flex-col px-1 pt-4">
         <p className="eyebrow">{PRODUCT_TYPE_LABEL[product.productType]}</p>
         <h3 className="mt-1 line-clamp-2 text-h3">{product.name}</h3>

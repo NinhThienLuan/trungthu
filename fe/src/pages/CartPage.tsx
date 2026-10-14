@@ -42,21 +42,29 @@ export function CartPage() {
 
               <ul className="divide-y divide-line">
                 {group.items.map((item) => (
-                  <li key={item.variantId} className="flex flex-wrap items-center gap-4 px-5 py-4">
+                  <li key={item.lineId} className="flex flex-wrap items-center gap-4 px-5 py-4">
+                    {item.imageUrl && <img src={item.imageUrl} alt="" className="size-14 rounded-sm object-cover" />}
                     <div className="min-w-0 flex-1">
                       <Link to={ROUTES.product(item.productId)} className="font-semibold text-navy hover:underline">
                         {item.productName}
                       </Link>
                       <p className="text-small text-muted">
+                        {item.kind === 'box' && <span className="font-semibold text-gold-ink">Hộp tự phối · </span>}
                         {item.variantName} · {formatVnd(item.unitPrice)}
                       </p>
+                      {item.slots && (
+                        <p className="mt-1 text-small text-muted">
+                          Gồm: {item.slots.map((s) => `${s.productName} ${s.variantName}`).join(', ')}
+                        </p>
+                      )}
+                      {item.note && <p className="mt-1 text-small italic text-muted">Lời chúc: “{item.note}”</p>}
                     </div>
-                    <QuantityStepper size="sm" value={item.quantity} max={item.stock} onChange={(q) => setQuantity(item.variantId, q)} />
+                    <QuantityStepper size="sm" value={item.quantity} max={item.stock} onChange={(q) => setQuantity(item.lineId, q)} />
                     <p className="w-28 text-right font-semibold text-navy">{formatVnd(item.unitPrice * item.quantity)}</p>
                     <button
                       type="button"
                       className="btn btn-ghost btn-sm"
-                      onClick={() => remove(item.variantId)}
+                      onClick={() => remove(item.lineId)}
                       aria-label={`Xoá ${item.productName} ${item.variantName}`}
                     >
                       <Trash2 className="size-4" />

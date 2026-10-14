@@ -8,11 +8,20 @@ export interface CheckoutLine {
   quantity: number
 }
 
+/** Hộp tự phối -> BE lưu vào custom_boxes + custom_box_items (mỗi phần tử cakeVariantIds là 1 ô) */
+export interface CheckoutBox {
+  boxVariantId: string
+  quantity: number
+  cakeVariantIds: string[]
+  note?: string
+}
+
 /** Mỗi Provider một nhóm: một ngày nhận, một đơn con */
 export interface CheckoutGroup {
   providerId: string
   deliveryDate: string // yyyy-MM-dd
   items: CheckoutLine[]
+  boxes: CheckoutBox[]
 }
 
 export interface VatInfo {
@@ -37,6 +46,8 @@ export interface OrderLine {
   variantName: string
   unitPrice: number
   quantity: number
+  /** Tên các bánh trong hộp tự phối (theo thứ tự ô) */
+  boxContents?: string[]
 }
 
 export interface Order {

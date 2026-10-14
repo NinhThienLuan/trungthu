@@ -10,6 +10,7 @@ import { CheckoutPage } from '../pages/CheckoutPage'
 import { PaymentPage } from '../pages/PaymentPage'
 import { MyOrdersPage } from '../pages/MyOrdersPage'
 import { RfqPage } from '../pages/RfqPage'
+import { BoxBuilderPage } from '../pages/BoxBuilderPage'
 import { PolicyPage } from '../pages/PolicyPage'
 import { LoginPage } from '../pages/LoginPage'
 import { RegisterPage } from '../pages/RegisterPage'
@@ -25,6 +26,7 @@ export const router = createBrowserRouter([
       { path: '/products/:id', element: <ProductDetailPage /> },
       { path: '/cart', element: <CartPage /> },
       { path: '/rfq', element: <RfqPage /> },
+      { path: '/box-builder', element: <BoxBuilderPage /> },
       { path: '/policy', element: <PolicyPage /> },
       {
         element: <ProtectedRoute />,

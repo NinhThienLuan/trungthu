@@ -18,6 +18,7 @@ export const ROUTES = {
   payment: '/payment',
   orders: '/orders',
   rfq: '/rfq',
+  boxBuilder: '/box-builder',
   policy: '/policy',
   login: '/login',
   register: '/register',

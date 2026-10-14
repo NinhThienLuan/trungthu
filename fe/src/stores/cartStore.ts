@@ -1,16 +1,33 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
-export interface CartItem {
+/** Một bánh đặt vào 1 ô của hộp tự phối */
+export interface BoxSlot {
   variantId: string
+  productName: string
+  variantName: string
+  unitPrice: number
+  imageUrl?: string | null
+}
+
+export interface CartItem {
+  /** Khoá dòng: bánh lẻ = variantId; hộp tự phối = id ngẫu nhiên (cùng 1 vỏ hộp có thể khác bánh bên trong) */
+  lineId: string
+  kind: 'single' | 'box'
+  variantId: string // bánh lẻ: variant đó; hộp: variant vỏ hộp
   productId: string
   providerId: string
   storeName: string
   productName: string
   variantName: string
+  /** Giá 1 đơn vị: bánh lẻ = giá variant; hộp = giá vỏ + tổng giá bánh trong hộp */
   unitPrice: number
   stock: number
   quantity: number
+  imageUrl?: string | null
+  /** Chỉ có ở hộp tự phối */
+  slots?: BoxSlot[]
+  note?: string
 }
 
 export interface CartGroup {
@@ -20,13 +37,16 @@ export interface CartGroup {
   subtotal: number
 }
 
+type NewItem = Omit<CartItem, 'quantity' | 'lineId' | 'kind'>
+
 interface CartState {
   items: CartItem[]
   /** Ngày nhận đã chọn cho từng Provider (yyyy-MM-dd) */
   deliveryDates: Record<string, string>
-  add: (item: Omit<CartItem, 'quantity'>, quantity: number) => void
-  setQuantity: (variantId: string, quantity: number) => void
-  remove: (variantId: string) => void
+  add: (item: NewItem, quantity: number) => void
+  addBox: (item: NewItem & { slots: BoxSlot[]; note?: string }, quantity: number) => void
+  setQuantity: (lineId: string, quantity: number) => void
+  remove: (lineId: string) => void
   setDeliveryDate: (providerId: string, date: string) => void
   clear: () => void
 }
@@ -41,25 +61,31 @@ export const useCartStore = create<CartState>()(
 
       add: (item, quantity) =>
         set((state) => {
-          const existing = state.items.find((i) => i.variantId === item.variantId)
+          const existing = state.items.find((i) => i.lineId === item.variantId)
           if (existing) {
             return {
               items: state.items.map((i) =>
-                i.variantId === item.variantId ? { ...i, quantity: clamp(i.quantity + quantity, item.stock) } : i,
+                i.lineId === item.variantId ? { ...i, quantity: clamp(i.quantity + quantity, item.stock) } : i,
               ),
             }
           }
-          return { items: [...state.items, { ...item, quantity: clamp(quantity, item.stock) }] }
+          const line: CartItem = { ...item, lineId: item.variantId, kind: 'single', quantity: clamp(quantity, item.stock) }
+          return { items: [...state.items, line] }
         }),
 
-      setQuantity: (variantId, quantity) =>
+      addBox: (item, quantity) =>
         set((state) => ({
-          items: state.items.map((i) => (i.variantId === variantId ? { ...i, quantity: clamp(quantity, i.stock) } : i)),
+          items: [...state.items, { ...item, lineId: crypto.randomUUID(), kind: 'box', quantity: clamp(quantity, item.stock) }],
         })),
 
-      remove: (variantId) =>
+      setQuantity: (lineId, quantity) =>
+        set((state) => ({
+          items: state.items.map((i) => (i.lineId === lineId ? { ...i, quantity: clamp(quantity, i.stock) } : i)),
+        })),
+
+      remove: (lineId) =>
         set((state) => {
-          const items = state.items.filter((i) => i.variantId !== variantId)
+          const items = state.items.filter((i) => i.lineId !== lineId)
           // Bỏ ngày nhận của shop không còn món nào
           const providers = new Set(items.map((i) => i.providerId))
           const deliveryDates = Object.fromEntries(
@@ -73,7 +99,18 @@ export const useCartStore = create<CartState>()(
 
       clear: () => set({ items: [], deliveryDates: {} }),
     }),
-    { name: 'cart' },
+    {
+      name: 'cart',
+      version: 1,
+      // Giỏ lưu từ bản cũ (chưa có lineId/kind) -> coi là bánh lẻ
+      migrate: (persisted) => {
+        const state = persisted as { items?: CartItem[]; deliveryDates?: Record<string, string> }
+        return {
+          ...state,
+          items: (state.items ?? []).map((i) => ({ ...i, lineId: i.lineId ?? i.variantId, kind: i.kind ?? 'single' })),
+        } as CartState
+      },
+    },
   ),
 )
 

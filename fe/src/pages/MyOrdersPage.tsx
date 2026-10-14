@@ -45,10 +45,11 @@ export function MyOrdersPage() {
                 <span className={cn('chip', STATUS_STYLE[order.status])}>{ORDER_STATUS_LABEL[order.status]}</span>
               </div>
               <ul className="mt-4 flex flex-col gap-1 border-t border-line pt-4 text-small">
-                {order.lines.map((line) => (
-                  <li key={line.variantId} className="flex justify-between gap-4">
+                {order.lines.map((line, index) => (
+                  <li key={`${line.variantId}-${index}`} className="flex justify-between gap-4">
                     <span className="text-muted">
                       {line.productName} · {line.variantName} × {line.quantity}
+                      {line.boxContents && <span className="block pl-3">Gồm: {line.boxContents.join(', ')}</span>}
                     </span>
                     <span>{formatVnd(line.unitPrice * line.quantity)}</span>
                   </li>

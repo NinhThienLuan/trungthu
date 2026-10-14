@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { Check, ChevronLeft, ShoppingBag } from 'lucide-react'
+import { Check, ChevronLeft, Gift, ShoppingBag } from 'lucide-react'
 import { productApi } from '../apis/products'
 import { useApi } from '../hooks/useApi'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
@@ -49,6 +49,7 @@ export function ProductDetailPage() {
         variantName: variant.variantName,
         unitPrice: variant.price,
         stock: variant.stockQuantity,
+        imageUrl: product.imageUrl,
       },
       quantity,
     )
@@ -62,7 +63,7 @@ export function ProductDetailPage() {
       </Link>
 
       <div className="grid gap-8 md:grid-cols-2 md:gap-12">
-        <ProductThumb type={product.productType} name={product.name} className="card" />
+        <ProductThumb type={product.productType} name={product.name} src={product.imageUrl} className="card" />
 
         <div>
           <p className="eyebrow">{PRODUCT_TYPE_LABEL[product.productType]}</p>
@@ -111,6 +112,18 @@ export function ProductDetailPage() {
             </button>
           </div>
           {variant && inStock && <p className="mt-2 text-small text-muted">Còn {variant.stockQuantity} sản phẩm</p>}
+
+          {/* Lối vào trang tự phối hộp quà */}
+          {product.productType === 'BOX_SHELL' && variant && inStock && (
+            <Link to={`${ROUTES.boxBuilder}?box=${variant.id}`} className="btn btn-outline mt-4">
+              <Gift className="size-4" aria-hidden /> Tự chọn bánh vào hộp
+            </Link>
+          )}
+          {product.productType === 'LOOSE_CAKE' && variant && inStock && (
+            <Link to={`${ROUTES.boxBuilder}?provider=${product.providerId}&cake=${variant.id}`} className="btn btn-outline mt-4">
+              <Gift className="size-4" aria-hidden /> Đóng vào hộp quà
+            </Link>
+          )}
 
           {added && (
             <div className="mt-4">
