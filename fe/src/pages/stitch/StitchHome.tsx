@@ -106,11 +106,11 @@ export function StitchHome() {
             </div>{' '}
           </div>{' '}
         </section>{' '}
-        <section className="w-full bg-surface-container-low py-space-xl px-margin-mobile md:px-margin border-b border-surface-variant">
+        <section className="w-full bg-surface-container-low py-space-xl px-margin-mobile md:px-margin">
           {' '}
           <div className="w-full max-w-[1440px] mx-auto flex flex-col gap-space-xl">
             {' '}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-space-md border-b border-border-gold-subtle pb-4">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-space-md pb-4">
               {' '}
               <div className="flex flex-col gap-1">
                 {' '}
@@ -158,7 +158,7 @@ export function StitchHome() {
                     Vỏ nướng xốp mịn bọc lấy nhân trứng muối thơm lừng, chảy tan êm mượt khi dùng cùng trà Ô Long danh
                     tiếng.
                   </p>{' '}
-                  <div className="pt-2 flex items-center justify-between border-t border-surface-variant">
+                  <div className="pt-2 flex items-center justify-between">
                     {' '}
                     <span className="font-label-md text-label-md text-secondary font-bold">
                       Từ 165.000đ / bánh
@@ -193,7 +193,7 @@ export function StitchHome() {
                     Đượm vị lạp xưởng Mai Quế Lộ, mứt bí giòn rụm, hạt sen Tây Hồ kết hợp lá chanh thái chỉ thơm bùi
                     thuần túy.
                   </p>{' '}
-                  <div className="pt-2 flex items-center justify-between border-t border-surface-variant">
+                  <div className="pt-2 flex items-center justify-between">
                     {' '}
                     <span className="font-label-md text-label-md text-secondary font-bold">
                       Từ 140.000đ / bánh
@@ -228,7 +228,7 @@ export function StitchHome() {
                     Lớp nếp nương hoa bưởi tinh khôi ôm trọn hạt sen nhuyễn ngọt dịu, đánh thức phong vị đêm rằm tinh
                     tế.
                   </p>{' '}
-                  <div className="pt-2 flex items-center justify-between border-t border-surface-variant">
+                  <div className="pt-2 flex items-center justify-between">
                     {' '}
                     <span className="font-label-md text-label-md text-secondary font-bold">
                       Từ 130.000đ / bánh
@@ -263,7 +263,7 @@ export function StitchHome() {
                     Bổ dưỡng thượng phẩm kết hợp yến đảo Khánh Hòa tự nhiên, bảo chứng sức khỏe trường thọ cho đối tác
                     cao cấp.
                   </p>{' '}
-                  <div className="pt-2 flex items-center justify-between border-t border-surface-variant">
+                  <div className="pt-2 flex items-center justify-between">
                     {' '}
                     <span className="font-label-md text-label-md text-secondary font-bold">
                       Từ 280.000đ / bánh
@@ -348,13 +348,13 @@ export function StitchHome() {
           </div>{' '}
         </section>{' '}
         <section
-          className="w-full bg-surface py-space-xl px-margin-mobile md:px-margin border-b border-surface-variant"
+          className="w-full bg-surface py-space-xl px-margin-mobile md:px-margin"
           id="artisan-guild"
         >
           {' '}
           <div className="w-full max-w-[1440px] mx-auto flex flex-col gap-space-xl">
             {' '}
-            <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-space-md border-b border-border-gold-subtle pb-4">
+            <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-space-md pb-4">
               {' '}
               <div className="flex flex-col gap-1 max-w-xl">
                 {' '}
@@ -422,7 +422,7 @@ export function StitchHome() {
                     Lừng danh bánh nướng lá chanh thập cẩm xá xíu truyền thống đất Cảng, vỏ mỏng vàng ruộm.
                   </p>{' '}
                 </div>{' '}
-                <div className="pt-space-md flex flex-col gap-2 border-t border-surface-variant mt-2">
+                <div className="pt-space-md flex flex-col gap-2 mt-2">
                   {' '}
                   <div className="flex items-baseline justify-between">
                     {' '}
@@ -471,7 +471,7 @@ export function StitchHome() {
                     Biểu tượng bánh trung thu thủ đô, hương hoa bưởi thanh khiết và vị mứt sen Tây Hồ khó quên.
                   </p>{' '}
                 </div>{' '}
-                <div className="pt-space-md flex flex-col gap-2 border-t border-surface-variant mt-2">
+                <div className="pt-space-md flex flex-col gap-2 mt-2">
                   {' '}
                   <div className="flex items-baseline justify-between">
                     {' '}
@@ -520,7 +520,7 @@ export function StitchHome() {
                     Thương hiệu nức tiếng phương Nam với dòng bánh Vi Cá, Gà Quay Jambon 2 trứng đậm đà.
                   </p>{' '}
                 </div>{' '}
-                <div className="pt-space-md flex flex-col gap-2 border-t border-surface-variant mt-2">
+                <div className="pt-space-md flex flex-col gap-2 mt-2">
                   {' '}
                   <div className="flex items-baseline justify-between">
                     {' '}
@@ -569,7 +569,7 @@ export function StitchHome() {
                     Bí quyết nướng bánh thủ công mộc mạc thơm dẻo, lưu giữ ký ức rằm Trung Thu Hà Thành xưa.
                   </p>{' '}
                 </div>{' '}
-                <div className="pt-space-md flex flex-col gap-2 border-t border-surface-variant mt-2">
+                <div className="pt-space-md flex flex-col gap-2 mt-2">
                   {' '}
                   <div className="flex items-baseline justify-between">
                     {' '}
@@ -677,7 +677,7 @@ export function StitchHome() {
             </div>{' '}
             <div className="lg:col-span-5 bg-surface-container-lowest border border-border-gold-subtle p-space-xl rounded-[0.125rem] shadow-xl flex flex-col gap-space-md">
               {' '}
-              <div className="flex flex-col gap-1 border-b border-surface-variant pb-3">
+              <div className="flex flex-col gap-1 pb-3">
                 {' '}
                 <span className="font-label-sm text-label-sm text-secondary uppercase font-bold tracking-wider">
                   Cổng Yêu Cầu Doanh Nghiệp VIP

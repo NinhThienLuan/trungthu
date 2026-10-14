@@ -580,7 +580,7 @@ export function StitchB2bPortal() {
                   </span>{' '}
                   <h3 className="font-headline-md text-headline-md text-champagne-light">Bản Tính Khái Toán Nhanh</h3>{' '}
                 </div>{' '}
-                <div className="space-y-space-sm pt-space-xs font-body-md text-body-md divide-y divide-surface-container-lowest/10">
+                <div className="space-y-space-sm pt-space-xs font-body-md text-body-md">
                   {' '}
                   <div className="flex justify-between items-center py-2 text-on-primary-container">
                     {' '}
@@ -716,7 +716,7 @@ export function StitchB2bPortal() {
             </div>{' '}
             <div className="lg:col-span-7 bg-surface-container-lowest p-space-lg lg:p-space-xl rounded-[0.125rem] shadow-md space-y-space-lg">
               {' '}
-              <div className="border-b border-surface-container-highest pb-space-sm">
+              <div className="pb-space-sm">
                 {' '}
                 <h3 className="font-headline-md text-headline-md text-primary">Thông Tin Đề Nghị Báo Giá (RFQ)</h3>{' '}
                 <p className="font-body-sm text-body-sm text-on-surface-variant">
@@ -962,7 +962,7 @@ export function StitchB2bPortal() {
                     }
                   </p>{' '}
                 </div>{' '}
-                <div className="pt-space-sm border-t border-surface-container-highest flex items-center gap-space-sm">
+                <div className="pt-space-sm flex items-center gap-space-sm">
                   {' '}
                   <div className="w-10 h-10 rounded-[0.75rem] bg-champagne-light flex items-center justify-center text-primary font-bold">
                     {' VC '}
@@ -994,7 +994,7 @@ export function StitchB2bPortal() {
                     }
                   </p>{' '}
                 </div>{' '}
-                <div className="pt-space-sm border-t border-surface-container-highest flex items-center gap-space-sm">
+                <div className="pt-space-sm flex items-center gap-space-sm">
                   {' '}
                   <div className="w-10 h-10 rounded-[0.75rem] bg-champagne-light flex items-center justify-center text-primary font-bold">
                     {' TT '}
@@ -1026,7 +1026,7 @@ export function StitchB2bPortal() {
                     }
                   </p>{' '}
                 </div>{' '}
-                <div className="pt-space-sm border-t border-surface-container-highest flex items-center gap-space-sm">
+                <div className="pt-space-sm flex items-center gap-space-sm">
                   {' '}
                   <div className="w-10 h-10 rounded-[0.75rem] bg-champagne-light flex items-center justify-center text-primary font-bold">
                     {' LH '}

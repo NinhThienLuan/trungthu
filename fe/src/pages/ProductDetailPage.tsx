@@ -421,7 +421,7 @@ export function ProductDetailPage() {
           {' '}
           <div className="max-w-[1320px] mx-auto px-margin-mobile lg:px-margin">
             {' '}
-            <div className="flex items-center justify-start border-b border-transparent gap-space-lg overflow-x-auto pb-space-sm">
+            <div className="flex items-center justify-start gap-space-lg overflow-x-auto pb-space-sm">
               {' '}
               <button className="detail-tab active pb-space-xs font-headline-sm text-headline-sm text-ink-dark font-bold relative shrink-0 transition-colors">
                 {' Câu Chuyện Nghệ Nhân 70 Năm '}
@@ -509,7 +509,7 @@ export function ProductDetailPage() {
                 {' '}
                 <div className="lg:col-span-6 bg-surface-container-lowest p-space-xl rounded-[0.25rem] shadow-sm space-y-space-md">
                   {' '}
-                  <div className="border-b border-surface-container pb-space-sm">
+                  <div className="pb-space-sm">
                     {' '}
                     <span className="font-label-sm text-label-sm uppercase tracking-widest text-secondary font-bold">
                       Bảng Giá Trị Dinh Dưỡng Thực Nghiệm
@@ -521,34 +521,34 @@ export function ProductDetailPage() {
                   </div>{' '}
                   <div className="space-y-space-xs text-ink-dark font-body-md text-body-md">
                     {' '}
-                    <div className="flex justify-between py-2 border-b border-surface-container">
+                    <div className="flex justify-between py-2">
                       {' '}
                       <span className="font-bold">Năng Lượng (Calories)</span>{' '}
                       <span className="font-bold">428 kcal</span>{' '}
                     </div>{' '}
-                    <div className="flex justify-between py-2 border-b border-surface-container">
+                    <div className="flex justify-between py-2">
                       {' '}
                       <span className="text-on-surface-variant">Chất đạm (Protein)</span> <span>8.6 g</span>{' '}
                     </div>{' '}
-                    <div className="flex justify-between py-2 border-b border-surface-container">
+                    <div className="flex justify-between py-2">
                       {' '}
                       <span className="text-on-surface-variant">Tổng chất béo tự nhiên (Total Fat)</span>{' '}
                       <span>18.2 g</span>{' '}
                     </div>{' '}
-                    <div className="flex justify-between py-2 border-b border-surface-container pl-space-md text-on-surface-variant">
+                    <div className="flex justify-between py-2 pl-space-md text-on-surface-variant">
                       {' '}
                       <span>Chất béo bão hòa tự nhiên</span> <span>4.1 g</span>{' '}
                     </div>{' '}
-                    <div className="flex justify-between py-2 border-b border-surface-container">
+                    <div className="flex justify-between py-2">
                       {' '}
                       <span className="text-on-surface-variant">Chất bột đường (Carbohydrates)</span>{' '}
                       <span>54.5 g</span>{' '}
                     </div>{' '}
-                    <div className="flex justify-between py-2 border-b border-surface-container pl-space-md text-on-surface-variant">
+                    <div className="flex justify-between py-2 pl-space-md text-on-surface-variant">
                       {' '}
                       <span>Đường tự nhiên tự luyện (Cane Sugar)</span> <span>21.0 g</span>{' '}
                     </div>{' '}
-                    <div className="flex justify-between py-2 border-b border-surface-container">
+                    <div className="flex justify-between py-2">
                       {' '}
                       <span className="text-on-surface-variant">Natri (Sodium)</span> <span>240 mg</span>{' '}
                     </div>{' '}

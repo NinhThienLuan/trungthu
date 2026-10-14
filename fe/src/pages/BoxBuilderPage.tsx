@@ -255,7 +255,6 @@ export function BoxBuilderPage() {
               <div className="relative z-10 bg-primary p-6 sm:p-8 rounded-[0.25rem] shadow-inner flex flex-col items-center justify-center min-h-[380px]">
                 <div className="w-full text-center pb-5 mb-5 flex flex-col items-center">
                   <span className="font-headline-sm text-[13px] tracking-[0.2em] text-secondary-fixed uppercase">NGUYỆT VIÊN ĐÀI • NGỰ THƯỢNG PHẨM</span>
-                  <div className="w-16 h-0.5 bg-secondary-fixed/40 mt-1" />
                 </div>
                 <div className={cn(slotGrid, 'transition-all duration-300')}>
                   {slots.map((slot, i) => {
