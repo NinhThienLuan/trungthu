@@ -45,7 +45,7 @@ export function CartPage() {
                   <li key={item.lineId} className="flex flex-wrap items-center gap-4 px-5 py-4">
                     {item.imageUrl && <img src={item.imageUrl} alt="" className="size-14 rounded-sm object-cover" />}
                     <div className="min-w-0 flex-1">
-                      <Link to={ROUTES.product(item.productId)} className="font-semibold text-navy hover:underline">
+                      <Link to={item.kind === 'box' ? ROUTES.boxBuilder : ROUTES.product(item.productId)} className="font-semibold text-navy hover:underline">
                         {item.productName}
                       </Link>
                       <p className="text-small text-muted">

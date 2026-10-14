@@ -7,8 +7,9 @@ import { useAuthStore } from '../stores/authStore'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { checkoutSchema, fieldErrors } from '../schemas'
 import { DEPOSIT_RATE, ROUTES } from '../constants'
-import { formatDate, formatVnd } from '../lib/format'
+import { formatVnd } from '../lib/format'
 import { TextArea, TextInput } from '../components/ui/Field'
+import { OrderItemsSummary } from '../components/OrderItemsSummary'
 import { PageHeader } from '../components/ui/PageHeader'
 import { Notice } from '../components/ui/States'
 import type { CheckoutRequest } from '../types/order'
@@ -81,7 +82,7 @@ export function CheckoutPage() {
     <div className="page section">
       <PageHeader title="Thông tin đặt hàng" />
 
-      <form noValidate onSubmit={handleSubmit} className="grid gap-8 lg:grid-cols-[1fr_20rem]">
+      <form noValidate onSubmit={handleSubmit} className="grid gap-8 lg:grid-cols-[1fr_26rem]">
         <div className="flex flex-col gap-6">
           <section className="card p-5 md:p-6">
             <h2 className="text-h3">Người nhận</h2>
@@ -110,19 +111,10 @@ export function CheckoutPage() {
         </div>
 
         <aside className="card h-fit p-5 lg:sticky lg:top-24">
-          <h2 className="text-h3">{groups.length} đơn hàng</h2>
-          <ul className="mt-4 flex flex-col gap-3 text-small">
-            {groups.map((g) => (
-              <li key={g.providerId} className="rounded-sm bg-ivory p-3">
-                <p className="font-semibold text-navy">{g.storeName}</p>
-                <p className="text-muted">Nhận {formatDate(deliveryDates[g.providerId])}</p>
-                <p className="mt-1 flex justify-between">
-                  <span className="text-muted">{g.items.reduce((s, i) => s + i.quantity, 0)} sản phẩm</span>
-                  <span>{formatVnd(g.subtotal)}</span>
-                </p>
-              </li>
-            ))}
-          </ul>
+          <h2 className="text-h3">Chi tiết đơn hàng ({groups.length} xưởng)</h2>
+          <div className="mt-4">
+            <OrderItemsSummary groups={groups} deliveryDates={deliveryDates} />
+          </div>
           <div className="mt-4 flex justify-between border-t border-line pt-4">
             <span className="font-semibold">Tổng cộng</span>
             <span className="font-serif text-h3 text-navy">{formatVnd(total)}</span>

@@ -1,26 +1,73 @@
 import { Link } from 'react-router-dom'
-import { BRAND, ROUTES } from '../constants'
+import { ROUTES } from '../constants'
+
+/** Footer chuyển từ bản Stitch, giữ nguyên nội dung */
+const COLUMNS = [
+  {
+    title: 'Bộ Tuyển Chọn',
+    links: [
+      { label: 'Bộ Sưu Tập Sơn Hà Nguyệt', to: ROUTES.products },
+      { label: 'Dạ Yến Cung Đình', to: ROUTES.products },
+      { label: 'Tự Phối Hộp Gỗ Khảm Trai', to: ROUTES.boxBuilder },
+      { label: 'Hương Vị Đông Trùng Yến Sào', to: ROUTES.products },
+    ],
+  },
+  {
+    title: 'Giải Pháp Doanh Nghiệp',
+    links: [
+      { label: 'Yêu Cầu Báo Giá Khối Lượng Lớn', to: ROUTES.rfq },
+      { label: 'Khắc Kim & Ép Kim Biểu Tượng', to: ROUTES.rfq },
+      { label: 'Hợp Đồng & Hóa Đơn Doanh Nghiệp', to: '/b2b/checkout' },
+      { label: 'Đăng Ký Đối Tác Nghệ Nhân', to: '/seller/profile' },
+    ],
+  },
+]
 
 export function Footer() {
   return (
-    <footer className="mt-auto bg-navy-deep text-white/70">
-      <div className="page grid gap-8 py-12 md:grid-cols-3">
-        <div>
-          <p className="font-serif text-h3 text-gold">{BRAND}</p>
-          <p className="mt-2 max-w-xs text-small">Sàn kết nối người mua với các xưởng bánh Trung Thu thủ công.</p>
+    <footer className="w-full bg-primary-container text-champagne-light pt-space-xl pb-space-lg">
+      <div className="max-w-[1320px] mx-auto px-margin-mobile lg:px-margin grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-space-xl mb-space-xl">
+        <div className="space-y-space-md">
+          <span className="font-headline-sm text-headline-sm text-champagne-light block">Nguyệt Viên Đài</span>
+          <p className="font-body-sm text-body-sm text-on-primary-container leading-relaxed">
+            Tôn vinh tinh hoa mỹ vị hoàng cung và di sản bánh Trung thu thủ công Việt Nam kết hợp nghệ thuật tạo tác đương đại.
+          </p>
+          <div className="flex items-center gap-space-sm pt-space-xs">
+            <span className="font-label-sm text-label-sm text-secondary-fixed">BẢO CHỨNG HOÀNG TRIỀU</span>
+          </div>
         </div>
-        <div className="flex flex-col gap-2 text-small">
-          <p className="eyebrow text-gold">Mua sắm</p>
-          <Link to={ROUTES.products} className="hover:text-gold">Bộ sưu tập</Link>
-          <Link to={ROUTES.rfq} className="hover:text-gold">Đặt hàng doanh nghiệp</Link>
-          <Link to={ROUTES.orders} className="hover:text-gold">Tra cứu đơn hàng</Link>
-        </div>
-        <div className="flex flex-col gap-2 text-small">
-          <p className="eyebrow text-gold">Hỗ trợ</p>
-          <Link to={ROUTES.policy} className="hover:text-gold">Chính sách bánh tươi & hoàn tiền</Link>
+        {COLUMNS.map((col) => (
+          <div key={col.title} className="space-y-space-sm">
+            <h4 className="font-label-lg text-label-lg text-secondary-fixed uppercase tracking-wider">{col.title}</h4>
+            <ul className="space-y-2 font-body-sm text-body-sm text-on-primary-container">
+              {col.links.map((link) => (
+                <li key={link.label}>
+                  <Link className="hover:text-champagne-light transition-colors" to={link.to}>
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+        <div className="space-y-space-sm">
+          <h4 className="font-label-lg text-label-lg text-secondary-fixed uppercase tracking-wider">Điện Đài Tư Vấn</h4>
+          <p className="font-body-sm text-body-sm text-on-primary-container">Đường dây nóng đại tiệc & quà tặng ngoại giao:</p>
+          <p className="font-headline-sm text-headline-sm text-secondary-fixed">1800 8899</p>
+          <p className="font-body-sm text-body-sm text-on-primary-container">nguyetviendai@hoangtriều.vn</p>
         </div>
       </div>
-      <div className="page border-t border-white/10 py-5 text-small">© {new Date().getFullYear()} {BRAND}</div>
+      <div className="max-w-[1320px] mx-auto px-margin-mobile lg:px-margin pt-space-md flex flex-col md:flex-row items-center justify-between gap-space-sm text-on-primary-container font-body-sm text-body-sm">
+        <p>© 2024 Nguyệt Viên Đài. Bản quyền thuộc về Đại Sàn Trung Thu Hoàng Gia.</p>
+        <div className="flex gap-space-md">
+          <Link className="hover:text-champagne-light transition-colors" to={ROUTES.policy}>
+            Quy Chế Hoạt Động
+          </Link>
+          <Link className="hover:text-champagne-light transition-colors" to={ROUTES.policy}>
+            Chính Sách Bảo Mật
+          </Link>
+        </div>
+      </div>
     </footer>
   )
 }

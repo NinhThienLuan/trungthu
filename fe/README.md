@@ -14,14 +14,14 @@ Chạy backend (`be/`) trước để có dữ liệu thật cho đăng nhập v
 
 ## Quy tắc giao diện (bắt buộc)
 
-- **Mọi màu, font, cỡ chữ chỉ khai báo trong `src/assets/style.css`.** Bảng màu mặc định của Tailwind đã bị tắt,
-  nên `bg-blue-500`, `text-gray-600`... sẽ không có tác dụng. Chỉ dùng màu thương hiệu: `navy`, `navy-deep`, `gold`,
-  `gold-ink`, `champagne`, `ivory`, `jade`, `ink`, `muted`, `line`, `success`, `danger`.
-- Cỡ chữ chỉ dùng 7 bậc: `text-display`, `text-h1`, `text-h2`, `text-h3`, `text-body`, `text-small`, `text-label`.
-- Dùng class có sẵn thay vì tự viết lại: `page`, `section`, `card`, `btn btn-primary | btn-outline | btn-ghost`,
-  `input`, `field-label`, `chip`, `eyebrow`.
-- Icon chỉ dùng `lucide-react`, không dùng emoji.
-- Chữ trên UI ngắn gọn: tiêu đề + tối đa 1 dòng mô tả.
+- Giao diện chuyển từ bản thiết kế **Stitch** (`artisanal_confectionery_luxury`). Mọi token màu / font / cỡ chữ / khoảng cách
+  nằm trong `src/assets/style.css`; bảng màu mặc định của Tailwind đã bị tắt nên chỉ dùng được màu thương hiệu.
+- Trang Stitch dùng tên token của Stitch: `bg-primary-container`, `text-secondary`, `text-on-surface-variant`,
+  `font-headline-sm text-headline-sm`, `font-body-md text-body-md`, `p-space-md`, `px-margin`...
+- Trang tự viết (giỏ hàng, checkout...) dùng bộ rút gọn cùng giá trị: `navy`, `gold`, `ivory`, `text-h1..text-label`,
+  `card`, `btn btn-primary`, `input`, `chip`.
+- Icon: `<Icon name="tên_material" />` (map sang lucide-react) hoặc import thẳng từ `lucide-react`. Không dùng emoji.
+- Không viết mã màu hex trực tiếp trong className.
 
 ## Cấu trúc
 
@@ -34,7 +34,7 @@ src/
 ├── hooks/       # useApi, useDocumentTitle
 ├── layouts/     # MainLayout, AuthLayout
 ├── lib/         # format tiền, ngày, cn()
-├── pages/       # mỗi route một trang
+├── pages/       # mỗi route một trang; pages/stitch/* là màn chuyển nguyên từ Stitch
 ├── routes/      # router + ProtectedRoute
 ├── schemas/     # validate form bằng zod
 ├── stores/      # zustand: auth, cart

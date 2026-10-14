@@ -28,6 +28,8 @@ export interface CartItem {
   /** Chỉ có ở hộp tự phối */
   slots?: BoxSlot[]
   note?: string
+  /** Bảng tách giá 1 hộp (quy cách, vỏ hộp, logo, trà, chiết khấu) để hiện ở checkout */
+  priceLines?: Array<{ label: string; amount: number }>
 }
 
 export interface CartGroup {
