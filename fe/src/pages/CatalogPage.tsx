@@ -457,7 +457,7 @@ export function CatalogPage() {
                   <CatalogCard key={p.id} product={p} />
                 ))}{' '}
               </div>{' '}
-              <div className="pt-space-lg flex flex-col sm:flex-row items-center justify-between gap-space-md border-t border-border-gold-subtle">
+              <div className="pt-space-lg flex flex-col sm:flex-row items-center justify-between gap-space-md">
                 {' '}
                 <div className="font-body-sm text-body-sm text-on-surface-variant">
                   {' Hiển thị '}

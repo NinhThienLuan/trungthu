@@ -73,7 +73,7 @@ export function StitchB2bCheckout() {
                       B2B BATCH #NGV-2024-88
                     </span>{' '}
                   </div>{' '}
-                  <div className="divide-y divide-surface-container-high">
+                  <div className="">
                     {' '}
                     <div className="py-space-md flex flex-col gap-space-sm">
                       {' '}
@@ -136,7 +136,7 @@ export function StitchB2bCheckout() {
                       </div>{' '}
                       <div className="mt-space-sm bg-surface-container-low p-space-sm rounded-[0.125rem] border border-gold-subtle/30 text-body-sm">
                         {' '}
-                        <div className="flex items-center justify-between pb-1 mb-1.5 border-b border-surface-container-high">
+                        <div className="flex items-center justify-between pb-1 mb-1.5">
                           {' '}
                           <span className="font-label-sm text-[11px] uppercase tracking-wider text-secondary font-semibold flex items-center gap-1">
                             {' '}
@@ -149,7 +149,7 @@ export function StitchB2bCheckout() {
                         </div>{' '}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-space-md gap-y-1">
                           {' '}
-                          <div className="flex justify-between items-center py-0.5 border-b border-surface-container/60">
+                          <div className="flex justify-between items-center py-0.5">
                             {' '}
                             <span className="text-primary flex items-center gap-1.5">
                               <span className="w-1.5 h-1.5 rounded-[0.75rem] bg-gold-burnished"></span>Bào Ngư Sốt X.O
@@ -157,7 +157,7 @@ export function StitchB2bCheckout() {
                             </span>{' '}
                             <span className="font-medium text-on-surface-variant">285.000₫</span>{' '}
                           </div>{' '}
-                          <div className="flex justify-between items-center py-0.5 border-b border-surface-container/60">
+                          <div className="flex justify-between items-center py-0.5">
                             {' '}
                             <span className="text-primary flex items-center gap-1.5">
                               <span className="w-1.5 h-1.5 rounded-[0.75rem] bg-gold-burnished"></span>Lava Trứng Muối
@@ -165,7 +165,7 @@ export function StitchB2bCheckout() {
                             </span>{' '}
                             <span className="font-medium text-on-surface-variant">215.000₫</span>{' '}
                           </div>{' '}
-                          <div className="flex justify-between items-center py-0.5 border-b border-surface-container/60">
+                          <div className="flex justify-between items-center py-0.5">
                             {' '}
                             <span className="text-primary flex items-center gap-1.5">
                               <span className="w-1.5 h-1.5 rounded-[0.75rem] bg-gold-burnished"></span>Yến Sào Hạt Sen
@@ -173,7 +173,7 @@ export function StitchB2bCheckout() {
                             </span>{' '}
                             <span className="font-medium text-on-surface-variant">265.000₫</span>{' '}
                           </div>{' '}
-                          <div className="flex justify-between items-center py-0.5 border-b border-surface-container/60">
+                          <div className="flex justify-between items-center py-0.5">
                             {' '}
                             <span className="text-primary flex items-center gap-1.5">
                               <span className="w-1.5 h-1.5 rounded-[0.75rem] bg-gold-burnished"></span>Thập Cẩm Gà Quay
@@ -198,7 +198,7 @@ export function StitchB2bCheckout() {
                             <span className="font-medium text-on-surface-variant">155.000₫</span>{' '}
                           </div>{' '}
                         </div>{' '}
-                        <div className="mt-1.5 pt-1 border-t border-surface-container-high flex items-center justify-between text-[12px] text-tertiary font-medium">
+                        <div className="mt-1.5 pt-1 flex items-center justify-between text-[12px] text-tertiary font-medium">
                           {' '}
                           <span className="flex items-center gap-1">
                             {' '}
@@ -262,7 +262,7 @@ export function StitchB2bCheckout() {
                       </div>{' '}
                       <div className="mt-space-sm bg-surface-container-low p-space-sm rounded-[0.125rem] border border-gold-subtle/30 text-body-sm">
                         {' '}
-                        <div className="flex items-center justify-between pb-1 mb-1.5 border-b border-surface-container-high">
+                        <div className="flex items-center justify-between pb-1 mb-1.5">
                           {' '}
                           <span className="font-label-sm text-[11px] uppercase tracking-wider text-secondary font-semibold flex items-center gap-1">
                             {' '}
@@ -275,7 +275,7 @@ export function StitchB2bCheckout() {
                         </div>{' '}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-space-md gap-y-1">
                           {' '}
-                          <div className="flex justify-between items-center py-0.5 border-b border-surface-container/60">
+                          <div className="flex justify-between items-center py-0.5">
                             {' '}
                             <span className="text-primary flex items-center gap-1.5">
                               <span className="w-1.5 h-1.5 rounded-[0.75rem] bg-gold-burnished"></span>Thập Cẩm Bát Bửu
@@ -283,7 +283,7 @@ export function StitchB2bCheckout() {
                             </span>{' '}
                             <span className="font-medium text-on-surface-variant">245.000₫</span>{' '}
                           </div>{' '}
-                          <div className="flex justify-between items-center py-0.5 border-b border-surface-container/60">
+                          <div className="flex justify-between items-center py-0.5">
                             {' '}
                             <span className="text-primary flex items-center gap-1.5">
                               <span className="w-1.5 h-1.5 rounded-[0.75rem] bg-gold-burnished"></span>Thập Cẩm X.O Sò

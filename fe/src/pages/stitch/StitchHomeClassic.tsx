@@ -52,7 +52,7 @@ export function StitchHomeClassic() {
                 {' Đặt Hàng Doanh Nghiệp B2B '}
               </a>{' '}
             </div>{' '}
-            <div className="mt-12 pt-6 border-t border-gold/25 flex items-center gap-8 text-xs text-slate-300">
+            <div className="mt-12 pt-6 flex items-center gap-8 text-xs text-slate-300">
               {' '}
               <div>
                 {' '}
@@ -75,7 +75,7 @@ export function StitchHomeClassic() {
           </div>{' '}
         </div>{' '}
       </section>{' '}
-      <section className="py-14 bg-surface-container-low border-y border-primary-container/10 relative z-20" data-purpose="features">
+      <section className="py-14 bg-surface-container-low relative z-20" data-purpose="features">
         {' '}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {' '}
@@ -170,7 +170,6 @@ export function StitchHomeClassic() {
           <h2 className="font-imperial-title text-3xl sm:text-4xl font-bold mt-2 text-primary-container">
             Bốn Bộ Sưu Tập Ngự Thiện
           </h2>{' '}
-          <div className="w-16 h-0.5 bg-gold-burnished mx-auto mt-4"></div>{' '}
         </div>{' '}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {' '}
@@ -213,7 +212,7 @@ export function StitchHomeClassic() {
                 Nhân custard kem sữa béo dịu, lõi lòng đỏ muối chưng cất 60 ngày tan chảy mềm mại ngập tràn giác quan.
               </p>{' '}
             </div>{' '}
-            <div className="mt-6 pt-4 border-t border-primary-container/10 flex items-center justify-between">
+            <div className="mt-6 pt-4 flex items-center justify-between">
               {' '}
               <div>
                 {' '}
@@ -268,7 +267,7 @@ export function StitchHomeClassic() {
                 Thịt bào ngư thượng hạng xắt hạt lựu, sợi vi cá chưng cùng sốt XO cay nồng thượng vị, đẳng cấp quà biếu.
               </p>{' '}
             </div>{' '}
-            <div className="mt-6 pt-4 border-t border-primary-container/10 flex items-center justify-between">
+            <div className="mt-6 pt-4 flex items-center justify-between">
               {' '}
               <div>
                 {' '}
@@ -326,7 +325,7 @@ export function StitchHomeClassic() {
                 chanh tươi.
               </p>{' '}
             </div>{' '}
-            <div className="mt-6 pt-4 border-t border-primary-container/10 flex items-center justify-between">
+            <div className="mt-6 pt-4 flex items-center justify-between">
               {' '}
               <div>
                 {' '}
@@ -384,7 +383,7 @@ export function StitchHomeClassic() {
                 sức khỏe.
               </p>{' '}
             </div>{' '}
-            <div className="mt-6 pt-4 border-t border-primary-container/10 flex items-center justify-between">
+            <div className="mt-6 pt-4 flex items-center justify-between">
               {' '}
               <div>
                 {' '}
@@ -405,7 +404,7 @@ export function StitchHomeClassic() {
         </div>{' '}
       </section>{' '}
       <section
-        className="py-16 bg-surface-container-low border-t border-primary-container/10"
+        className="py-16 bg-surface-container-low"
         data-purpose="corporate-b2b-quote"
         id="b2b-calculator"
       >
