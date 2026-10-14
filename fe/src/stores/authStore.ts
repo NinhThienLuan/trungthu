@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { authApi } from '../apis/auth'
+import { authService } from '../services/authService'
 import type { User } from '../types/user'
 
 interface AuthState {
@@ -17,7 +17,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   init: async () => {
     try {
-      set({ user: await authApi.me() })
+      set({ user: await authService.me() })
     } catch {
       set({ user: null })
     } finally {
@@ -26,14 +26,14 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   login: async (email, password) => {
-    const { user } = await authApi.login(email, password)
+    const { user } = await authService.login(email, password)
     set({ user })
     return user
   },
 
   logout: async () => {
     try {
-      await authApi.logout()
+      await authService.logout()
     } finally {
       set({ user: null })
     }

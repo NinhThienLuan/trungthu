@@ -1,5 +1,40 @@
-import type { CartGroup } from '../stores/cartStore'
+import type { CartGroup, CartItem } from '../stores/cartStore'
 import { formatDate, formatVnd } from '../lib/format'
+
+/** Chi tiết hộp tự phối: từng bánh trong hộp + bảng giá 1 hộp + lời chúc. Dùng chung cho giỏ hàng và checkout. */
+export function BoxItemDetails({ item }: { item: CartItem }) {
+  if (!item.slots) return null
+  return (
+    <div className="mt-2 rounded-sm bg-white px-3 py-2">
+      <p className="text-label font-semibold uppercase text-gold-ink">Bánh trong hộp ({item.slots.length})</p>
+      <ul className="mt-1 flex flex-col gap-0.5">
+        {item.slots.map((slot, i) => (
+          <li key={`${slot.variantId}-${i}`} className="flex justify-between gap-2 text-small">
+            <span className="text-ink">
+              {i + 1}. {slot.productName} <span className="text-muted">· {slot.variantName}</span>
+            </span>
+            <span className="shrink-0 text-muted">{formatVnd(slot.unitPrice)}</span>
+          </li>
+        ))}
+      </ul>
+      {item.priceLines && (
+        <>
+          <p className="mt-2 text-label font-semibold uppercase text-gold-ink">Giá 1 hộp</p>
+          <ul className="mt-1 flex flex-col gap-0.5">
+            {item.priceLines.map((line) => (
+              <li key={line.label} className="flex justify-between gap-2 text-small">
+                <span className="text-muted">{line.label}</span>
+                <span className={line.amount < 0 ? 'shrink-0 text-success' : 'shrink-0 text-ink'}>{formatVnd(line.amount)}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-1 text-small text-muted">Giá bánh lẻ chỉ để tham khảo — đã gồm trong giá quy cách.</p>
+        </>
+      )}
+      {item.note && <p className="mt-2 text-small italic text-muted">Lời chúc: “{item.note}”</p>}
+    </div>
+  )
+}
 
 /** Chi tiết từng món + giá ở checkout, nhóm theo xưởng (mỗi xưởng = 1 đơn) */
 export function OrderItemsSummary({ groups, deliveryDates }: { groups: CartGroup[]; deliveryDates: Record<string, string> }) {
@@ -28,37 +63,7 @@ export function OrderItemsSummary({ groups, deliveryDates }: { groups: CartGroup
                     </p>
                   </div>
                 </div>
-
-                {item.slots && (
-                  <div className="mt-2 rounded-sm bg-white px-3 py-2">
-                    <p className="text-label font-semibold uppercase text-gold-ink">Bánh trong hộp ({item.slots.length})</p>
-                    <ul className="mt-1 flex flex-col gap-0.5">
-                      {item.slots.map((slot, i) => (
-                        <li key={`${slot.variantId}-${i}`} className="flex justify-between gap-2 text-small">
-                          <span className="text-ink">
-                            {i + 1}. {slot.productName} <span className="text-muted">· {slot.variantName}</span>
-                          </span>
-                          <span className="shrink-0 text-muted">{formatVnd(slot.unitPrice)}</span>
-                        </li>
-                      ))}
-                    </ul>
-                    {item.priceLines && (
-                      <>
-                        <p className="mt-2 text-label font-semibold uppercase text-gold-ink">Giá 1 hộp</p>
-                        <ul className="mt-1 flex flex-col gap-0.5">
-                          {item.priceLines.map((line) => (
-                            <li key={line.label} className="flex justify-between gap-2 text-small">
-                              <span className="text-muted">{line.label}</span>
-                              <span className={line.amount < 0 ? 'shrink-0 text-success' : 'shrink-0 text-ink'}>{formatVnd(line.amount)}</span>
-                            </li>
-                          ))}
-                        </ul>
-                        <p className="mt-1 text-small text-muted">Giá bánh lẻ chỉ để tham khảo — đã gồm trong giá quy cách.</p>
-                      </>
-                    )}
-                    {item.note && <p className="mt-2 text-small italic text-muted">Lời chúc: “{item.note}”</p>}
-                  </div>
-                )}
+                <BoxItemDetails item={item} />
               </li>
             ))}
           </ul>

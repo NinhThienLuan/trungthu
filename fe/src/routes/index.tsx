@@ -1,46 +1,47 @@
 import type { ReactNode } from 'react'
 import { createBrowserRouter } from 'react-router-dom'
-import { MainLayout } from '../layouts/MainLayout'
-import { AuthLayout } from '../layouts/AuthLayout'
-import { SellerLayout } from '../layouts/SellerLayout'
+import { UserLayout } from '../components/layouts/UserLayout'
+import { AuthLayout } from '../components/layouts/AuthLayout'
+import { AdminLayout } from '../components/layouts/AdminLayout'
 import { ProtectedRoute } from './ProtectedRoute'
-import { CartPage } from '../pages/CartPage'
-import { CheckoutPage } from '../pages/CheckoutPage'
-import { PaymentPage } from '../pages/PaymentPage'
-import { MyOrdersPage } from '../pages/MyOrdersPage'
-import { PolicyPage } from '../pages/PolicyPage'
-import { LoginPage } from '../pages/LoginPage'
-import { RegisterPage } from '../pages/RegisterPage'
+import { CartPage } from '../pages/user/CartPage'
+import { CheckoutPage } from '../pages/user/CheckoutPage'
+import { PaymentPage } from '../pages/user/PaymentPage'
+import { MyOrdersPage } from '../pages/user/MyOrdersPage'
+import { PolicyPage } from '../pages/user/PolicyPage'
+import { LoginPage } from '../pages/auth/LoginPage'
+import { RegisterPage } from '../pages/auth/RegisterPage'
 import { NotFoundPage } from '../pages/NotFoundPage'
-import { StitchPage } from '../pages/stitch/StitchPage'
-import { StitchHome } from '../pages/stitch/StitchHome'
-import { StitchHomeClassic } from '../pages/stitch/StitchHomeClassic'
-import { CatalogPage } from '../pages/CatalogPage'
-import { ProductDetailPage } from '../pages/ProductDetailPage'
-import { BoxBuilderPage } from '../pages/BoxBuilderPage'
-import { B2bPortalPage } from '../pages/B2bPortalPage'
-import { StitchB2bCheckout } from '../pages/stitch/StitchB2bCheckout'
-import { StitchSellerRegister } from '../pages/stitch/StitchSellerRegister'
-import { StitchSellerProducts } from '../pages/stitch/StitchSellerProducts'
-import { StitchSellerOrders } from '../pages/stitch/StitchSellerOrders'
-import { StitchSellerDispatch } from '../pages/stitch/StitchSellerDispatch'
-import { StitchAdminKyc } from '../pages/stitch/StitchAdminKyc'
-import { StitchAdminFinance } from '../pages/stitch/StitchAdminFinance'
+import { StitchPage } from '../components/layouts/StitchPage'
+import { HomePage } from '../pages/user/HomePage'
+import { HomeClassicPage } from '../pages/user/HomeClassicPage'
+import { CatalogPage } from '../pages/user/CatalogPage'
+import { ProductDetailPage } from '../pages/user/ProductDetailPage'
+import { BoxBuilderPage } from '../pages/user/BoxBuilderPage'
+import { B2bPortalView } from '../pages/user/B2bPortalView'
+import { RfqFormCatcher } from '../components/RfqFormCatcher'
+import { B2bCheckoutPage } from '../pages/user/B2bCheckoutPage'
+import { ProfilePage } from '../pages/admin/ProfilePage'
+import { BakeBatchPage } from '../pages/admin/BakeBatchPage'
+import { OrdersPage } from '../pages/admin/OrdersPage'
+import { B2bDispatchPage } from '../pages/admin/B2bDispatchPage'
+import { QualityReviewPage } from '../pages/admin/QualityReviewPage'
+import { DashboardPage } from '../pages/admin/DashboardPage'
 
 const stitch = (title: string | undefined, page: ReactNode) => <StitchPage title={title}>{page}</StitchPage>
 
 export const router = createBrowserRouter([
   {
-    element: <MainLayout />,
+    element: <UserLayout />,
     children: [
       // Trang buyer chuyển nguyên từ Stitch
-      { path: '/', element: stitch('', <StitchHome />) },
-      { path: '/trang-chu-co-dien', element: stitch('Trang chủ', <StitchHomeClassic />) },
+      { path: '/', element: stitch('', <RfqFormCatcher><HomePage /></RfqFormCatcher>) },
+      { path: '/trang-chu-co-dien', element: stitch('Trang chủ', <HomeClassicPage />) },
       { path: '/products', element: stitch('Bộ sưu tập', <CatalogPage />) },
       { path: '/products/:id', element: stitch(undefined, <ProductDetailPage />) },
       { path: '/box-builder', element: stitch('Tự phối hộp quà', <BoxBuilderPage />) },
-      { path: '/rfq', element: stitch('Báo giá doanh nghiệp', <B2bPortalPage />) },
-      { path: '/b2b/checkout', element: stitch('Đặt hàng doanh nghiệp', <StitchB2bCheckout />) },
+      { path: '/rfq', element: stitch('Báo giá doanh nghiệp', <RfqFormCatcher><B2bPortalView /></RfqFormCatcher>) },
+      { path: '/b2b/checkout', element: stitch('Đặt hàng doanh nghiệp', <B2bCheckoutPage />) },
       // Luồng đặt hàng chạy được (không có màn Stitch tương ứng)
       { path: '/cart', element: <CartPage /> },
       { path: '/policy', element: <PolicyPage /> },
@@ -57,14 +58,14 @@ export const router = createBrowserRouter([
   },
   {
     // Khu vực nghệ nhân / quản trị (FE2) — giao diện Stitch tĩnh
-    element: <SellerLayout />,
+    element: <AdminLayout />,
     children: [
-      { path: '/seller', element: stitch('Bảng điều khiển', <StitchAdminFinance />) },
-      { path: '/seller/products', element: stitch('Menu & mẻ ra lò', <StitchSellerProducts />) },
-      { path: '/seller/b2b', element: stitch('Điều phối B2B', <StitchSellerDispatch />) },
-      { path: '/seller/orders', element: stitch('Đơn hàng & giao lạnh', <StitchSellerOrders />) },
-      { path: '/seller/profile', element: stitch('Hồ sơ & thẩm định', <StitchSellerRegister />) },
-      { path: '/admin/kyc', element: stitch('Thẩm định chất lượng', <StitchAdminKyc />) },
+      { path: '/seller', element: stitch('Bảng điều khiển', <DashboardPage />) },
+      { path: '/seller/products', element: stitch('Menu & mẻ ra lò', <BakeBatchPage />) },
+      { path: '/seller/b2b', element: stitch('Điều phối B2B', <B2bDispatchPage />) },
+      { path: '/seller/orders', element: stitch('Đơn hàng & giao lạnh', <OrdersPage />) },
+      { path: '/seller/profile', element: stitch('Hồ sơ & thẩm định', <ProfilePage />) },
+      { path: '/admin/kyc', element: stitch('Thẩm định chất lượng', <QualityReviewPage />) },
     ],
   },
   {

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { Icon } from './Icon'
 import { useCartStore } from '../stores/cartStore'
 import { ROUTES } from '../constants'
@@ -10,7 +10,6 @@ const vnd = (n: number) => `${n.toLocaleString('vi-VN')} đ`
 /** Thẻ sản phẩm theo đúng markup bản Stitch (bộ sưu tập), dữ liệu lấy từ Product */
 export function CatalogCard({ product }: { product: Product }) {
   const add = useCartStore((s) => s.add)
-  const navigate = useNavigate()
   const [added, setAdded] = useState(false)
   const variant = product.variants[0]
   const d = product.display
@@ -91,44 +90,16 @@ export function CatalogCard({ product }: { product: Product }) {
                 <span className="text-body-sm font-normal">đ{d?.unit ?? ''}</span>
               </span>
             </div>
-            {d && (
-              <div className="text-right">
-                <span className="font-label-sm text-label-sm text-tertiary-container bg-tertiary-fixed px-1.5 py-0.5 rounded-[0.125rem] block">
-                  {d.wholesaleLabel}
-                </span>
-                <span className="font-body-sm text-[11px] text-secondary font-medium">{d.discountLabel}</span>
-              </div>
-            )}
           </div>
-          {d && (
-            <div className="pt-1">
-              <div className="bg-surface-container-low p-2 rounded-[0.125rem] text-body-sm space-y-1">
-                <div className="flex justify-between text-[11px] text-on-surface-variant">
-                  <span>{d.tiers[0]}</span> <span>{d.tiers[1]}</span>
-                  <span className="text-secondary font-bold">{d.tiers[2]}</span>
-                </div>
-              </div>
-            </div>
-          )}
-          <div className="grid grid-cols-2 gap-2 pt-2">
-            <button
-              type="button"
-              onClick={buyOne}
-              disabled={!inStock}
-              className="w-full py-2 px-2 rounded-[0.125rem] bg-surface-container-high hover:bg-surface-container-highest text-primary font-label-sm text-label-sm uppercase tracking-wider transition-colors flex items-center justify-center gap-1 disabled:opacity-40"
-            >
-              <Icon name={added ? 'check' : 'shopping_cart'} className="text-[16px]" aria-hidden />
-              {added ? 'Đã thêm' : inStock ? 'Mua Lẻ' : 'Hết hàng'}
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate(ROUTES.rfq)}
-              className="w-full py-2 px-2 rounded-[0.125rem] bg-primary text-secondary-fixed hover:bg-ink-dark font-label-sm text-label-sm uppercase tracking-wider transition-all flex items-center justify-center gap-1 shadow-sm"
-            >
-              <Icon name="add_task" className="text-[16px]" aria-hidden />
-              Báo Giá Sỉ
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={buyOne}
+            disabled={!inStock}
+            className="mt-2 w-full py-2.5 px-2 rounded-[0.125rem] bg-primary text-secondary-fixed hover:bg-ink-dark font-label-sm text-label-sm uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5 disabled:opacity-40"
+          >
+            <Icon name={added ? 'check' : 'shopping_cart'} className="text-[16px]" aria-hidden />
+            {added ? 'Đã thêm vào giỏ' : inStock ? 'Thêm vào giỏ' : 'Hết hàng'}
+          </button>
         </div>
       </div>
     </article>
