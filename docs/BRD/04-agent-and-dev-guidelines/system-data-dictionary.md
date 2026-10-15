@@ -108,7 +108,6 @@ Toàn bộ các thực thể trong cơ sở dữ liệu được giữ nguyên v
 | `name` | `VARCHAR(255)` | No | - | Tên dòng bánh hoặc hộp quà tiêu chuẩn. |
 | `description` | `TEXT` | Yes | - | Mô tả chi tiết thành phần, hương vị. |
 | `product_type` | `VARCHAR(30)` | No | - | Enum: `LOOSE_CAKE`, `BOX_SHELL`, `GREETING_CARD`, `ADDON_SERVICE`. |
-| `shelf_life_days` | `INT` | Yes | - | HSD bánh tươi (Bắt buộc với `LOOSE_CAKE`: 7 - 15 ngày). |
 | `status` | `VARCHAR(30)` | No | - | Trạng thái: `ACTIVE`, `INACTIVE`. |
 
 ---

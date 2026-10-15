@@ -2,6 +2,7 @@ package fpt.sba.trungthu.entity;
 
 import fpt.sba.trungthu.common.infrastructure.BaseEntity;
 import fpt.sba.trungthu.entity.enumeration.UserRole;
+import fpt.sba.trungthu.entity.enumeration.UserStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -50,5 +51,5 @@ public class User extends BaseEntity {
     @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 30)
-    private fpt.sba.trungthu.entity.enumeration.UserStatus status = fpt.sba.trungthu.entity.enumeration.UserStatus.ACTIVE;
+    private UserStatus status = UserStatus.ACTIVE;
 }

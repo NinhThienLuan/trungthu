@@ -41,7 +41,6 @@ public class ProductMapper {
                 .name(product.getName())
                 .description(product.getDescription())
                 .productType(product.getProductType())
-                .shelfLifeDays(product.getShelfLifeDays())
                 .status(product.getStatus())
                 .createdAt(product.getCreatedAt())
                 .variants(variantResponses)
@@ -82,7 +81,6 @@ public class ProductMapper {
                 .name(request.getName().trim())
                 .description(request.getDescription())
                 .productType(request.getProductType())
-                .shelfLifeDays(request.getShelfLifeDays())
                 .status(status)
                 .build();
     }
@@ -94,7 +92,6 @@ public class ProductMapper {
         product.setName(request.getName().trim());
         product.setDescription(request.getDescription());
         product.setProductType(request.getProductType());
-        product.setShelfLifeDays(request.getShelfLifeDays());
         if (request.getStatus() != null) {
             try {
                 product.setStatus(ProductStatus.valueOf(request.getStatus().trim().toUpperCase()));

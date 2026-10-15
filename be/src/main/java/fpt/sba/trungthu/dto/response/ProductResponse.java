@@ -20,7 +20,6 @@ public class ProductResponse {
     private String name;
     private String description;
     private ProductType productType;
-    private Integer shelfLifeDays;
     private fpt.sba.trungthu.entity.enumeration.ProductStatus status;
     private LocalDateTime createdAt;
     private List<ProductVariantResponse> variants;
@@ -36,7 +35,6 @@ public class ProductResponse {
                 .name(product.getName())
                 .description(product.getDescription())
                 .productType(product.getProductType())
-                .shelfLifeDays(product.getShelfLifeDays())
                 .status(product.getStatus())
                 .createdAt(product.getCreatedAt())
                 .variants(product.getVariants().stream()

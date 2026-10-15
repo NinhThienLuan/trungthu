@@ -471,7 +471,7 @@
 - **Vai trò**: Form tạo mới dòng sản phẩm gốc và các biến thể SKU đi kèm.
 
 ### 21.2 Các Thành Phần Giao Diện
-- **Thông Tin Gốc**: Chọn Loại (`Bánh lẻ`, `Vỏ hộp`, `Thiệp chúc`), Tên dòng sản phẩm, Mô tả, Khai báo HSD bánh tươi (`shelf_life_days`).
+- **Thông Tin Gốc**: Chọn Loại (`Bánh lẻ`, `Vỏ hộp`, `Thiệp chúc`), Tên dòng sản phẩm, Mô tả.
 - **Danh Sách Biến Thể (Variant Matrix)**:
   - Bánh lẻ: Thêm biến thể 150g, 200g, 250g kèm đơn giá và số lượng kho ban đầu.
   - Vỏ hộp: Thêm biến thể Set 2, Set 4, Set 6.

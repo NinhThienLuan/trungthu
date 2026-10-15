@@ -1,6 +1,6 @@
 # MEMORY — Trung Thu Backend
 
-> Last updated: 2026-10-12 | Tests: **24/24 PASS** ✅
+> Last updated: 2026-10-14 | Tests: **24/24 PASS** ✅ | Note: Đã xóa hoàn toàn Hạn Sử Dụng (`shelfLifeDays`) khỏi Product module theo quyết định tinh gọn scope.
 
 ---
 

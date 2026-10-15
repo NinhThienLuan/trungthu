@@ -40,10 +40,11 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional(readOnly = true)
     public PageResponse<ProductResponse> getMyProducts(String providerEmail, Pageable pageable) {
-        log.info("Fetching paginated products for provider: {} [page: {}, size: {}]", 
+        log.info("Fetching paginated products for provider: {} [page: {}, size: {}]",
                 providerEmail, pageable.getPageNumber(), pageable.getPageSize());
         try {
-            Page<Product> productPage = productRepository.findByProviderEmailOrderByCreatedAtDesc(providerEmail, pageable);
+            Page<Product> productPage = productRepository.findByProviderEmailOrderByCreatedAtDesc(providerEmail,
+                    pageable);
             return PageResponse.from(productPage, p -> productMapper.toResponse(p, false));
         } catch (Exception ex) {
             log.error("Error fetching paginated products for provider {}: {}", providerEmail, ex.getMessage(), ex);
@@ -76,9 +77,6 @@ public class ProductServiceImpl implements ProductService {
         try {
             User provider = userRepository.findByEmailAndStatus(providerEmail, UserStatus.ACTIVE)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Provider not found"));
-            
-            // Kiểm tra quy tắc hạn sử dụng theo từng loại sản phẩm
-            validateShelfLife(request);
 
             // Chuyển đổi DTO sang Entity qua ProductMapper
             Product product = productMapper.toEntity(request, provider);
@@ -104,11 +102,13 @@ public class ProductServiceImpl implements ProductService {
         try {
             Product product = findOwnedProduct(providerEmail, productId);
 
-            // Quy tắc: Đổi loại sản phẩm sẽ làm sai thuộc tính của các biến thể đã có (weightGram / boxCapacity)
-            if (product.getProductType() != request.getProductType() && product.getVariants() != null && !product.getVariants().isEmpty()) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot change product type after variants exist");
+            // Quy tắc: Đổi loại sản phẩm sẽ làm sai thuộc tính của các biến thể đã có
+            // (weightGram / boxCapacity)
+            if (product.getProductType() != request.getProductType() && product.getVariants() != null
+                    && !product.getVariants().isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Cannot change product type after variants exist");
             }
-            validateShelfLife(request);
 
             // Cập nhật thuộc tính qua ProductMapper
             productMapper.updateEntity(product, request);
@@ -149,10 +149,12 @@ public class ProductServiceImpl implements ProductService {
             log.info("Variant created successfully with ID: {}, SKU: {}", saved.getId(), sku);
             return productMapper.toVariantResponse(saved);
         } catch (ResponseStatusException rse) {
-            log.warn("Validation failure adding variant to product {} for {}: {}", productId, providerEmail, rse.getReason());
+            log.warn("Validation failure adding variant to product {} for {}: {}", productId, providerEmail,
+                    rse.getReason());
             throw rse;
         } catch (Exception ex) {
-            log.error("Unexpected error adding variant to product {} for {}: {}", productId, providerEmail, ex.getMessage(), ex);
+            log.error("Unexpected error adding variant to product {} for {}: {}", productId, providerEmail,
+                    ex.getMessage(), ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Cannot add variant");
         } finally {
             log.debug("Finished addVariant for product: {}", productId);
@@ -162,7 +164,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public ProductVariantResponse updateVariant(String providerEmail, UUID productId, UUID variantId,
-                                                ProductVariantRequest request) {
+            ProductVariantRequest request) {
         log.info("Updating variant {} of product {} for provider: {}", variantId, productId, providerEmail);
         try {
             Product product = findOwnedProduct(providerEmail, productId);
@@ -193,7 +195,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional(readOnly = true)
     public PageResponse<ProductResponse> getProducts(ProductType type, Pageable pageable) {
-        log.info("Fetching public catalog products [type: {}, page: {}, size: {}]", 
+        log.info("Fetching public catalog products [type: {}, page: {}, size: {}]",
                 type, pageable.getPageNumber(), pageable.getPageSize());
         try {
             Page<Product> productPage = productRepository.findPublic(type, pageable);
@@ -252,18 +254,6 @@ public class ProductServiceImpl implements ProductService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
     }
 
-    private void validateShelfLife(ProductRequest request) {
-        // // LOOSE_CAKE: Bánh lẻ tươi - bắt buộc phải khai báo hạn sử dụng (7 - 15 ngày)
-        boolean isCake = request.getProductType() == ProductType.LOOSE_CAKE;
-        if (isCake && request.getShelfLifeDays() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Shelf life days is required for LOOSE_CAKE");
-        }
-        // // BOX_SHELL / GREETING_CARD / ADDON_SERVICE: Không áp dụng hạn sử dụng bánh tươi
-        if (!isCake && request.getShelfLifeDays() != null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Shelf life days only applies to LOOSE_CAKE");
-        }
-    }
-
     private void validateVariantForType(ProductType type, ProductVariantRequest request) {
         // // LOOSE_CAKE: Bánh lẻ - yêu cầu bắt buộc có trọng lượng gram (weightGram)
         boolean isCake = type == ProductType.LOOSE_CAKE;
@@ -281,7 +271,8 @@ public class ProductServiceImpl implements ProductService {
                             : "Box capacity only applies to BOX_SHELL variant");
         }
 
-        // // Động hóa dung tích hộp: Không hardcode Set {2, 4, 6}, chấp nhận mọi dung tích số nguyên dương (boxCapacity > 0)
+        // // Động hóa dung tích hộp: Không hardcode Set {2, 4, 6}, chấp nhận mọi dung
+        // tích số nguyên dương (boxCapacity > 0)
         if (isBox && request.getBoxCapacity() <= 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Box capacity must be greater than 0");
         }

@@ -54,7 +54,7 @@ public class ProviderProductController {
     }
 
     @PostMapping
-    @Operation(summary = "Create a product (LOOSE_CAKE requires shelfLifeDays)")
+    @Operation(summary = "Create a product")
     public ResponseEntity<ApiResponseDTO<ProductResponse>> createProduct(
             @Valid @RequestBody ProductRequest request) {
         String providerEmail = securityContextService.getCurrentUserEmail();

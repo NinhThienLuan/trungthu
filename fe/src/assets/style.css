@@ -14,17 +14,27 @@
   --color-current: currentColor;
   --color-white: #ffffff;
 
-  --color-navy: #092441;        /* thương hiệu chính: header, nút chính, tiêu đề */
-  --color-navy-deep: #051322;   /* hover của nút chính, footer */
-  --color-gold: #d6a75c;        /* điểm nhấn trên nền tối, viền, icon */
-  --color-gold-ink: #7c5713;    /* chữ vàng trên nền sáng (đủ tương phản) */
-  --color-champagne: #f3e8d2;   /* nền nhạt cho badge, ô chọn (= champagne-light) */
-  --color-ivory: #fcf9f4;       /* nền trang (= surface của Stitch) */
-  --color-jade: #142818;        /* chỉ dùng cho khu vực B2B */
+  --color-navy: #092441;
+  /* thương hiệu chính: header, nút chính, tiêu đề */
+  --color-navy-deep: #051322;
+  /* hover của nút chính, footer */
+  --color-gold: #d6a75c;
+  /* điểm nhấn trên nền tối, viền, icon */
+  --color-gold-ink: #7c5713;
+  /* chữ vàng trên nền sáng (đủ tương phản) */
+  --color-champagne: #f3e8d2;
+  /* nền nhạt cho badge, ô chọn (= champagne-light) */
+  --color-ivory: #fcf9f4;
+  /* nền trang (= surface của Stitch) */
+  --color-jade: #142818;
+  /* chỉ dùng cho khu vực B2B */
 
-  --color-ink: #1c1c19;         /* chữ chính */
-  --color-muted: #43474d;       /* chữ phụ (= on-surface-variant) */
-  --color-line: #e5e2dd;        /* viền mảnh (= surface-variant) */
+  --color-ink: #1c1c19;
+  /* chữ chính */
+  --color-muted: #43474d;
+  /* chữ phụ (= on-surface-variant) */
+  --color-line: #e5e2dd;
+  /* viền mảnh (= surface-variant) */
 
   --color-success: #2f6b3a;
   --color-success-soft: #e3efe3;
@@ -36,19 +46,26 @@
   --font-sans: "Plus Jakarta Sans", system-ui, sans-serif;
 
   /* ---------- Cỡ chữ: 7 bậc, khớp thang chữ của Stitch ---------- */
-  --text-display: 3rem;         /* 48px = headline-xl */
+  --text-display: 3rem;
+  /* 48px = headline-xl */
   --text-display--line-height: 1.2;
-  --text-h1: 2.25rem;           /* 36px = headline-lg */
+  --text-h1: 2.25rem;
+  /* 36px = headline-lg */
   --text-h1--line-height: 1.28;
-  --text-h2: 1.5rem;            /* 24px = headline-md */
+  --text-h2: 1.5rem;
+  /* 24px = headline-md */
   --text-h2--line-height: 1.3;
-  --text-h3: 1.25rem;           /* 20px = headline-sm */
+  --text-h3: 1.25rem;
+  /* 20px = headline-sm */
   --text-h3--line-height: 1.4;
-  --text-body: 0.875rem;        /* 14px = body-md */
+  --text-body: 0.875rem;
+  /* 14px = body-md */
   --text-body--line-height: 1.57;
-  --text-small: 0.75rem;        /* 12px = body-sm */
+  --text-small: 0.75rem;
+  /* 12px = body-sm */
   --text-small--line-height: 1.5;
-  --text-label: 0.6875rem;      /* 11px - nhãn in hoa */
+  --text-label: 0.6875rem;
+  /* 11px - nhãn in hoa */
   --text-label--line-height: 1.4;
   --text-label--letter-spacing: 0.12em;
 
@@ -59,7 +76,8 @@
   --shadow-card: 0 1px 2px rgb(9 36 65 / 0.04), 0 4px 16px rgb(9 36 65 / 0.06);
   --shadow-card-hover: 0 8px 24px rgb(214 167 92 / 0.18);
 
-  --container-page: 80rem;      /* 1280px */
+  --container-page: 80rem;
+  /* 1280px */
 
   /* =====================================================================
    * Token của bản thiết kế Stitch (artisanal_confectionery_luxury/DESIGN.md).
@@ -78,12 +96,12 @@
   --color-secondary-container: #ffcc7d;
   --color-on-secondary: #ffffff;
   --color-on-secondary-container: #795510;
-  --color-secondary-fixed: #ffdeae;
+  --color-secondary-fixed: #ffffff;
   --color-secondary-fixed-dim: #f0be71;
   --color-on-secondary-fixed: #281800;
   --color-on-secondary-fixed-variant: #604100;
   --color-tertiary: #011205;
-  --color-tertiary-container: #142818;
+  --color-tertiary-container: #D4AF37;
   --color-on-tertiary: #ffffff;
   --color-on-tertiary-container: #7a917b;
   --color-tertiary-fixed: #d0e9d0;
@@ -193,27 +211,35 @@
   html {
     -webkit-text-size-adjust: 100%;
   }
+
   body {
     @apply bg-ivory font-sans text-body text-ink antialiased;
   }
+
   /* Trang chuyển từ Stitch (.stitch) tự khai báo font/màu tiêu đề -> không áp rule này */
-  h1:not(.stitch *), h2:not(.stitch *), h3:not(.stitch *) {
+  h1:not(.stitch *),
+  h2:not(.stitch *),
+  h3:not(.stitch *) {
     @apply font-serif text-navy;
     text-wrap: balance;
   }
+
   :focus-visible {
     @apply outline-2 outline-offset-2 outline-gold;
   }
+
   ::selection {
     @apply bg-champagne text-navy;
   }
 }
 
 @layer components {
+
   /* Khung trang: max 1280px, lề 16px mobile / 32px desktop */
   .page {
     @apply mx-auto w-full max-w-(--container-page) px-4 md:px-8;
   }
+
   /* Khoảng cách dọc giữa các khu vực lớn */
   .section {
     @apply py-12 md:py-20;
@@ -229,19 +255,21 @@
 
   /* Nút: 3 kiểu, 2 cỡ */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-sm border px-5 h-11
-      text-small font-semibold uppercase tracking-wider transition-colors
-      disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-sm border px-5 h-11 text-small font-semibold uppercase tracking-wider transition-colors disabled:cursor-not-allowed disabled:opacity-50;
   }
+
   .btn-sm {
     @apply h-9 px-3;
   }
+
   .btn-primary {
     @apply border-navy bg-navy text-gold hover:bg-navy-deep;
   }
+
   .btn-outline {
     @apply border-gold bg-transparent text-navy hover:bg-champagne/50;
   }
+
   .btn-ghost {
     @apply border-transparent bg-transparent text-navy hover:bg-champagne/50;
   }
@@ -250,21 +278,23 @@
   .field-label {
     @apply mb-1.5 block text-small font-semibold text-ink;
   }
+
   .input {
-    @apply h-11 w-full rounded-sm border border-line bg-ivory px-3 text-body text-ink
-      placeholder:text-muted/70 focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold;
+    @apply h-11 w-full rounded-sm border border-line bg-ivory px-3 text-body text-ink placeholder:text-muted/70 focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold;
   }
+
   textarea.input {
     @apply h-auto py-2.5;
   }
+
   .field-error {
     @apply mt-1 text-small text-danger;
   }
 
   .chip {
-    @apply inline-flex items-center gap-1 rounded-full border border-line bg-ivory px-3 py-1
-      text-label font-semibold uppercase text-navy;
+    @apply inline-flex items-center gap-1 rounded-full border border-line bg-ivory px-3 py-1 text-label font-semibold uppercase text-navy;
   }
+
   .chip-active {
     @apply border-navy bg-navy text-gold;
   }
@@ -283,20 +313,24 @@
   .gold-border-subtle {
     border: 1px solid rgb(212 175 55 / 0.28);
   }
+
   .gold-gradient-text {
     background: linear-gradient(135deg, #fff0cc 0%, #d4af37 50%, #b88636 100%);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
   }
+
   .badge-blur-mordan {
     background: rgb(9 36 65 / 0.75);
     backdrop-filter: blur(10px);
   }
+
   .sheen-gold-btn {
     background: linear-gradient(135deg, #f0c45b 0%, #d4af37 50%, #b88636 100%);
     transition: all 0.3s ease;
   }
+
   .sheen-gold-btn:hover {
     box-shadow: 0 4px 20px rgb(212 175 55 / 0.35);
     filter: brightness(1.05);
@@ -315,16 +349,20 @@
     opacity: 0;
     transform: scale(1.05) translate3d(0, 0, 0);
   }
+
   5% {
     opacity: 1;
   }
+
   25% {
     opacity: 1;
   }
+
   31% {
     opacity: 0;
     transform: scale(1.16) translate3d(-2%, -1%, 0);
   }
+
   100% {
     opacity: 0;
     transform: scale(1.16) translate3d(-2%, -1%, 0);
@@ -335,6 +373,7 @@
   .hero-motion-slide {
     animation: none;
   }
+
   .hero-motion-slide:first-child {
     opacity: 1;
     transform: scale(1.05);
@@ -342,7 +381,10 @@
 }
 
 @media print {
-  header, footer, .no-print {
+
+  header,
+  footer,
+  .no-print {
     display: none !important;
   }
 }

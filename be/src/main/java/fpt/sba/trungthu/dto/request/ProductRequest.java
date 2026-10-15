@@ -21,9 +21,6 @@ public class ProductRequest {
     @NotNull(message = "Product type is required (LOOSE_CAKE, BOX_SHELL, GREETING_CARD, ADDON_SERVICE)")
     private ProductType productType;
 
-    @Positive(message = "Shelf life days must be positive")
-    private Integer shelfLifeDays;
-
     @Pattern(regexp = "ACTIVE|HIDDEN", message = "Status must be ACTIVE or HIDDEN")
     private String status;
 }

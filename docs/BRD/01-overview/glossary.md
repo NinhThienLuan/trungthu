@@ -31,12 +31,12 @@ Tài liệu này chuẩn hóa các thuật ngữ chuyên môn được sử dụ
 
 ---
 
-## 3. Thuật Ngữ Mùa Vụ, Hạn Sử Dụng & Đặt Trước (Seasonality & Freshness)
+## 3. Thuật Ngữ Mùa Vụ & Đặt Trước (Seasonality & Freshness)
 
 | Thuật ngữ (English / Vietnamese) | Mô tả chi tiết | Quy định / Giá trị áp dụng |
 | :--- | :--- | :--- |
 | **Khung thời gian linh hoạt (Flexible Window)** | Hệ thống mở nhận đơn hàng B2C và yêu cầu B2B RFQ quanh năm, **không chặn cứng** theo khoảng thời gian mùa vụ Trung Thu (tháng 7 - 8 Âm Lịch). | Xưởng chủ động quản lý việc nhận đơn qua công tắc `is_season_active` và hạn ngạch `capacity_cap`. |
-| **Hạn sử dụng bánh tươi (Fresh Shelf Life)** | Thời gian bảo quản tối đa của bánh Trung Thu tươi (handmade, không chất bảo quản). | **7 - 10 ngày** đối với bánh dẻo tươi;<br>**10 - 15 ngày** đối với bánh nướng tươi. |
+| **Hạn sử dụng bánh tươi (Fresh Shelf Life)** | Tính năng quản lý HSD tự động theo ngày ra lò. | **Đã cắt giảm khỏi phạm vi hệ thống** để tinh gọn luồng tạo sản phẩm và đơn hàng. |
 | **Ràng buộc ngày đặt bánh (Order Lead-Time Rule)** | Thời gian tối thiểu giữa lúc bấm đặt hàng và ngày nhận bánh để xưởng kịp chuẩn bị nguyên liệu và xếp lịch ra lò. | Tối thiểu **3 ngày** (`expected_delivery_date >= CURRENT_DATE + 3`). **MVP chặn cứng mọi yêu cầu nhận dưới 3 ngày**, không hỗ trợ same-day/rush. |
 | **Giao hàng theo đợt (Multi-batch Delivery)** | Giải pháp dành cho đơn hàng sỉ B2B: chia tổng số lượng đặt mua thành nhiều đợt giao vào các ngày/địa chỉ khác nhau để bánh luôn mới. | **MVP**: Toàn bộ đơn hàng giao 1 đợt duy nhất.<br>**Phase 2**: Cho phép chia tách đa đợt giao nhiều địa chỉ chi nhánh. |
 

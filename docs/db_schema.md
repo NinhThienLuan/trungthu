@@ -99,7 +99,6 @@ Tài liệu này tổng hợp toàn bộ 17 Thực thể (Entities), Bảng dữ
 | `name` | `String` / `VARCHAR(150)` | `NOT NULL` | Tên dòng sản phẩm (VD: `"Bánh Trung Thu Thập Cẩm Gà Quay"`, `"Thiệp Ép Kim Hoàng Gia"`). |
 | `product_type` | `String` / `VARCHAR(30)` | `NOT NULL` | Enum: `LOOSE_CAKE`, `BOX_SHELL`, `GREETING_CARD`, `ADDON_SERVICE`. |
 | `category` | `String` / `VARCHAR(30)` | `NOT NULL` | Enum: `BAKED`, `SNOWSKIN`, `VEGAN`, `LOW_SUGAR`, `PACKAGING`, `SERVICES`. |
-| `shelf_life_days` | `Integer` / `INT` | `NULLABLE` | Hạn sử dụng bánh tươi tính theo ngày (7–15 ngày; null đối với thiệp/vỏ hộp/dịch vụ). |
 | `description` | `Text` / `TEXT` | `NULLABLE` | Mô tả thành phần, quy cách, chi tiết dịch vụ đi kèm. |
 | `is_active` | `Boolean` / `BOOLEAN` | `DEFAULT true` | Trạng thái hiển thị sản phẩm. |
 | `created_at` | `LocalDateTime` / `TIMESTAMP` | `DEFAULT CURRENT_TIMESTAMP` | Thời điểm tạo sản phẩm. |

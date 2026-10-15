@@ -17,14 +17,10 @@ Cho phép khách hàng cá nhân (B2C) lựa chọn mua các sản phẩm bánh 
     - Tính số tiền cọc riêng (`deposit_amount`).
     - Hiển thị mã ảnh VietQR chuyển tiền trực tiếp tới số tài khoản ngân hàng của Provider đó.
 
-### 2.2. Quy tắc Biến Thể Sản Phẩm & Hạn Sử Dụng Bánh Tươi (Product Variant & Fresh Shelf Life)
+### 2.2. Quy tắc Biến Thể Sản Phẩm (Product & ProductVariant)
 - Sản phẩm được quản lý theo mô hình **Product & ProductVariant**:
-  - `Product`: Dòng sản phẩm ("Bánh Thập Cẩm Gà Quay", "Hộp Quà Đoàn Viên"), loại sản phẩm (`LOOSE_CAKE`, `BOX_SHELL`, `GREETING_CARD`, `ADDON_SERVICE`), HSD bánh tươi (`shelf_life_days`).
+  - `Product`: Dòng sản phẩm ("Bánh Thập Cẩm Gà Quay", "Hộp Quà Đoàn Viên"), loại sản phẩm (`LOOSE_CAKE`, `BOX_SHELL`, `GREETING_CARD`, `ADDON_SERVICE`).
   - `ProductVariant`: Mã SKU, trọng lượng (150g, 200g, 250g), dung tích vỏ hộp (Set 2, 4, 6), đơn giá (`price`), tồn kho (`stock_quantity`).
-- **Hiển thị Hạn Sử Dụng (Shelf Life Display)**:
-  - Bánh dẻo tươi: **7 - 10 ngày**.
-  - Bánh nướng tươi: **10 - 15 ngày**.
-  - Luôn hiển thị khuyến cáo HSD tính từ **Ngày Ra Lò (`bake_date`)**.
 
 ### 2.3. Quy tắc Hộp Quà Chuẩn Trong MVP vs Tự Phối Custom Box Trong Phase 2
 - **Trong MVP**: Khách hàng mua các Set hộp quà đóng sẵn tiêu chuẩn (sản phẩm hoàn chỉnh) hoặc bánh lẻ mua theo số lượng thông qua bảng `order_items`.

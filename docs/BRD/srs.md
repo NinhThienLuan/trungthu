@@ -113,8 +113,8 @@ Nền tảng đóng vai trò là phần mềm trung gian dịch vụ (Pure SaaS 
     - `ADDON_SERVICE`: Dịch vụ gia tăng (túi quà, thắt nơ).
   - Quản lý album ảnh sản phẩm qua `ProductImage` với cờ `is_primary` cho ảnh đại diện chính.
   - Mỗi biến thể SKU (`ProductVariant`) quản lý mã SKU, trọng lượng/dung tích, đơn giá (`price`) và tồn kho (`stock_quantity`).
-- **`[REQ-CAT-02]` `[MVP]` Hiển thị Hạn Sử Dụng Bánh Tươi**:
-  - Dòng bánh lẻ khai báo `shelf_life_days` (7-15 ngày), giao diện hiển thị khuyến cáo HSD tính từ ngày ra lò.
+- **`[REQ-CAT-02]` `[Đã cắt giảm / Removed]` Quản lý Hạn Sử Dụng Bánh Tươi**:
+  - Đã lược bỏ hoàn toàn trường `shelf_life_days` và logic ràng buộc HSD bánh tươi để tinh gọn phạm vi phát triển.
 - **`[REQ-CAT-03]` `[MVP]` Quản lý tồn kho thời gian thực**:
   - Kiểm tra tồn kho nguyên tử (`Atomic Stock Validation`) lúc checkout, trừ kho thành phẩm chính xác theo số lượng đặt mua trong `order_items`.
 - **`[REQ-CAT-04]` `[MVP]` Tự động làm mờ khi hết hàng (Out-of-Stock)**:
@@ -243,7 +243,7 @@ Nền tảng đóng vai trò là phần mềm trung gian dịch vụ (Pure SaaS 
 | :--- | :--- | :---: | :--- | :--- |
 | **Xác thực & KYC** | `[REQ-AUTH-01]` $\rightarrow$ `[REQ-AUTH-04]` | **MVP** | `BR-06` | `users`, `store_compliance_docs` |
 | **Gói SaaS Provider** | `[REQ-SAAS-01]`, `[02]`, `[04]`<br>`[REQ-SAAS-03]` (Cron hết hạn) | **MVP**<br>Phase 2 | `BR-06` | `provider_subscriptions`, `payment_transactions` |
-| **Sản phẩm & Tồn kho** | `[REQ-CAT-01]` $\rightarrow$ `[REQ-CAT-04]` | **MVP** | `BR-01`, `BR-05` | `products`, `product_variants`, `product_images` |
+| **Sản phẩm & Tồn kho** | `[REQ-CAT-01]`, `[03]`, `[04]` (Đã cắt `[02]`) | **MVP** | `BR-01`, `BR-05` | `products`, `product_variants`, `product_images` |
 | **Tùy biến Hộp Quà** | `[REQ-B2C-01]` $\rightarrow$ `[REQ-B2C-05]` | **Phase 2** | `BR-01`, `BR-05` | `custom_boxes`, `custom_box_items` |
 | **Giá cả & Phụ phí** | `[REQ-PRIC-03]` (Phí in)<br>`[REQ-PRIC-01]`, `[02]`, `[04]` | **MVP**<br>Phase 2 | `BR-03` | `product_variants`, `orders` |
 | **Lịch Bánh Tươi** | `[REQ-BATCH-01]` (Lead-time $\ge 3$ ngày)<br>`[REQ-BATCH-02]`, `[03]`, `[04]` | **MVP** (1 đợt)<br>Phase 2 (Đa đợt) | `BR-01`, `BR-04` | `order_batches`, `orders` |

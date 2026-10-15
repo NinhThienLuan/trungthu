@@ -1,15 +1,10 @@
 package fpt.sba.trungthu.controller;
 
-import fpt.sba.trungthu.dto.request.ChangePasswordRequest;
-import fpt.sba.trungthu.dto.request.ForgotPasswordRequest;
-import fpt.sba.trungthu.dto.request.GoogleLoginRequest;
-import fpt.sba.trungthu.dto.request.LoginRequest;
-import fpt.sba.trungthu.dto.request.RefreshTokenRequest;
-import fpt.sba.trungthu.dto.request.RegisterRequest;
-import fpt.sba.trungthu.dto.request.ResetPasswordRequest;
+import fpt.sba.trungthu.dto.request.*;
 import fpt.sba.trungthu.dto.response.ApiResponseDTO;
 import fpt.sba.trungthu.dto.response.AuthResponse;
 import fpt.sba.trungthu.dto.response.UserResponse;
+import fpt.sba.trungthu.entity.enumeration.AuthProviderType;
 import fpt.sba.trungthu.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -49,11 +44,11 @@ public class AuthController {
     @Operation(summary = "Unified authentication gateway endpoint (local, google, etc.)")
     public ResponseEntity<ApiResponseDTO<AuthResponse>> authenticate(
             @PathVariable("provider") String providerStr,
-            @RequestBody fpt.sba.trungthu.dto.request.AuthGatewayRequest request,
+            @Valid @RequestBody AuthGatewayRequest request,
             HttpServletResponse response) {
-        fpt.sba.trungthu.entity.enumeration.AuthProviderType provider;
+        AuthProviderType provider;
         try {
-            provider = fpt.sba.trungthu.entity.enumeration.AuthProviderType.valueOf(providerStr.toUpperCase());
+            provider = AuthProviderType.valueOf(providerStr.toUpperCase());
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid auth provider: " + providerStr);
         }
@@ -78,8 +73,8 @@ public class AuthController {
             @Valid @RequestBody GoogleLoginRequest request,
             HttpServletResponse response) {
         AuthResponse authResponse = authService.authenticate(
-                fpt.sba.trungthu.dto.request.AuthGatewayRequest.builder()
-                        .provider(fpt.sba.trungthu.entity.enumeration.AuthProviderType.GOOGLE)
+                AuthGatewayRequest.builder()
+                        .provider(AuthProviderType.GOOGLE)
                         .idToken(request.getIdToken())
                         .build(),
                 response);
