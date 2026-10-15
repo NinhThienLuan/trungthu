@@ -42,7 +42,7 @@
   --color-danger-soft: #ffdad6;
 
   /* ---------- Font ---------- */
-  --font-serif: "Playfair Display", Georgia, serif;
+  --font-serif: "Playfair Display", "Times New Roman", Times, serif;
   --font-sans: "Plus Jakarta Sans", system-ui, sans-serif;
 
   /* ---------- Cỡ chữ: 7 bậc, khớp thang chữ của Stitch ---------- */
@@ -137,13 +137,13 @@
   --color-border-gold-subtle: rgb(214 167 92 / 0.28);
   --color-emerald-shadow: #0f1e14;
 
-  --font-headline-xl: "Playfair Display", Georgia, serif;
-  --font-headline-xl-mobile: "Playfair Display", Georgia, serif;
-  --font-headline-lg: "Playfair Display", Georgia, serif;
-  --font-headline-lg-mobile: "Playfair Display", Georgia, serif;
-  --font-headline-md: "Playfair Display", Georgia, serif;
-  --font-headline-sm: "Playfair Display", Georgia, serif;
-  --font-imperial-title: "Playfair Display", Georgia, serif;
+  --font-headline-xl: "Playfair Display", "Times New Roman", Times, serif;
+  --font-headline-xl-mobile: "Playfair Display", "Times New Roman", Times, serif;
+  --font-headline-lg: "Playfair Display", "Times New Roman", Times, serif;
+  --font-headline-lg-mobile: "Playfair Display", "Times New Roman", Times, serif;
+  --font-headline-md: "Playfair Display", "Times New Roman", Times, serif;
+  --font-headline-sm: "Playfair Display", "Times New Roman", Times, serif;
+  --font-imperial-title: "Playfair Display", "Times New Roman", Times, serif;
   --font-body: "Plus Jakarta Sans", system-ui, sans-serif;
   --font-body-lg: "Plus Jakarta Sans", system-ui, sans-serif;
   --font-body-md: "Plus Jakarta Sans", system-ui, sans-serif;
@@ -221,6 +221,7 @@
   h2:not(.stitch *),
   h3:not(.stitch *) {
     @apply font-serif text-navy;
+
     text-wrap: balance;
   }
 

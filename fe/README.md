@@ -27,19 +27,27 @@ Chạy backend (`be/`) trước để có dữ liệu thật cho đăng nhập v
 
 ```
 src/
-├── apis/        # gọi BE; mock.ts bật/tắt dữ liệu giả cho API chưa xong
-├── assets/      # style.css (design system duy nhất)
-├── components/  # Header, Footer, ProductCard, DeliveryDatePicker, ui/*
-├── constants/   # ROUTES, label, quy tắc nghiệp vụ (MIN_LEAD_DAYS...)
-├── hooks/       # useApi, useDocumentTitle
-├── layouts/     # MainLayout, AuthLayout
-├── lib/         # format tiền, ngày, cn()
-├── pages/       # mỗi route một trang; pages/stitch/* là màn chuyển nguyên từ Stitch
-├── routes/      # router + ProtectedRoute
-├── schemas/     # validate form bằng zod
-├── stores/      # zustand: auth, cart
-└── types/       # kiểu dữ liệu khớp DTO của BE
+├── apis/          # tầng gọi mạng: http.ts (axios + refresh token), mock.ts (cờ bật/tắt mock), mockData.ts
+├── services/      # nghiệp vụ gọi BE: authService, productService, orderService, capacityService, rfqService
+├── assets/        # style.css — design system duy nhất (Tailwind v4, cấu hình bằng @theme)
+├── components/
+│   ├── layouts/   # UserLayout, AdminLayout, AuthLayout, Header, Footer, StitchPage
+│   └── ui/        # Field, States, QuantityStepper, PageHeader
+├── constants/     # ROUTES, label, quy tắc nghiệp vụ (MIN_LEAD_DAYS...)
+├── hooks/         # useApi, useDocumentTitle
+├── lib/           # format tiền, ngày, cn()
+├── pages/
+│   ├── user/      # trang người mua: Home, Catalog, ProductDetail, BoxBuilder, Cart, Checkout, Payment, MyOrders, B2B, Policy
+│   ├── admin/     # khu vực nghệ nhân / quản trị sàn (FE2)
+│   ├── auth/      # Login, Register
+│   └── NotFoundPage.tsx
+├── routes/        # router, ProtectedRoute, stitchPaths (data-path của Stitch -> route)
+├── schemas/       # validate form bằng zod
+├── stores/        # zustand: auth, cart
+└── types/         # kiểu dữ liệu khớp DTO của BE
 ```
+
+Tailwind v4 không cần `tailwind.config.js`: toàn bộ cấu hình (màu, font, cỡ chữ, khoảng cách) khai báo bằng `@theme` trong `src/assets/style.css`.
 
 ## API đang dùng dữ liệu giả
 
@@ -52,4 +60,4 @@ Xem `src/apis/mock.ts`. Khi BE xong module nào thì đổi cờ tương ứng t
 | `orders` | BE4 Luân | `GET /api/orders/me`, `GET /api/orders/{id}` |
 | `rfq` | BE3 Phát | `POST /api/rfqs` |
 
-Định dạng request/response nằm trong `src/types/order.ts`.
+Định dạng request/response nằm trong `src/types/order.ts`; hàm gọi API nằm trong `src/services/`.

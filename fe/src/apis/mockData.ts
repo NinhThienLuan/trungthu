@@ -147,3 +147,19 @@ export const BOX_MATERIALS = [
 
 /** Xưởng đóng hộp tự phối: sàn Nguyệt Viên Đài (khay ghi 'Nguyệt Viên Đài • Ngự Thượng Phẩm') */
 export const BOX_PROVIDER = { id: 'p-nguyet-vien-dai', storeName: 'Đại Sàn Nguyệt Viên Đài' }
+
+/** Đánh giá mẫu cho trang chi tiết (thay bằng API đánh giá khi BE có) */
+export interface MockReview {
+  id: string
+  author: string
+  rating: number
+  date: string // yyyy-MM-dd
+  variant: string
+  content: string
+}
+export const MOCK_REVIEWS: MockReview[] = [
+  { id: 'r1', author: 'Minh Anh', rating: 5, date: '2026-10-02', variant: 'Quy cách chuẩn', content: 'Bánh thơm, nhân mềm, hộp chắc chắn. Giao đúng ngày đã chọn.' },
+  { id: 'r2', author: 'Quốc Bảo', rating: 5, date: '2026-09-28', variant: 'Hộp 6 bánh', content: 'Đặt làm quà cho đối tác, ai cũng khen hộp đẹp. Sẽ đặt lại.' },
+  { id: 'r3', author: 'Thu Hà', rating: 4, date: '2026-09-25', variant: 'Quy cách chuẩn', content: 'Vị ngon, hơi ngọt so với mình. Đóng gói cẩn thận.' },
+  { id: 'r4', author: 'Gia Huy', rating: 5, date: '2026-09-20', variant: 'Hộp 8 bánh', content: 'Bánh mới ra lò, vỏ mỏng, nhân đầy. Trà kèm theo rất thơm.' },
+]

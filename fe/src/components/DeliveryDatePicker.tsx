@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { capacityApi } from '../apis/capacity'
+import { capacityService } from '../services/capacityService'
 import { useApi } from '../hooks/useApi'
 import { MIN_LEAD_DAYS } from '../constants'
 import { addDays, cn, parseIsoDate, toIsoDate } from '../lib/format'
@@ -15,7 +15,7 @@ interface Props {
 
 /**
  * Lịch chọn ngày nhận cho 1 Provider.
- * Ngày < hôm nay + MIN_LEAD_DAYS hoặc đã kín hạn ngạch thì bị khoá (dữ liệu từ capacityApi).
+ * Ngày < hôm nay + MIN_LEAD_DAYS hoặc đã kín hạn ngạch thì bị khoá (dữ liệu từ capacityService).
  */
 export function DeliveryDatePicker({ providerId, value, onChange }: Props) {
   const minDate = useMemo(() => addDays(new Date(), MIN_LEAD_DAYS), [])
@@ -26,7 +26,7 @@ export function DeliveryDatePicker({ providerId, value, onChange }: Props) {
 
   const first = toIsoDate(month)
   const last = toIsoDate(new Date(month.getFullYear(), month.getMonth() + 1, 0))
-  const { data, loading, error } = useApi(() => capacityApi.availableDates(providerId, first, last), [providerId, first])
+  const { data, loading, error } = useApi(() => capacityService.availableDates(providerId, first, last), [providerId, first])
   const availability = useMemo(() => new Map(data?.map((d) => [d.date, d.available])), [data])
 
   // Ô trống đầu tháng để ngày 1 rơi đúng thứ (tuần bắt đầu từ T2)
