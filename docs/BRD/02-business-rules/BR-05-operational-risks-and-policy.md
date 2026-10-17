@@ -1,5 +1,7 @@
 # 📜 Business Rule: BR-05 - Quản Lý Rủi Ro Vận Hành, Pháp Lý & Chính Sách Bán Hàng (Operational Risks & E-commerce Policies)
 
+> Cập nhật 2026-10-16: Ngưỡng cọc/COD tính trên từng Order sau tách; transaction và hold theo [hợp đồng Backend](../04-agent-and-dev-guidelines/backend-ownership-and-order-contract.md).
+
 ## 1. Goal (Mục tiêu)
 Định nghĩa các quy tắc nghiệp vụ giải quyết các rủi ro vận hành đặc thù của thương mại điện tử bánh Trung Thu: Quy định đặt cọc theo loại đơn hàng, quản lý tồn kho đa tầng (Vỏ hộp vs Vị bánh), mô hình thanh toán trực tiếp không Escrow, quy trình xuất hóa đơn VAT doanh nghiệp, chính sách đổi trả bánh tươi và tuân thủ pháp lý sàn TMĐT tại Việt Nam.
 
@@ -15,7 +17,7 @@
   - Khách hàng được phép lựa chọn hình thức thanh toán khi nhận hàng (`payment_method = 'COD'`).
   - Số tiền đặt cọc bằng 0 (`deposit_amount = 0`), thanh toán toàn bộ cho shipper khi nhận bánh.
 
-### 2.2. Quy Tắc Quản Lý Tồn Kho Đa Tầng (Multi-level Real-time Inventory Rule)
+### 2.2. [Phase 2] Quy Tắc Quản Lý Tồn Kho Đa Tầng (Multi-level Real-time Inventory Rule)
 - **Rủi ro**: Vỏ hộp còn nhưng vị bánh lẻ bị hết (hoặc ngược lại) dẫn đến vỡ đơn hàng ghép.
 - **Quy tắc trừ kho**:
   - Khi khách hoàn tất chọn 1 Hộp tùy chỉnh (Set 4 bánh):
@@ -63,7 +65,9 @@
     │      ├─► NẾU CÓ ──► Bắt buộc chọn VIETQR, Thanh toán cọc >= 50% trực tiếp tới Provider
     │      └─► NẾU KHÔNG ──► Cho phép chọn COD (Cọc 0đ, thanh toán khi nhận hàng)
     │
-    ├─► Giữ chỗ tồn kho & Capacity Cap trong 15 phút
+    ├─► Reserve stock/capacity trong một transaction cho mọi Provider
+    ├─► VIETQR: PENDING_DEPOSIT, hold 15 phút; Seller gia hạn một lần +15 phút trước hạn
+    ├─► COD: CONFIRMED/UNPAID, không deadline; không bị cron hold hủy
     │
     ├─► Tùy chọn Xuất Hóa Đơn VAT (Nhập MST & Email hóa đơn)
     │

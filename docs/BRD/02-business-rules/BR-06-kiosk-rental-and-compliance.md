@@ -1,5 +1,7 @@
 # 📜 Business Rule: BR-06 - Đăng Ký Gói Dịch Vụ SaaS Provider & Quản Lý Hồ Sơ Pháp Lý (Provider SaaS Subscription & Compliance - Streamlined MVP)
 
+> Cập nhật 2026-10-16: SaaS được tinh gọn thành nạp phí/kích hoạt quyền bán theo bảng phân việc. [BE1](../04-agent-and-dev-guidelines/backend-ownership-and-order-contract.md) sở hữu nghiệp vụ và ProviderPolicy; BE4 phối hợp schema giao dịch dùng chung.
+
 ## 1. Goal (Mục tiêu)
 Quy định chi tiết mô hình kinh doanh **Pure Provider SaaS Model**: các gói dịch vụ SaaS đăng ký cho Provider/Nhà sản xuất, thời hạn hiển thị, phân quyền niêm yết SKU, và quy trình kiểm duyệt bắt buộc đối với Hồ sơ Pháp lý Cửa hàng (Giấy chứng nhận ATTP, Giấy phép ĐKKD, Định danh KYC) theo phạm vi tinh gọn cho nhóm 6 người trong 4 tuần.
 
@@ -7,20 +9,12 @@ Quy định chi tiết mô hình kinh doanh **Pure Provider SaaS Model**: các g
 
 ## 2. Core Rules (Quy tắc nghiệp vụ cốt lõi)
 
-### 2.1. Quy tắc Gói Đăng Ký Provider SaaS (`provider_subscriptions`)
-- **Cấu hình Đăng Ký**: Mỗi Provider khi tham gia Sàn phải đăng ký và duy trì ít nhất **1 Gói dịch vụ SaaS hoạt động (`ACTIVE`)**.
-- **Các Gói Đăng Ký SaaS Provider (Subscription Packages)**:
-  - **Gói Tiêu Chuẩn (`STANDARD` - MVP Scope)**:
-    - Mức phí đăng ký: $1.000.000$ VNĐ / thời hạn 3 tháng (90 ngày).
-    - Giới hạn niêm yết tối đa: **20 biến thể SKU** (`max_products_allowed = 20`).
-    - Quyền lợi: Mở gian hàng trên sàn, hiển thị sản phẩm trong danh mục tìm kiếm chung, tiếp nhận đơn B2C lẻ/custom và nhận thông báo B2B RFQ.
-  - **Gói VIP Nổi Bật (`VIP` - MVP Scope)**:
-    - Mức phí đăng ký: $3.000.000$ VNĐ / thời hạn 3 tháng (90 ngày).
-    - Giới hạn niêm yết tối đa: **100 biến thể SKU** (`max_products_allowed = 100`).
-    - Quyền lợi: Toàn bộ quyền lợi gói Tiêu chuẩn + Được gắn cờ `is_featured = true` hiển thị ưu tiên ở đầu danh sách gian hàng.
-- **Thanh Toán Phí Đăng Ký SaaS & Đối Soát Thủ Công**:
-  - Provider thực hiện chuyển khoản phí dịch vụ trực tiếp vào tài khoản ngân hàng của Sàn (Platform Admin) với cú pháp nội dung `SUB-[SellerId]`. Giao dịch ghi nhận loại `SUBSCRIPTION_FEE` ở trạng thái `PENDING`.
-  - Platform Admin kiểm tra sao kê ngân hàng và bấm nút "Xác Nhận Kích Hoạt Gói" trên Dashboard Admin $\rightarrow$ Chuyển trạng thái gói sang `ACTIVE`. Không sử dụng webhook tự động để đơn giản hóa kiến trúc và hạn chế phụ thuộc bên thứ ba.
+### 2.1. Nạp phí kích hoạt quyền bán SaaS
+- Provider chuyển khoản phí tới tài khoản sàn; đây là nạp phí dịch vụ, không phải ví có số dư/nạp/rút.
+- BE1 cấu hình mức phí, thời hạn, giới hạn SKU trong quyền bán. MVP không bắt buộc xây hai hạng STANDARD/VIP hay quyền quảng cáo.
+- Ghi Subscription PENDING_PAYMENT và giao dịch SUBSCRIPTION_FEE/PENDING, nội dung SUB-[SellerId]. Admin đối soát thực nhận rồi chuyển giao dịch SUCCESS và Subscription ACTIVE trong cùng transaction, có phân quyền và chống xác nhận lặp.
+- Không dùng webhook. BE1 quyết định đủ điều kiện bán qua ProviderPolicy (KYC, quyền bán ACTIVE, trạng thái tài khoản/công tắc nhận đơn); BE3 kiểm tra lại khi Checkout.
+- BE4 quản lý mapping/repository PaymentTransaction dùng chung; xác nhận kích hoạt SaaS thuộc BE1, không đưa vào Order lifecycle BE3.
 
 ### 2.2. Quy tắc Kiểm Duyệt Hồ Sơ Pháp Lý & An Toàn Thực Phẩm (Compliance & Food Safety Verification)
 - **Danh Mục Tài Liệu Bắt Buộc (`store_compliance_docs`)**:
@@ -45,7 +39,7 @@ Quy định chi tiết mô hình kinh doanh **Pure Provider SaaS Model**: các g
     │
     ├─► 1. Tải lên Hồ sơ Pháp lý (Form upload KYC chung) ──► Admin duyệt (is_compliance_approved = true)
     │
-    ├─► 2. Chọn Gói SaaS Provider (STANDARD - 20 SKU hoặc VIP - 100 SKU)
+    ├─► 2. Nạp phí kích hoạt quyền bán theo cấu hình BE1
     │
     ▼
 [Chuyển Khoản Phí SaaS Cho Admin Sàn]
@@ -69,4 +63,4 @@ Quy định chi tiết mô hình kinh doanh **Pure Provider SaaS Model**: các g
 ## 4. Non-goals (Phạm vi không thực hiện trong BR này)
 - Không miễn phí gói dịch vụ SaaS cho bất kỳ thương hiệu nào (100% Provider phải đăng ký gói hợp lệ).
 - Không tự động gia hạn gói SaaS (Provider chủ động bấm gia hạn và thanh toán).
-- Bỏ hạng gói `EXCLUSIVE_POPUP` và logic quảng cáo carousel phức tạp trong MVP.
+- Không xây phân hạng quảng cáo STANDARD/VIP/EXCLUSIVE_POPUP hoặc ví số dư trong MVP.

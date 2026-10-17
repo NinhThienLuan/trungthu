@@ -1,5 +1,7 @@
 # 📖 Từ Điển Thuật Ngữ Nghiệp Vụ (Domain Glossary)
 
+> Cập nhật 2026-10-16: Thuật ngữ Order/COD/hold theo [hợp đồng Backend](../04-agent-and-dev-guidelines/backend-ownership-and-order-contract.md).
+
 Tài liệu này chuẩn hóa các thuật ngữ chuyên môn được sử dụng trong toàn bộ tài liệu thiết kế và mã nguồn của **Nền Tảng Bán Bánh Trung Thu (trung_thu_web)**.
 
 ---
@@ -27,7 +29,7 @@ Tài liệu này chuẩn hóa các thuật ngữ chuyên môn được sử dụ
 | **Lịch sản xuất Song Lịch (Dual Production Calendar)** | Công cụ quản lý dành riêng cho Provider, hiển thị lịch trả bánh và nướng bánh đồng thời bằng **Dương Lịch và Âm Lịch**. | Lõi tính toán chạy 100% theo Dương Lịch chuẩn (`LocalDate`). Lịch Âm chỉ hiển thị nhãn chuỗi ký tự tham khảo (Ví dụ: `25/09/2026 (15/08 Âm Lịch)`). |
 | **Hạn ngạch nướng ngày (Daily Capacity Cap)** | Số lượng chiếc bánh tối đa mà xưởng có thể nướng trong 1 ngày ra lò (`bake_date`). | Nếu tổng số bánh cần nướng trong ngày `bake_date` đạt $100\%$ Hạn ngạch, hệ thống tự động khóa ngày giao tương ứng (`bake_date + 1`) trên trang mua hàng. |
 | **Kế hoạch ra lò bánh (Daily Production Sheet)** | Báo cáo tự động gom tổng số lượng từng loại bánh lẻ cần nướng trong ngày `bake_date` từ tất cả các đơn B2C & B2B. | Xuất file in A4 cho thợ làm bánh tại xưởng. |
-| **Phí vận chuyển theo khu vực (Shipping Fee Calculation)** | Khoản phí giao hàng được cấu hình theo Quận/Huyện/Tỉnh thành và cộng vào hóa đơn checkout (không bao gồm ứng dụng shipper riêng). | Hiển thị thành dòng phí riêng biệt trên hóa đơn. 1 đơn hàng chỉ mua từ 1 Provider duy nhất. |
+| **Phí vận chuyển theo khu vực (Shipping Fee Calculation)** | Khoản phí giao hàng phẳng do từng Provider cấu hình và cộng vào Order sau tách (không bao gồm ứng dụng shipper riêng). | Hiển thị thành dòng phí riêng biệt trên hóa đơn. Giỏ được đa Provider; mỗi Order sau tách chỉ có một Provider. |
 
 ---
 
@@ -35,7 +37,7 @@ Tài liệu này chuẩn hóa các thuật ngữ chuyên môn được sử dụ
 
 | Thuật ngữ (English / Vietnamese) | Mô tả chi tiết | Quy định / Giá trị áp dụng |
 | :--- | :--- | :--- |
-| **Khung thời gian linh hoạt (Flexible Window)** | Hệ thống mở nhận đơn hàng B2C và yêu cầu B2B RFQ quanh năm, **không chặn cứng** theo khoảng thời gian mùa vụ Trung Thu (tháng 7 - 8 Âm Lịch). | Xưởng chủ động quản lý việc nhận đơn qua công tắc `is_season_active` và hạn ngạch `capacity_cap`. |
+| **Khung thời gian linh hoạt (Flexible Window)** | Hệ thống mở nhận đơn hàng B2C và yêu cầu B2B RFQ quanh năm, **không chặn cứng** theo khoảng thời gian mùa vụ Trung Thu (tháng 7 - 8 Âm Lịch). | Xưởng chủ động quản lý việc nhận đơn qua công tắc `is_season_active` và hạn ngạch `max_quantity`. |
 | **Hạn sử dụng bánh tươi (Fresh Shelf Life)** | Tính năng quản lý HSD tự động theo ngày ra lò. | **Đã cắt giảm khỏi phạm vi hệ thống** để tinh gọn luồng tạo sản phẩm và đơn hàng. |
 | **Ràng buộc ngày đặt bánh (Order Lead-Time Rule)** | Thời gian tối thiểu giữa lúc bấm đặt hàng và ngày nhận bánh để xưởng kịp chuẩn bị nguyên liệu và xếp lịch ra lò. | Tối thiểu **3 ngày** (`expected_delivery_date >= CURRENT_DATE + 3`). **MVP chặn cứng mọi yêu cầu nhận dưới 3 ngày**, không hỗ trợ same-day/rush. |
 | **Giao hàng theo đợt (Multi-batch Delivery)** | Giải pháp dành cho đơn hàng sỉ B2B: chia tổng số lượng đặt mua thành nhiều đợt giao vào các ngày/địa chỉ khác nhau để bánh luôn mới. | **MVP**: Toàn bộ đơn hàng giao 1 đợt duy nhất.<br>**Phase 2**: Cho phép chia tách đa đợt giao nhiều địa chỉ chi nhánh. |
@@ -50,3 +52,12 @@ Tài liệu này chuẩn hóa các thuật ngữ chuyên môn được sử dụ
 | **Chiến Dịch Giá Mùa Vụ (Seasonal Campaign Toggle - Phase 2)** | Cơ chế tùy chọn cho phép Admin/Provider kích hoạt chiến dịch: Early Bird (giảm 10-15%) hoặc Rush Peak (phụ thu 10-20% từ 06/08 đến 14/08 Âm lịch). | Không tự động ép buộc trong MVP. Chuyển sang Phase 2. |
 | **Phí Sản Xuất Ưu Tiên Giao Gấp (Rush Production Fee - Phase 2)** | Phụ phí áp dụng khi khách hàng muốn nhận bánh khẩn cấp trong vòng 24h - 48h. | **MVP chặn cứng $< 3$ ngày**. Tính năng thu phí giao gấp 50k/hộp chuyển sang Phase 2. |
 | **Báo Giá Thương Lượng B2B (B2B Custom Quotation)** | Mức giá và chiết khấu đặc biệt dành cho đơn hàng sỉ $\ge 20$ hộp. | Trong mô hình RFQ, do Provider tự đề xuất trong báo giá riêng, không áp cứng tự động trên sàn. |
+
+## 5. Checkout và giữ chỗ
+
+| Thuật ngữ | Quy định |
+| --- | --- |
+| Checkout đa Provider | Một transaction tạo một Order/Provider, không có Order cha; một nhóm lỗi rollback toàn bộ. Sau commit các Order độc lập. |
+| COD | Đơn thường < 2 triệu trên từng Order; CONFIRMED/UNPAID, cọc 0, không deadline, vẫn reserve tài nguyên. |
+| Hold | VIETQR/PENDING_DEPOSIT giữ 15 phút, Seller sở hữu gia hạn một lần +15 phút trước hạn, có lý do; trần 30 phút từ lúc đặt. |
+| Phiếu ra lò MVP | BE4 tạo v_bake_lines, BE2 API xuất, FE2 in; loại chờ cọc/hủy, báo theo SKU/set khi chưa có định mức vị bánh. |

@@ -1,5 +1,7 @@
 # 🗺️ Sitemap & Navigation Design Specification
 
+> Cập nhật 2026-10-16: MVP cho phép giỏ đa Provider, mỗi Provider một Order. Các route thiết kế mở rộng theo phạm vi SRS; [hợp đồng Backend](../04-agent-and-dev-guidelines/backend-ownership-and-order-contract.md) quyết định API/ownership/lifecycle.
+
 - **Mã tài liệu**: `SPEC-NAV-01`
 - **Dự án**: `Nền Tảng Bán Bánh Trung Thu Trực Tuyến`
 - **Phiên bản**: `v1.0.0`
@@ -19,7 +21,7 @@
 │   ├── /b2b-portal/rfqs (Danh Sách Yêu Cầu Đã Gửi)
 │   └── /b2b-portal/rfqs/:rfqId/compare (So Sánh Báo Giá Từ Các Provider)
 ├── /cart (Giỏ Hàng & Tách Đợt Giao Hàng Bánh Tươi)
-├── /checkout (Xác Nhận Đặt Cọc >= 50%, Hóa Đơn VAT & Đợt Giao)
+├── /checkout (Chọn COD/VIETQR Theo Provider, Hóa Đơn VAT & Ngày Giao)
 ├── /order-success/:orderId (Xác Nhận Đơn Hàng & Hướng Dẫn VietQR)
 ├── /order-tracking (Tra Cứu Đơn Hàng & Đợt Giao Hàng Bằng Số Điện Thoại/Mã Đơn)
 │   └── /order-tracking/:orderId (Chi Tiết Tiến Độ Ra Lò & Khiếu Nại 24h)
@@ -60,14 +62,14 @@
 | `/products/**` | Công khai | Mọi người dùng (`ANONYMOUS`) | Cho phép truy cập bình thường |
 | `/custom-box` | Công khai | Mọi người dùng (`ANONYMOUS`) | Cho phép truy cập bình thường |
 | `/b2b-rfq` | Công khai | Mọi người dùng (`ANONYMOUS`) | Cho phép gửi form |
-| `/b2b-portal/**` | Có bảo vệ | `ROLE_BUYER` (Khách doanh nghiệp) | Chuyển hướng về `/auth/login?redirect=...` |
+| `/b2b-portal/**` | Có bảo vệ | `ROLE_CUSTOMER` (Khách doanh nghiệp) | Chuyển hướng về `/auth/login?redirect=...` |
 | `/cart` | Công khai | Khách vãng lai + Đã đăng nhập | Cho phép thao tác lưu giỏ cục bộ |
-| `/checkout` | Có bảo vệ | `ROLE_BUYER` hoặc Đăng ký nhanh | Yêu cầu số điện thoại / Đăng nhập |
-| `/order-tracking/**` | Công khai | Tra cứu qua SĐT + Mã đơn | Kiểm tra mã OTP gửi qua SMS/Zalo |
+| `/checkout` | Có bảo vệ | `ROLE_CUSTOMER` đã đăng nhập | Chuyển về đăng nhập |
+| `/order-tracking/**` | Có bảo vệ | CUSTOMER sở hữu đơn | Đăng nhập; ngoài phạm vi trả 404, không tra cứu công khai/OTP trong MVP |
 | `/compliance` | Công khai | Mọi người dùng (`ANONYMOUS`) | Cho phép tải PDF chứng nhận |
-| `/seller/onboarding` | Có bảo vệ | `ROLE_SELLER` (Chưa nộp KYC) | Chặn truy cập nếu không phải Seller |
-| `/seller/subscription` | Có bảo vệ | `ROLE_SELLER` (Chưa có gói Active) | Yêu cầu chọn gói SaaS trước |
-| `/seller/**` (Các trang khác) | Có bảo vệ nghiêm ngặt | `ROLE_SELLER` + `is_compliance_approved` + `ACTIVE` SaaS | Điều hướng về trang Onboarding/Subscription nếu chưa đủ điều kiện |
+| `/seller/onboarding` | Có bảo vệ | `ROLE_PROVIDER` (Chưa nộp KYC) | Chặn truy cập nếu không phải Seller |
+| `/seller/subscription` | Có bảo vệ | `ROLE_PROVIDER` (Chưa có gói Active) | Yêu cầu chọn gói SaaS trước |
+| `/seller/**` (Các trang khác) | Có bảo vệ nghiêm ngặt | `ROLE_PROVIDER` + `is_compliance_approved` + `ACTIVE` SaaS | Điều hướng về trang Onboarding/Subscription nếu chưa đủ điều kiện |
 | `/admin/**` | Quản trị tối cao | `ROLE_PLATFORM_ADMIN` | Trả về mã lỗi `403 Forbidden` |
 
 ---

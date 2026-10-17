@@ -1,8 +1,10 @@
 # 📋 Software Requirements Specification (SRS) - Streamlined MVP
 
+> Cập nhật 2026-10-16: [Hợp đồng Backend](04-agent-and-dev-guidelines/backend-ownership-and-order-contract.md) quy định ownership/API và chi tiết Checkout/lifecycle; schema đích tại [Data Dictionary](04-agent-and-dev-guidelines/system-data-dictionary.md). Các quy định này chưa đồng nghĩa code đã triển khai.
+
 - **Dự án**: Nền Tảng Bán Bánh Trung Thu Trực Tuyến Tùy Biến (`trungthu`)
-- **Phiên bản**: `v1.2.0` (Streamlined Scope cho 6 người x 4 tuần)
-- **Tài liệu căn cứ**: `docs/BRD/`, `docs/specs/system-data-dictionary.md`
+- **Phiên bản**: `v1.4.0` (2026-10-16: ownership, đa Provider, transaction, COD và hold)
+- **Tài liệu căn cứ**: `docs/BRD/`, `docs/BRD/04-agent-and-dev-guidelines/system-data-dictionary.md`
 - **Mô hình kiến trúc**: Spring Boot 3.x RESTful Backend + Modern Web Frontend (Tailwind/CSS Overlay)
 - **Mô hình kinh doanh**: Pure SaaS 0% hoa hồng, thanh toán cọc trực tiếp tài khoản Provider (No Escrow).
 
@@ -28,14 +30,14 @@ Nền tảng đóng vai trò là phần mềm trung gian dịch vụ (Pure SaaS 
 | Tác nhân | Quyền hạn (`Role`) | Mô tả & Trách nhiệm chính |
 | :--- | :--- | :--- |
 | **Khách Vãng Lai (Guest)** | `ANONYMOUS` | Xem danh mục sản phẩm, xem hồ sơ ATTP xưởng, thử công cụ phối hộp quà & xem trước giá. Bắt buộc đăng ký/đăng nhập tài khoản BUYER trước khi chốt đơn (Bỏ Guest Checkout để đảm bảo an toàn đơn hàng). |
-| **Người Mua (Buyer)** | `BUYER` | Đặt hàng B2C, thanh toán cọc $\ge 50\%$ qua ảnh VietQR, gửi form yêu cầu sỉ B2B RFQ, tra cứu trạng thái đơn hàng. |
-| **Chủ Xưởng (Seller/Provider)**| `SELLER` | Nộp hồ sơ KYC xưởng, đăng ký gói SaaS, niêm yết SKU, quản lý Lịch Ra Lò theo ngày nướng `bake_date`, xác nhận nhận cọc, in Phiếu Ra Lò. |
+| **Người Mua (Buyer)** | `CUSTOMER` | Đặt hàng B2C, thanh toán cọc $\ge 50\%$ qua ảnh VietQR, gửi form yêu cầu sỉ B2B RFQ, tra cứu trạng thái đơn hàng. |
+| **Chủ Xưởng (Seller/Provider)**| `PROVIDER` | Nộp hồ sơ KYC xưởng, đăng ký gói SaaS, niêm yết SKU, quản lý Lịch Ra Lò theo ngày nướng `bake_date`, xác nhận nhận cọc, in Phiếu Ra Lò. |
 | **Quản Trị Nền Tảng (Platform Admin)** | `PLATFORM_ADMIN` | Phê duyệt hồ sơ KYC ATTP (`is_compliance_approved`), đối soát chuyển khoản và kích hoạt gói SaaS cho Provider. |
 
 ### 2.2 Đặc Thù Nghiệp Vụ Cốt Lõi (Domain Specifics)
 1. **Bánh tươi HSD ngắn (Perishable Fresh Shelf-Life)**: Bánh dẻo 7-10 ngày, bánh nướng 10-15 ngày. Bắt buộc nướng trước ngày giao 1 ngày (`bake_date = expected_delivery_date - 1`), không lưu kho dài ngày.
 2. **Nguyên tắc Solar-First Core**: Toàn bộ hệ thống CSDL, logic nghiệp vụ, tính ngày giao đều dùng **Dương Lịch (`LocalDate`)**. Nhãn lịch Âm được hạ xuống hạng mục mở rộng (`Optional / Phase 2`).
-3. **Mở nhận đơn linh hoạt quanh năm**: Hệ thống cho phép đặt hàng B2C và gửi B2B RFQ quanh năm, chỉ cần thỏa mãn khoảng cách chuẩn bị tối thiểu $\ge 3$ ngày (`expected_delivery_date >= CURRENT_DATE + 3`) và xưởng còn hạn ngạch nướng (`capacity_cap`).
+3. **Mở nhận đơn linh hoạt quanh năm**: Hệ thống cho phép đặt hàng B2C và gửi B2B RFQ quanh năm, chỉ cần thỏa mãn khoảng cách chuẩn bị tối thiểu $\ge 3$ ngày (`expected_delivery_date >= CURRENT_DATE + 3`) và xưởng còn hạn ngạch nướng (`max_quantity`).
 4. **Mô hình Pure SaaS - No Escrow**: Sàn không thu phí hoa hồng đơn hàng, **không giữ tiền ký quỹ**. Người mua quét ảnh VietQR chuyển thẳng vào tài khoản ngân hàng của từng Provider.
 5. **Giao diện không Emoji**: Tuân thủ tuyệt đối quy chuẩn UI chuyên nghiệp, sử dụng bộ icon SVG tiêu chuẩn (`lucide-react`), không sử dụng emoji thô.
 
@@ -44,7 +46,7 @@ Nền tảng đóng vai trò là phần mềm trung gian dịch vụ (Pure SaaS 
 - **🟢 Giai Đoạn MVP (Must-Have / Core MVP cho 6 người x 4 tuần)**:
   - Xác thực người dùng Local JWT (`CUSTOMER`, `PROVIDER`, `PLATFORM_ADMIN`) với mật khẩu băm BCrypt. Bắt buộc đăng nhập trước khi checkout.
   - Tải lên hồ sơ pháp lý ATTP/GPKD qua 1 flow chung (`store_compliance_docs`) và Admin xét duyệt để kích hoạt mở bán (`is_compliance_approved`).
-  - Đăng ký gói SaaS: `STANDARD` (20 SKU) và `VIP` (100 SKU, gắn cờ `is_featured`). Provider chuyển khoản cho sàn, Platform Admin đối soát và kích hoạt thủ công.
+  - SaaS tinh gọn: Provider nạp/chuyển khoản phí, Admin đối soát kích hoạt quyền bán; phí/thời hạn/giới hạn SKU cấu hình bởi BE1, không bắt buộc phân hạng gói hoặc ví số dư.
   - Quản lý danh mục Product/Variant (Bánh lẻ, Set hộp đóng sẵn tiêu chuẩn, Thiệp chúc mừng).
   - Quản lý album ảnh sản phẩm (`product_images`) với 1 ảnh đại diện chính.
   - **Giỏ hàng chung & Tách đơn tự động theo Provider (Hướng A)**: Khách hàng được tự do nhặt sản phẩm từ nhiều Provider vào 1 giỏ hàng chung; khi bấm checkout, hệ thống tự động tách thành các đơn hàng con độc lập (`Order`) theo từng `provider_id`.
@@ -52,10 +54,10 @@ Nền tảng đóng vai trò là phần mềm trung gian dịch vụ (Pure SaaS 
   - Ràng buộc ngày nhận $\ge 3$ ngày (Chặn cứng trong MVP). Tính ngày nướng `bake_date = delivery_date - 1`.
   - Kiểm soát hạn ngạch nướng xưởng (`daily_capacities`) theo `bake_date`. Tự động khóa ngày nướng khi chạm 100% công suất.
   - Thanh toán cọc trực tiếp qua ảnh VietQR miễn phí riêng cho từng đơn con của từng Provider. Seller vào Dashboard bấm "Xác Nhận Đã Nhận Cọc" $\rightarrow$ Đơn chuyển sang `DEPOSITED` (Không dùng webhook).
-  - Tiến trình `@Scheduled` giữ chỗ 15 phút: quá hạn tự hủy đơn sang `CANCELLED`, hoàn trả tồn kho và trừ giảm `booked_quantity` theo `bake_date`.
+  - VIETQR giữ chỗ 15 phút, Seller gia hạn một lần thêm 15 phút trước hạn; cron hủy/nhả khi hết deadline hiện tại. COD hợp lệ vào CONFIRMED, không có hold cọc.
   - Tiếp nhận form yêu cầu báo giá sỉ B2B RFQ ($\ge 20$ hộp) và hiển thị trên Dashboard của Provider để chủ động liên hệ ngoài hệ thống.
   - Phiếu Ra Lò Bánh Tươi tổng hợp theo `bake_date` tính động bằng SQL query, hỗ trợ in bằng CSS `@media print` của trình duyệt.
-  - Tiếp nhận thông tin xuất hóa đơn VAT (lưu 4 trường vào bảng `orders`).
+  - Tiếp nhận thông tin xuất hóa đơn VAT (lưu tên công ty/MST/địa chỉ/email và cờ yêu cầu hóa đơn vào Order).
   - UI tĩnh hiển thị Chính sách Keep-the-Item Refund & Miễn trừ đổi ý bánh tươi.
 
 - **🟡 Giai Đoạn 2 (Post-MVP / Phase 2 - Advanced Expansion & Retained Entities)**:
@@ -89,13 +91,11 @@ Nền tảng đóng vai trò là phần mềm trung gian dịch vụ (Pure SaaS 
 
 ### 3.2 Gói Đăng Ký Dịch Vụ SaaS Provider (Provider SaaS Subscription)
 
-- **`[REQ-SAAS-01]` `[MVP]` Đăng ký gói SaaS Provider (`provider_subscriptions` / `Subscription`)**:
-  - Seller đăng ký 1 trong 2 gói dịch vụ SaaS mùa vụ:
-    - **`STANDARD`**: Phí $1.000.000$ VNĐ/mùa, giới hạn tối đa **20 biến thể SKU** (`max_products_allowed = 20`).
-    - **`VIP`**: Phí $3.000.000$ VNĐ/mùa, giới hạn tối đa **100 biến thể SKU** (`max_products_allowed = 100`), gắn cờ nổi bật `is_featured = true` ưu tiên hiển thị gian hàng ở đầu danh sách.
-- **`[REQ-SAAS-02]` `[MVP]` Thanh toán phí SaaS & Đối soát thủ công**:
-  - Provider thực hiện chuyển khoản phí dịch vụ tới số tài khoản ngân hàng của Platform Admin với cú pháp `SUB-[SellerId]`. Giao dịch ghi nhận loại `SUBSCRIPTION_FEE` ở trạng thái `PENDING`.
-  - Platform Admin kiểm tra sao kê ngân hàng và bấm nút "Xác Nhận Kích Hoạt Gói" trên trang quản trị $\rightarrow$ Chuyển trạng thái gói sang `ACTIVE`.
+- **`[REQ-SAAS-01]` `[MVP]` Nạp phí kích hoạt quyền bán**:
+  - BE1 quản lý phí/thời hạn/quyền bán bằng cấu hình; MVP không bắt buộc phân hạng STANDARD/VIP hay ví có số dư.
+- **`[REQ-SAAS-02]` `[MVP]` Đối soát thủ công**:
+  - Provider chuyển phí tới sàn, giao dịch `SUBSCRIPTION_FEE`/`PENDING`; Admin xác nhận thực nhận và kích hoạt Subscription `ACTIVE`. BE1 sở hữu nghiệp vụ, BE4 thống nhất persistence giao dịch dùng chung.
+
 - **`[REQ-SAAS-03]` `[Phase 2]` Tự động kiểm tra hết hạn gói SaaS**:
   - Tiến trình Cron quét hàng ngày chuyển gói hết hạn sang `SUSPENDED`.
 - **`[REQ-SAAS-04]` `[MVP]` Công tắc Bật/Tạm dừng nhận đơn thủ công (`is_season_active`)**:
@@ -171,11 +171,12 @@ Nền tảng đóng vai trò là phần mềm trung gian dịch vụ (Pure SaaS 
 
 - **`[REQ-PROD-01]` `[MVP]` Dashboard Lịch Sản Xuất Dương Lịch**: Hiển thị danh sách lịch nướng bánh theo ngày của từng Provider.
 - **`[REQ-PROD-02]` `[MVP]` Tự động tổng hợp Phiếu Ra Lò Bánh Tươi theo `bake_date`**:
+  - BE4 tạo view `v_bake_lines`, BE2 xây API xuất từ view; FE2 in. Chỉ lấy đơn đã chấp nhận/đã cọc trở đi, loại chờ cọc/hủy; quy đổi số bánh và giới hạn báo cáo Variant/set theo hợp đồng Backend.
   - Khi Provider chọn ngày nướng trên lịch: hệ thống thực hiện SQL query gom toàn bộ bánh lẻ và hộp quà có ngày nhận trùng `bake_date + 1`.
-  - Xuất bảng tổng hợp số lượng từng vị bánh lẻ cần nướng (VD: 150 Thập cẩm, 80 Hạt sen).
+  - Xuất tổng hợp theo Variant bánh lẻ/set và số bánh tương ứng; chưa có định mức set thì không phân rã theo vị bên trong.
   - Cung cấp nút in nhanh Phiếu Ra Lò sử dụng CSS `@media print` của trình duyệt. Không cần tạo bảng lưu trữ `production_batches`.
-- **`[REQ-PROD-03]` `[MVP]` Cấu hình Hạn Ngạch Nướng Bánh Hàng Ngày (`daily_capacities`)**: Provider cài đặt `capacity_cap` theo ngày nướng.
-- **`[REQ-PROD-04]` `[MVP]` Tự động khóa ngày nướng khi chạm 100% công suất**: Khi `booked_quantity >= capacity_cap`, ngày nhận tương ứng (`bake_date + 1`) bị mờ (disabled) trên lịch đặt hàng của khách.
+- **`[REQ-PROD-03]` `[MVP]` Cấu hình Hạn Ngạch Nướng Bánh Hàng Ngày (`daily_capacities`)**: Provider cài đặt `max_quantity` theo ngày nướng.
+- **`[REQ-PROD-04]` `[MVP]` Tự động khóa ngày nướng khi chạm 100% công suất**: Khi `reserved_quantity >= max_quantity`, ngày nhận tương ứng (`bake_date + 1`) bị mờ (disabled) trên lịch đặt hàng của khách.
 
 ---
 
@@ -185,16 +186,26 @@ Nền tảng đóng vai trò là phần mềm trung gian dịch vụ (Pure SaaS 
   - Đơn in tên riêng hoặc tổng tiền $\ge 2.000.000$ VNĐ: Bắt buộc cọc tối thiểu **50%** (`deposit_amount >= total_amount * 0.5`).
   - Đơn tiêu chuẩn (không in ấn) $< 2.000.000$ VNĐ: Được phép chọn **COD** (`deposit_amount = 0`).
 - **`[REQ-PAY-02]` `[MVP]` Thanh toán cọc trực tiếp qua ảnh VietQR & Xác nhận thủ công (No Webhook)**:
-  - **Giỏ hàng chung & Tách đơn theo Provider (Hướng A)**: Khách hàng được tự do nhặt sản phẩm từ nhiều Provider vào giỏ hàng chung. Tại bước Checkout, hệ thống tự động tách giỏ hàng thành các Đơn Hàng con độc lập (`Order`) theo từng `provider_id`. Mỗi đơn hàng con có mã đơn riêng, số tiền cọc riêng và sinh mã ảnh VietQR riêng.
+  - **Giỏ hàng chung & Tách đơn theo Provider (Hướng A)**: Khách hàng được tự do nhặt sản phẩm từ nhiều Provider vào giỏ hàng chung. Tại bước Checkout, hệ thống tự động tách giỏ hàng thành các Đơn Hàng con độc lập (`Order`) theo từng `provider_id`. Mỗi đơn hàng con có mã đơn và số tiền cọc riêng; nhánh VIETQR có QR riêng, COD không có QR.
   - **Sinh ảnh VietQR**: Hệ thống sinh URL ảnh mã VietQR miễn phí từ API:
     `https://img.vietqr.io/image/{bank_code}-{bank_account_number}-compact2.png?amount={deposit_amount}&addInfo=ORD-{order_code}`
   - **Xác nhận thanh toán**: Khách chuyển khoản trực tiếp vào tài khoản ngân hàng của từng Provider tương ứng. Provider kiểm tra sao kê số dư trên app ngân hàng của mình và bấm nút **"Xác Nhận Đã Nhận Cọc"** trên Dashboard Provider $\rightarrow$ Đơn hàng con tương ứng chuyển sang `DEPOSITED`.
   - **Lý do kiến trúc**: Loại bỏ webhook tự động của sàn vì tiền cọc chảy thẳng vào tài khoản của Seller, sàn không giữ tiền (No Escrow) nên sàn không có kết nối webhook merchant với ngân hàng cá nhân của Provider.
   - **Idempotency**: Bảo vệ bằng kiểm tra ràng buộc chuyển trạng thái đơn hàng (chỉ cho phép xác nhận khi đơn đang ở `PENDING_DEPOSIT`).
-- **`[REQ-PAY-03]` `[MVP]` Tiếp nhận thông tin xuất hóa đơn VAT điện tử**: Thu thập MST, Tên công ty, Email nhận hóa đơn (lưu trực tiếp 4 trường vào bảng `orders`).
-- **`[REQ-PAY-04]` `[MVP]` Giữ chỗ 15 phút & Thu hồi công suất tự động (`@Scheduled`)**:
-  - Đơn hàng khởi tạo ở `PENDING_DEPOSIT` được giữ chỗ tồn kho và hạn ngạch nướng (`booked_quantity`) theo `bake_date` trong vòng **15 phút**.
-  - Sau 15 phút nếu Seller chưa bấm xác nhận nhận cọc, tiến trình `@Scheduled` tự động chuyển đơn sang `CANCELLED`, hoàn trả số lượng tồn kho (`stock_quantity`) và trừ giảm `booked_quantity` theo `bake_date`.
+- **`[REQ-PAY-03]` `[MVP]` Tiếp nhận thông tin xuất hóa đơn VAT điện tử**: Thu thập MST, Tên công ty, Địa chỉ xuất hóa đơn, Email nhận hóa đơn (lưu trực tiếp 4 trường vào bảng `orders`).
+- **`[REQ-PAY-04]` `[MVP]` Hold và tự hủy**:
+  - Chỉ VIETQR/PENDING_DEPOSIT có deadline ban đầu 15 phút; Seller sở hữu gia hạn một lần thêm 15 phút trước hạn, lý do bắt buộc. Trần 30 phút từ ordered_at.
+  - Cron mỗi phút hủy khi `now >= hold_expires_at`; hủy đơn/hoàn stock/giảm reserved capacity/hủy giao dịch chờ phải commit cùng nhau, đúng một lần.
+  - Xác nhận cọc, gia hạn và cron khóa cùng Order, kiểm tra lại trạng thái/deadline; COD không bị cron này hủy.
+- **`[REQ-PAY-05]` `[MVP]` COD và trạng thái**:
+  - Điều kiện COD/ngưỡng 2 triệu tính trên từng Order sau tách; khởi tạo CONFIRMED/UNPAID, cọc 0, không QR/deadline, vẫn reserve stock/capacity.
+  - VIETQR: PENDING_DEPOSIT → DEPOSITED → BAKING_QUEUED → DELIVERING → COMPLETED. COD: CONFIRMED → BAKING_QUEUED → DELIVERING → COMPLETED.
+  - Hoàn thành khi đã thu đủ tiền; chỉ hủy thường ở PENDING_DEPOSIT hoặc CONFIRMED COD trước sản xuất. Bảng chuyển trạng thái đầy đủ tại hợp đồng Backend.
+- **`[REQ-CHK-01]` `[MVP]` Transaction đa Provider**:
+  - BE3 điều phối một transaction cho toàn bộ Checkout; BE2 giữ tài nguyên, BE4 tách/lưu đơn theo Provider. Một Provider thất bại rollback tất cả, không commit từng phần.
+  - Không tạo Order cha đa Provider; dùng checkout_id chung. MVP một ngày nhận và một OrderBatch cho mỗi Order.
+  - Sau commit các Order vận hành độc lập; không gọi mạng trong transaction. Preview chỉ đọc, submit validate lại.
+
 
 ---
 
@@ -229,7 +240,7 @@ Nền tảng đóng vai trò là phần mềm trung gian dịch vụ (Pure SaaS 
 ## 5. Ràng Buộc Kỹ Thuật & Kiến Trúc (Architectural Constraints)
 
 1. **Công nghệ Backend**: Java 21+, Spring Boot 3.x, Spring Data JPA, Spring Security, Hibernate Validator.
-2. **Cơ sở dữ liệu**: PostgreSQL, chuẩn hóa `UUID id` trong `BaseEntity`.
+2. **Cơ sở dữ liệu**: Cấu hình dev hiện dùng SQL Server, kiểm thử dùng H2; UUID id trong BaseEntity. Dev sửa entity trực tiếp bằng Hibernate ddl-auto=update, không thêm Flyway/migration. PostgreSQL là phương án hỗ trợ, không tự chuyển DB trong BE4.
 3. **Mô hình tính toán thời gian (Solar-First Architecture)**: Toàn bộ lưu trữ và tính toán sử dụng `java.time.LocalDate` Dương Lịch.
 4. **Kiến trúc phân tầng chuẩn**: `Controller` $\rightarrow$ `Service` / `ServiceImpl` $\rightarrow$ `Repository` $\rightarrow$ `Entity`.
 5. **In ấn tinh gọn**: Sử dụng CSS `@media print` cho Phiếu Ra Lò, không dùng thư viện xuất PDF nặng nề tại máy chủ.
@@ -249,5 +260,8 @@ Nền tảng đóng vai trò là phần mềm trung gian dịch vụ (Pure SaaS 
 | **Lịch Bánh Tươi** | `[REQ-BATCH-01]` (Lead-time $\ge 3$ ngày)<br>`[REQ-BATCH-02]`, `[03]`, `[04]` | **MVP** (1 đợt)<br>Phase 2 (Đa đợt) | `BR-01`, `BR-04` | `order_batches`, `orders` |
 | **B2B RFQ** | `[REQ-B2B-01]`, `[REQ-B2B-02]`<br>`[REQ-B2B-03]` $\rightarrow$ `[REQ-B2B-05]` | **MVP** (Form & List)<br>Phase 2 (Đấu thầu) | `BR-02` | `b2b_rfqs` |
 | **Lịch Sản Xuất** | `[REQ-PROD-01]`, `[03]`, `[04]`<br>`[REQ-PROD-02]` (Phiếu Ra Lò Query) | **MVP** | `BR-04` | `daily_capacities` |
-| **Thanh toán & Cọc** | `[REQ-PAY-01]` (Cọc 50%/COD)<br>`[REQ-PAY-02]` (VietQR thẳng Seller)<br>`[REQ-PAY-03]` (VAT), `[04]` (Hủy 15p)| **MVP** | `BR-01`, `BR-05`, `BR-06` | `payment_transactions`, `orders` |
+| **Thanh toán & Cọc** | `[REQ-PAY-01]` (Cọc 50%/COD)<br>`[REQ-PAY-02]` (VietQR thẳng Seller)<br>`[REQ-PAY-03]` (VAT), `[04]` (Hold/gia hạn), `[05]` (COD)| **MVP** | `BR-01`, `BR-05`, `BR-06` | `payment_transactions`, `orders` |
+| **Checkout đa Provider** | `[REQ-CHK-01]` | **MVP** | `BR-01`, Hợp đồng Backend | `ORDER`, `ORDER_BATCH`, `ORDER_ITEM`, `PAYMENT_TRANSACTION` |
 | **Khiếu nại & Hoàn tiền** | `[REQ-DISP-01]`, `[REQ-DISP-02]` (UI Policy)<br>`[REQ-DISP-03]` (Upload Video) | **MVP**<br>Phase 2 | `BR-05` | *UI tĩnh trong MVP* |
+
+Ownership triển khai và yêu cầu mới `[REQ-CHK-01]`, `[REQ-PAY-05]`: xem [hợp đồng Backend](04-agent-and-dev-guidelines/backend-ownership-and-order-contract.md).

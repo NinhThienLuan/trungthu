@@ -1,5 +1,7 @@
 # 📜 Business Rule: BR-01 - Đặt Hàng B2C & Giỏ Hàng Tách Đơn Theo Provider (B2C Ordering & Split Orders)
 
+> Cập nhật 2026-10-16: Cho phép giỏ đa Provider. Transaction, COD và gia hạn hold tuân theo [hợp đồng Backend](../04-agent-and-dev-guidelines/backend-ownership-and-order-contract.md).
+
 ## 1. Goal (Mục tiêu)
 Cho phép khách hàng cá nhân (B2C) lựa chọn mua các sản phẩm bánh lẻ (`LOOSE_CAKE`) hoặc các set hộp quà Trung Thu đóng sẵn tiêu chuẩn (`BOX_SHELL`) từ nhiều xưởng khác nhau. Hệ thống hỗ trợ **Giỏ Hàng Chung Đa Provider**, và tự động tách thành các Đơn Hàng con độc lập theo từng Provider lúc Checkout (**Hướng A**), chọn ngày nhận bánh tươi và đặt hàng trực tuyến với quy tắc đặt cọc VietQR trực tiếp.
 
@@ -15,7 +17,8 @@ Cho phép khách hàng cá nhân (B2C) lựa chọn mua các sản phẩm bánh 
     - Có mã đơn hàng riêng (`order_code`).
     - Tính phí vận chuyển riêng theo xưởng (`shipping_fee`).
     - Tính số tiền cọc riêng (`deposit_amount`).
-    - Hiển thị mã ảnh VietQR chuyển tiền trực tiếp tới số tài khoản ngân hàng của Provider đó.
+    - VIETQR hiển thị mã chuyển khoản riêng; COD hợp lệ không có QR.
+  - Không có Order cha đa Provider; `checkout_id` chỉ liên kết các đơn cùng lần đặt. MVP mỗi Order có đúng một OrderBatch giao hàng.
 
 ### 2.2. Quy tắc Biến Thể Sản Phẩm (Product & ProductVariant)
 - Sản phẩm được quản lý theo mô hình **Product & ProductVariant**:
@@ -34,15 +37,26 @@ Cho phép khách hàng cá nhân (B2C) lựa chọn mua các sản phẩm bánh 
   $$\text{bake\_date} = \text{expected\_delivery\_date} - 1$$
   - Xưởng nướng bánh trước ngày khách nhận đúng 1 ngày.
   - Slot hạn ngạch nướng xưởng (`daily_capacities`) và Phiếu Ra Lò (Daily Production Sheet) được tính toán, kiểm tra và trừ trực tiếp vào ngày **`bake_date`**.
-  - Nếu ngày `bake_date` của xưởng đã kín 100% hạn ngạch (`capacity_cap`), ngày nhận tương ứng của xưởng đó sẽ bị mờ trên giao diện chọn ngày.
+  - Nếu ngày `bake_date` của xưởng đã kín 100% hạn ngạch (`max_quantity`), ngày nhận tương ứng của xưởng đó sẽ bị mờ trên giao diện chọn ngày.
 
-### 2.5. Quy tắc Giữ Chỗ 15 Phút & Tự Động Hoàn Trả (Hold Reservation & Auto-Release)
-- Khi khách bấm tạo đơn hàng con, đơn chuyển sang trạng thái `PENDING_DEPOSIT` và hệ thống tạm giữ tồn kho cũng như cộng dồn `daily_capacities.reserved_quantity` theo `bake_date`.
-- Thời gian giữ chỗ tối đa là **15 phút**.
-- Nếu sau 15 phút Seller chưa bấm xác nhận cọc hoặc khi đơn bị hủy (`CANCELLED`):
-  - Tiến trình `@Scheduled` tự động chuyển trạng thái đơn sang `CANCELLED`.
-  - Tự động hoàn trả số lượng tồn kho của các biến thể bánh.
-  - Tự động giảm trừ số lượng đã đặt trên hạn ngạch xưởng của ngày `bake_date`.
+### 2.5. Hold, COD và gia hạn
+- VIETQR: tạo `PENDING_DEPOSIT`, giữ stock/capacity theo `bake_date`, `hold_expires_at = ordered_at + 15 phút`.
+- COD hợp lệ: đơn tiêu chuẩn không in riêng, tổng từng Order < 2 triệu; cọc 0, `CONFIRMED`/`UNPAID`, vẫn giữ tài nguyên, không có deadline và không bị cron hold hủy.
+- Seller sở hữu được gia hạn hold một lần thêm 15 phút vào deadline hiện tại (trần 30 phút từ lúc đặt), trước hạn, có lý do và audit. Không cho Buyer tự gia hạn hoặc gia hạn bằng tải lại QR.
+- `now >= hold_expires_at`: chặn xác nhận cọc/gia hạn; cron mỗi phút hủy đơn chờ cọc, hoàn stock và giảm reserved capacity đúng một lần trong cùng transaction.
+- Xác nhận cọc/hủy/gia hạn/cron phải khóa cùng Order và kiểm tra lại trạng thái, deadline sau khóa.
+
+### 2.6. Transaction Checkout đa Provider
+- BE3 điều phối một transaction cho toàn bộ Checkout. BE2 reserve stock/capacity; BE4 tách nhóm và lưu Order/Batch/Item/giao dịch, cùng tham gia transaction này.
+- Một Provider thiếu stock/slot hoặc bất kỳ bước lưu lỗi: rollback toàn bộ, không giữ đơn thành công từng phần. Preview không giữ tài nguyên; submit phải kiểm tra lại.
+- Sau commit, các Order độc lập. Hủy/hết hạn một Order không ảnh hưởng các Order khác. URL QR được dựng từ dữ liệu ngân hàng, không gọi mạng trong transaction.
+
+### 2.7. Luồng trạng thái
+- VIETQR: `PENDING_DEPOSIT → DEPOSITED → BAKING_QUEUED → DELIVERING → COMPLETED`.
+- COD: `CONFIRMED → BAKING_QUEUED → DELIVERING → COMPLETED`.
+- Hủy thường chỉ từ `PENDING_DEPOSIT` hoặc `CONFIRMED` COD trước sản xuất; không tự hủy/hoàn tiền đơn đã cọc.
+- Hoàn thành chỉ khi đã thu đủ tiền; xác nhận cọc/COD không trừ kho hoặc slot lần hai. Chi tiết payment status và cạnh tranh xem hợp đồng Backend.
+
 
 ---
 
@@ -52,17 +66,17 @@ Cho phép khách hàng cá nhân (B2C) lựa chọn mua các sản phẩm bánh 
 [Khách Hàng Chọn Sản Phẩm Đa Xưởng Vào Cart]
     │
     ▼ Khách Bấm "Tiến Hành Đặt Hàng"
-[Hệ Thống Tự Động Tách Giỏ Hàng (Split Orders)]
+[BE3 mở một transaction: BE2 reserve, BE4 tách/lưu; tất cả cùng commit hoặc rollback]
     │
     ├─► Đơn Hàng Con 1 (Provider A):
     │      ├─► Tính Ngày Nướng bake_date = delivery_date - 1
-    │      ├─► Giữ chỗ 15 phút tại DailyCapacity của Provider A
-    │      └─► Sinh ảnh VietQR trực tiếp tới STK Ngân Hàng của Provider A
+    │      ├─► Reserve stock/capacity Provider A (VIETQR: hold 15 phút; COD: CONFIRMED)
+    │      └─► Dựng URL VietQR nếu chọn VIETQR, COD không có QR; Provider A
     │
     └─► Đơn Hàng Con 2 (Provider B):
            ├─► Tính Ngày Nướng bake_date = delivery_date - 1
-           ├─► Giữ chỗ 15 phút tại DailyCapacity của Provider B
-           └─► Sinh ảnh VietQR trực tiếp tới STK Ngân Hàng của Provider B
+           ├─► Reserve stock/capacity Provider B (VIETQR: hold 15 phút; COD: CONFIRMED)
+           └─► Dựng URL VietQR nếu chọn VIETQR, COD không có QR; Provider B
 ```
 
 ---

@@ -10,9 +10,10 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "ORDER_BATCH", indexes = { @Index(name = "IX_ORDER_BATCH_order_id", columnList = "order_id"),
-        @Index(name = "IX_ORDER_BATCH_provider_id", columnList = "provider_id"),
-        @Index(name = "IX_ORDER_BATCH_capacity_id", columnList = "capacity_id") })
+@Table(name = "ORDER_BATCH", indexes = {
+        @Index(name = "IX_ORDER_BATCH_provider_date", columnList = "provider_id,delivery_date"),
+        @Index(name = "IX_ORDER_BATCH_capacity_id", columnList = "capacity_id")
+}, uniqueConstraints = @UniqueConstraint(name = "UQ_ORDER_BATCH_order_id", columnNames = "order_id"))
 @Check(name = "CK_ORDER_BATCH_subtotal", constraints = "subtotal >= 0")
 @Getter
 @Setter
@@ -29,8 +30,8 @@ public class OrderBatch extends BaseEntity {
     @JoinColumn(name = "provider_id", nullable = false, foreignKey = @ForeignKey(name = "FK_ORDER_BATCH_provider_id"))
     private User provider;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = true)
-    @JoinColumn(name = "capacity_id", nullable = true, foreignKey = @ForeignKey(name = "FK_ORDER_BATCH_capacity_id"))
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "capacity_id", foreignKey = @ForeignKey(name = "FK_ORDER_BATCH_capacity_id"))
     private DailyCapacity capacity;
 
     @Column(name = "delivery_date", nullable = false)
@@ -39,17 +40,16 @@ public class OrderBatch extends BaseEntity {
     @Column(name = "subtotal", nullable = false, precision = 18, scale = 2)
     private BigDecimal subtotal;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "batch_status", nullable = false, length = 30)
-    private fpt.sba.trungthu.entity.enumeration.OrderBatchStatus batchStatus;
-
-    /**
-     * Chuyển đổi trạng thái đợt bánh có kiểm tra switch-case
-     */
-    public void transitionBatchStatus(fpt.sba.trungthu.entity.enumeration.OrderBatchStatus targetStatus) {
-        if (this.batchStatus != null) {
-            this.batchStatus.validateTransition(targetStatus);
+    // MVP has one batch per order, so production/delivery status belongs to Order.
+    @PrePersist
+    @PreUpdate
+    protected void validateOwnership() {
+        if (order == null || provider == null || !provider.getId().equals(order.getProvider().getId())) {
+            throw new IllegalStateException("Batch provider must match order provider");
         }
-        this.batchStatus = targetStatus;
+        if (capacity != null && (!provider.getId().equals(capacity.getProvider().getId())
+                || !deliveryDate.minusDays(1).equals(capacity.getCapacityDate()))) {
+            throw new IllegalStateException("Capacity must match batch provider and bake date");
+        }
     }
 }

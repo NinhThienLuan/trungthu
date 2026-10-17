@@ -1,5 +1,9 @@
 # MEMORY — Trung Thu Backend
 
+> Cập nhật 2026-10-16: Đây là ghi chú lịch sử/code cũ, không phải đặc tả đích. Ownership, enum Order, COD và hold hiện hành xem [hợp đồng Backend](BRD/04-agent-and-dev-guidelines/backend-ownership-and-order-contract.md). Các kết quả test bên dưới chỉ thuộc lần chạy cũ.
+
+> Lưu ý BE4 2026-10-16: OrderPaymentStatus/TransactionStatus đã tách; bỏ OrderBatchStatus trong MVP, không thêm SKU vào OrderItem; giữ paidAt là thời điểm nghiệp vụ. Dev sửa entity trực tiếp, không Flyway/migration. Phần dưới là lịch sử trước thay đổi này.
+
 > Last updated: 2026-10-14 | Tests: **24/24 PASS** ✅ | Note: Đã xóa hoàn toàn Hạn Sử Dụng (`shelfLifeDays`) khỏi Product module theo quyết định tinh gọn scope.
 
 ---

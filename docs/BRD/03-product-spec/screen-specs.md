@@ -1,5 +1,7 @@
 # 📱 Screen Specification Document (Chi Tiết Giao Diện & UI States)
 
+> Cập nhật 2026-10-16: Checkout/đơn hàng MVP theo [hợp đồng Backend](../04-agent-and-dev-guidelines/backend-ownership-and-order-contract.md); các màn đấu thầu/custom/khiếu nại là Phase 2 theo SRS. SaaS chỉ nạp phí/kích hoạt, không phân hạng quảng cáo trong MVP.
+
 - **Mã tài liệu**: `SPEC-SCREEN-01`
 - **Dự án**: `Nền Tảng Bán Bánh Trung Thu Trực Tuyến`
 - **Phiên bản**: `v1.0.0`
@@ -59,7 +61,7 @@
 ### 1.2 Các Thành Phần Giao Diện (UI Layout Components)
 - **Top Announcement Bar**: Thông báo giai đoạn mùa vụ (Early Bird giảm 10-15% / Standard / Rush Peak) kèm ngày Âm lịch tham khảo.
 - **Hero Section**: Tiêu đề chào đón, hình ảnh hộp bánh nghệ thuật, 2 nút hành động chính: "Tự Phối Hộp Quà" (`PackagePlus` icon) và "Báo Giá Doanh Nghiệp" (`Building2` icon).
-- **VIP Top Banner Carousel**: Khu vực dành cho các Provider đăng ký gói SaaS `VIP_TOP_BANNER` hiển thị bộ sưu tập độc quyền.
+- **Bộ sưu tập giới thiệu**: Hiển thị sản phẩm/gian hàng hợp lệ; quảng cáo theo phân hạng gói là Phase 2.
 - **Cam Kết Chất Lượng & ATTP**: 4 khối cam kết kèm icon SVG (`ShieldCheck`, `Sparkles`, `Clock`, `Truck`): Bánh mới ra lò, 100% xưởng có giấy ATTP, In logo theo yêu cầu, Giao hàng chia đợt.
 - **Danh Mục Bánh Bán Chạy**: Danh sách thẻ sản phẩm bánh lẻ và set hộp nổi bật.
 
@@ -227,16 +229,16 @@
 
 ### 9.1 Mục Tiêu & URL
 - **URL Route**: `/checkout`
-- **Vai trò**: Nhập thông tin người nhận, xác nhận thanh toán cọc $\ge 50\%$, và đăng ký xuất hóa đơn VAT điện tử.
+- **Vai trò**: Giỏ đa Provider, mỗi nhóm chọn một ngày nhận và COD/VIETQR hợp lệ; hiển thị phí/cọc riêng, nhận thông tin giao hàng/VAT.
 
 ### 9.2 Các Thành Phần Giao Diện
-- **Thông Tin Giao Hàng**: Họ tên người nhận, SĐT, Địa chỉ chi tiết từng đợt giao.
+- **Thông Tin Giao Hàng**: Họ tên người nhận, SĐT, Địa chỉ nhận; MVP mỗi Order một đợt giao.
 - **Cơ Chế Thanh Toán Đặt Cọc**:
-  - Thông báo quy định: "Đơn hàng có in tên riêng/trên 2.000.000đ bắt buộc đặt cọc tối thiểu 50%".
+  - Ngưỡng >= 2.000.000đ/in riêng tính trên từng Order; bắt buộc VIETQR cọc >=50%. Đơn thường dưới ngưỡng được chọn COD cọc 0.
   - Lựa chọn: "Thanh toán Cọc 50%" hoặc "Thanh toán toàn bộ 100%".
-- **Phương Thức Thanh Toán**: Quét mã VietQR chuyển khoản trực tiếp cho xưởng hoặc Thẻ ngân hàng.
-- **Mục Xuất Hóa Đơn VAT**: Checkbox "Yêu cầu hóa đơn VAT Doanh Nghiệp" mở rộng các ô: Mã số thuế, Tên công ty, Email nhận hóa đơn.
-- **Nút Chốt Đơn**: "Xác nhận đặt hàng & Thanh toán cọc".
+- **Phương Thức Thanh Toán**: VIETQR trực tiếp Provider hoặc COD hợp lệ; MVP không tích hợp thanh toán thẻ.
+- **Mục Xuất Hóa Đơn VAT**: Checkbox "Yêu cầu hóa đơn VAT Doanh Nghiệp" mở rộng các ô: Mã số thuế, Tên công ty, Địa chỉ xuất hóa đơn, Email nhận hóa đơn.
+- **Nút Chốt Đơn**: "Xác nhận đặt hàng"; một nhóm lỗi thì toàn Checkout thất bại, không báo thành công từng phần.
 
 ### 9.3 Bốn Trạng Thái Giao Diện
 - **Loading State**: Spinner toàn trang khi validate tồn kho 2 cấp lần cuối.
@@ -254,14 +256,14 @@
 
 ### 10.2 Các Thành Phần Giao Diện
 - **Card Chúc Mừng**: Icon SVG `CheckCircle2` lớn màu xanh ngọc, thông báo "Đặt hàng thành công!".
-- **Khối Quét Mã VietQR**: Mã QR tạo động với đúng số tiền cọc 50% và nội dung chuyển khoản `COC [OrderID]`.
+- **Khối Quét Mã VietQR**: VIETQR theo số tiền phải chuyển ban đầu, nội dung `ORD-{order_code}`; mỗi Provider một QR. COD hiển thị CONFIRMED/số tiền thu khi nhận, không QR/countdown.
 - **Thông Tin Đợt Giao Hàng**: Hiển thị lịch nướng bánh dự kiến và ngày giao theo Dương lịch (kèm Âm lịch tham khảo).
 - **Nút Điều Hướng**: "Theo dõi đơn hàng" và "Về trang chủ".
 
 ### 10.3 Bốn Trạng Thái Giao Diện
 - **Loading State**: Khung Skeleton chờ tải thông tin QR và tài khoản Provider.
 - **Empty State**: Hiển thị lỗi nếu `orderId` không hợp lệ.
-- **Success State**: Mã VietQR hiển thị sắc nét kèm đồng hồ đếm ngược 15 phút giữ chỗ hạn ngạch nướng.
+- **Success State**: VIETQR đếm ngược từ holdExpiresAt backend trả, phản ánh gia hạn; COD không đếm ngược. Tải lại QR không tự gia hạn.
 - **Error State**: Nút tải lại thông tin thanh toán khi mất kết nối mạng.
 
 ---
@@ -270,10 +272,10 @@
 
 ### 11.1 Mục Tiêu & URL
 - **URL Route**: `/order-tracking`
-- **Vai trò**: Cho phép người mua tra cứu nhanh tình trạng đơn hàng mà không bắt buộc đăng nhập tài khoản.
+- **Vai trò**: Buyer đăng nhập để xem đơn thuộc mình; không mở tra cứu công khai bằng mã/SĐT trong MVP.
 
 ### 11.2 Các Thành Phần Giao Diện
-- **Form Tra Cứu**: Ô nhập Mã đơn hàng (`ORD-...`) và Số điện thoại đặt hàng.
+- **Danh sách đơn của tôi**: Lọc mã/trạng thái/ngày nhận; API luôn giới hạn customer từ JWT, không dùng SĐT làm bằng chứng sở hữu.
 - **Nút Tra Cứu**: Nút "Kiểm tra tiến độ đơn hàng" (`Search` icon).
 
 ### 11.3 Bốn Trạng Thái Giao Diện
@@ -292,13 +294,13 @@
 
 ### 12.2 Các Thành Phần Giao Diện
 - **Thanh Tiến Độ Ra Lò Bánh Tươi**:
-  - Bước 1: Đã xác nhận cọc (`CreditCard`).
+  - Bước 1: Đã xác nhận COD hoặc đã nhận cọc (`CreditCard`).
   - Bước 2: Đang xếp lịch nướng (`CalendarClock`).
   - Bước 3: Đang ra lò & đóng hộp (`Flame`).
   - Bước 4: Đang vận chuyển (`Truck`).
   - Bước 5: Đã giao thành công (`PackageCheck`).
 - **Khối Khiếu Nại 24h (Perishable Dispute Window)**:
-  - Xuất hiện trong vòng 24h sau khi đơn chuyển sang `DELIVERED`.
+  - Xuất hiện trong vòng 24h sau khi Order chuyển sang `COMPLETED` (Batch DELIVERED).
   - Form khiếu nại: Chọn loại lỗi (In sai tên, Bánh mốc hỏng, Sai vị), Tải video unboxing hoặc ảnh cận cảnh lỗi.
   - Chính sách ghi chú: "Áp dụng chính sách Hoàn tiền/Đổi mới giữ nguyên hàng cũ theo quy định ATTP."
 
@@ -408,21 +410,19 @@
 ## 18. `/seller/subscription` - Đăng Ký & Thanh Toán Gói SaaS
 
 ### 18.1 Mục Tiêu & URL
-- **URL Route**: `/seller/subscription`
-- **Vai trò**: Cho phép Seller chọn và thanh toán 1 trong 3 gói dịch vụ SaaS mùa vụ (Standard, VIP Top Banner, Exclusive Pop-up).
+- URL: `/seller/subscription`; Seller nạp phí để Admin kích hoạt quyền bán, không có ví số dư hay lựa chọn phân hạng quảng cáo.
 
-### 18.2 Các Thành Phần Giao Diện
-- **3 Thẻ Gói Dịch Vụ SaaS (Pricing Cards)**:
-  - Gói Tiêu Chuẩn (1.000.000đ/3 tháng - 20 SKU).
-  - Gói VIP Top Banner (3.000.000đ/3 tháng - Không giới hạn SKU, Ưu tiên B2B).
-  - Gói Pop-up Độc Quyền (5.000.000đ/tháng cao điểm).
-- **Mã VietQR Thanh Toán Trực Tiếp**: Hiển thị QR thanh toán phí thuê về tài khoản Sàn kèm cú pháp `SAAS [Package] [SellerID]`.
+### 18.2 Thành phần giao diện
+- Hiển thị phí/thời hạn/giới hạn SKU do BE1 cấu hình, tình trạng KYC và quyền bán.
+- Thông tin tài khoản sàn/QR nạp phí, nội dung `SUB-[SellerId]`.
+- Sau chuyển khoản hiển thị chờ đối soát; Admin xác nhận thực nhận mới ACTIVE. Không dùng webhook.
 
-### 18.3 Bốn Trạng Thái Giao Diện
-- **Loading State**: Spinner kiểm tra trạng thái webhook thanh toán theo thời gian thực.
-- **Empty State**: Danh sách các gói hiển thị sẵn sàng cho việc lựa chọn.
-- **Success State**: Màn hình thông báo "Gói dịch vụ SaaS đã kích hoạt thành công! Quyền mở bán đã được bật."
-- **Error State**: Thông báo lỗi giao dịch hết hạn thanh toán, yêu cầu tạo lại mã QR.
+### 18.3 Trạng thái giao diện
+- Loading: tải cấu hình/trạng thái quyền bán.
+- Empty: chưa có yêu cầu nạp phí.
+- Success: chờ Admin hoặc đã ACTIVE theo API; không suy ra thành công từ việc mở QR.
+- Error: lỗi gửi yêu cầu/tải trạng thái, giữ thông tin để thử lại.
+
 
 ---
 
@@ -482,7 +482,7 @@
 - **Loading State**: Spinner vô hiệu hóa nút submit khi đang tải ảnh lên CDN.
 - **Empty State**: Form trắng sẵn sàng nhập liệu.
 - **Success State**: Toast thông báo tạo thành công và chuyển hướng về danh sách sản phẩm.
-- **Error State**: Cảnh báo vượt quá giới hạn SKU của gói SaaS hiện tại (ví dụ: quá 20 SKU của gói Standard).
+- **Error State**: Cảnh báo vượt quá giới hạn SKU của gói SaaS hiện tại (giới hạn lấy từ cấu hình quyền bán BE1).
 
 ---
 
@@ -557,9 +557,9 @@
 - **Vai trò**: Quản lý chi tiết từng đơn hàng, trạng thái cọc, nội dung in vỏ hộp và cập nhật tiến độ đợt giao.
 
 ### 25.2 Các Thành Phần Giao Diện
-- **Tabs Trạng Thái Đơn**: `Tất cả`, `Chờ cọc`, `Đã cọc 50%`, `Đang nướng bánh`, `Đang giao`, `Hoàn thành`, `Khiếu nại`.
+- **Tabs Trạng Thái Đơn**: `Tất cả`, `Chờ cọc`, `COD đã xác nhận`, `Đã cọc`, `Đang nướng bánh`, `Đang giao`, `Hoàn thành`, `Khiếu nại`.
 - **Bảng Đơn Hàng**: Mã đơn, Tên người mua, SĐT, Số đợt giao (`order_batches`), Ngày giao dự kiến, Chữ in vỏ hộp, Tổng tiền, Số tiền đã cọc.
-- **Hành Động Đơn**: Nút "Xác nhận đã nướng xong", Nút "Bàn giao vận chuyển".
+- **Hành Động Đơn**: Xác nhận cọc trước hạn, gia hạn hold một lần +15 phút kèm lý do, đưa sản xuất, bàn giao vận chuyển và xác nhận đã giao/thu đủ tiền. Chỉ hiển thị thao tác hợp lệ theo trạng thái; COD không có xác nhận cọc/gia hạn.
 
 ### 25.3 Bốn Trạng Thái Giao Diện
 - **Loading State**: Skeleton shimmer danh sách đơn hàng.
@@ -619,7 +619,7 @@
 - **Vai trò**: Dành cho Quản trị Sàn theo dõi tổng số xưởng hoạt động, doanh thu phí thuê SaaS và các chỉ số toàn hệ thống.
 
 ### 28.2 Các Thành Phần Giao Diện
-- **Chỉ Số Doanh Thu SaaS**: Tổng tiền thu từ các gói SaaS Provider (Standard, VIP Top Banner, Pop-up).
+- **Chỉ Số Doanh Thu SaaS**: Tổng phí kích hoạt quyền bán đã được Admin đối soát thành công.
 - **Thống Kê Xưởng Hoạt Động**: Tổng số Seller, số Seller đã duyệt ATTP, số Seller đang tạm dừng.
 - **Biểu Đồ Tăng Trưởng**: Doanh thu gói SaaS theo từng tuần của mùa vụ.
 
@@ -671,21 +671,19 @@
 ## 31. `/admin/subscriptions` - Cấu Hình Các Gói Thuê Dịch Vụ SaaS
 
 ### 31.1 Mục Tiêu & URL
-- **URL Route**: `/admin/subscriptions`
-- **Vai trò**: Cấu hình mức giá thuê gói SaaS và quyền lợi đi kèm cho từng mùa vụ.
+- URL: `/admin/subscriptions`; Admin cấu hình phí/quyền bán và đối soát yêu cầu nạp phí.
 
-### 31.2 Các Thành Phần Giao Diện
-- **Danh Sách Gói SaaS**:
-  - Gói Standard: Phí thuê, giới hạn SKU (20 SKU), thời hạn (90 ngày).
-  - Gói VIP Top Banner: Phí thuê, vị trí ưu tiên banner.
-  - Gói Pop-up Độc Quyền: Phí thuê, thời hạn hiển thị.
-- **Form Chỉnh Sửa Phí Thuê**: Thay đổi mức phí và thời hạn hiệu lực của gói.
+### 31.2 Thành phần giao diện
+- Cấu hình mức phí, thời hạn, giới hạn SKU; không bắt buộc STANDARD/VIP/Pop-up.
+- Danh sách Provider, giao dịch SUBSCRIPTION_FEE, trạng thái KYC, yêu cầu chờ đối soát.
+- Xác nhận thực nhận/kích hoạt quyền bán có chống thao tác trùng; không kích hoạt chỉ vì Provider báo đã chuyển.
 
-### 31.3 Bốn Trạng Thái Giao Diện
-- **Loading State**: Skeleton card cấu hình gói.
-- **Empty State**: Hiển thị bảng giá mặc định.
-- **Success State**: Cập nhật giá thuê thành công, áp dụng cho các Seller đăng ký mới.
-- **Error State**: Báo lỗi mức phí không được để trống hoặc âm.
+### 31.3 Trạng thái giao diện
+- Loading: tải cấu hình/danh sách chờ.
+- Empty: chưa có yêu cầu.
+- Success: giao dịch SUCCESS và quyền bán ACTIVE theo phản hồi BE1.
+- Error: phí âm/thiếu cấu hình, không đủ quyền hoặc yêu cầu đã xử lý.
+
 
 ---
 
