@@ -23,7 +23,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Admin Compliance", description = "Admin compliance document review")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasRole('PLATFORM_ADMIN')")
 public class AdminComplianceController {
 
     private final ComplianceService complianceService;

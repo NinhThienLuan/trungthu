@@ -23,7 +23,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Admin Subscription", description = "Admin subscription management")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasRole('PLATFORM_ADMIN')")
 public class AdminSubscriptionController {
 
     private final SubscriptionService subscriptionService;

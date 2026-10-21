@@ -18,6 +18,14 @@ import java.util.UUID;
 @Slf4j
 public class LocalStorageServiceImpl implements StorageService {
     
+    /** Extensions allowed on disk, keyed by validated MIME type (KYC/ATTP docs: images + PDF only) */
+    private static final java.util.Map<String, String> SAFE_EXTENSIONS = java.util.Map.of(
+            "application/pdf", ".pdf",
+            "image/png", ".png",
+            "image/jpeg", ".jpg",
+            "image/jpg", ".jpg",
+            "image/webp", ".webp");
+
     @Value("${app.storage.base-path:uploads}")
     private String basePath;
     
@@ -33,11 +41,9 @@ public class LocalStorageServiceImpl implements StorageService {
                 Files.createDirectories(uploadPath);
             }
             
-            // Generate unique filename
-            String originalFilename = file.getOriginalFilename();
-            String extension = originalFilename != null && originalFilename.contains(".") 
-                ? originalFilename.substring(originalFilename.lastIndexOf(".")) 
-                : "";
+            // Generate unique filename. Extension comes from the validated content type, never from the
+            // client-supplied filename (e.g. "virus.exe" sent as application/pdf must not be stored as .exe)
+            String extension = SAFE_EXTENSIONS.getOrDefault(file.getContentType(), "");
             String filename = UUID.randomUUID() + extension;
             
             // Save file

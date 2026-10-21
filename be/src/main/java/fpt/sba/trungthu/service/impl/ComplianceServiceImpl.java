@@ -31,6 +31,9 @@ public class ComplianceServiceImpl implements ComplianceService {
     private final UserRepository userRepository;
     private final StorageService storageService;
 
+    private static final String[] ALLOWED_DOC_TYPES = {"application/pdf", "image/png", "image/jpeg"};
+    private static final int MAX_DOC_SIZE_MB = 10;
+
     @Override
     @Transactional
     public ComplianceDocResponse uploadDocument(String providerEmail, UploadComplianceDocRequest request) {
@@ -49,10 +52,8 @@ public class ComplianceServiceImpl implements ComplianceService {
                 throw new IllegalArgumentException("Invalid document type: " + request.getDocumentType());
             }
 
-            // Validate file
-            if (request.getFile() == null || request.getFile().isEmpty()) {
-                throw new IllegalArgumentException("File is required");
-            }
+            // Validate file: only images/PDF, max 10MB (NFR-SEC-03: block executables)
+            storageService.validateFile(request.getFile(), ALLOWED_DOC_TYPES, MAX_DOC_SIZE_MB);
 
             // Store file
             String documentUrl = storageService.uploadFile(request.getFile(), "compliance");
