@@ -1,81 +1,189 @@
 import { http, unwrap } from '../apis/http'
 import { USE_MOCK, delay, readStore, writeStore } from '../apis/mock'
-import { DEPOSIT_RATE, HOLD_MINUTES } from '../constants'
-import type { ApiResponse } from '../types/api'
-import type { CheckoutRequest, Order, OrderLine } from '../types/order'
+import { CANCELLABLE_STATUSES, COD_MAX_TOTAL, DEPOSIT_RATE, HOLD_MINUTES } from '../constants'
+import type { ApiResponse, Page } from '../types/api'
+import type {
+  CheckoutPreview,
+  CheckoutRequest,
+  OrderDetail,
+  OrderLine,
+  OrderQuery,
+  OrderSummary,
+} from '../types/order'
 import type { CartItem } from '../stores/cartStore'
 
-const MOCK_KEY = 'mock_orders'
+/**
+ * Đơn hàng theo hợp đồng BE (backend-ownership-and-order-contract.md):
+ * - BE4 (đã có): GET /api/orders/me, GET /api/orders/{id}
+ * - BE3 (chưa có): POST /api/checkout/preview, POST /api/checkout, POST /api/orders/{id}/cancel
+ */
+
+const MOCK_KEY = 'mock_orders_v2' // đổi key: đơn mock cũ có cấu trúc khác
+
+/** Cọc tối thiểu 50%, tiền VNĐ nguyên, làm tròn lên */
+const minDeposit = (total: number) => Math.ceil(total * DEPOSIT_RATE)
+
+/** Mock: dựng số liệu preview từ giỏ (BE thật tự tra giá theo variantId, không tin giá client) */
+function previewFromCart(body: CheckoutRequest, cart: CartItem[]): CheckoutPreview {
+  const groups = body.groups.map((group) => {
+    const items = cart.filter((item) => item.providerId === group.providerId)
+    const subtotalAmount = items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0)
+    const shippingFee = 0 // mock: BE3 tính phí ship theo xưởng
+    const totalAmount = subtotalAmount + shippingFee
+    const hasCustomBox = items.some((item) => item.kind === 'box')
+    return {
+      providerId: group.providerId,
+      subtotalAmount,
+      shippingFee,
+      totalAmount,
+      minDepositAmount: minDeposit(totalAmount),
+      codAllowed: totalAmount < COD_MAX_TOTAL && !hasCustomBox,
+    }
+  })
+  return { groups, grandTotal: groups.reduce((sum, g) => sum + g.totalAmount, 0) }
+}
+
+/** Mock: giả lập cron — đơn chờ cọc quá hạn giữ chỗ tự huỷ */
+function readMockOrders(): OrderDetail[] {
+  const now = Date.now()
+  return readStore<OrderDetail[]>(MOCK_KEY, []).map((order) =>
+    order.status === 'PENDING_DEPOSIT' && order.holdExpiresAt && Date.parse(order.holdExpiresAt) <= now
+      ? { ...order, status: 'CANCELLED' as const, holdExpiresAt: null }
+      : order,
+  )
+}
+
+const toSummary = ({
+  id, code, providerId, storeName, deliveryDate, status, paymentMethod, paymentStatus, totalAmount, paidAmount, remainingAmount, createdAt,
+}: OrderDetail): OrderSummary => ({
+  id, code, providerId, storeName, deliveryDate, status, paymentMethod, paymentStatus, totalAmount, paidAmount, remainingAmount, createdAt,
+})
 
 export const orderService = {
-  /**
-   * Đề xuất API cho BE3: POST /api/checkout -> trả về danh sách đơn con (mỗi Provider 1 đơn).
-   * Nếu 1 Provider hết slot, BE rollback toàn bộ và trả 409 kèm message.
-   */
-  checkout: async (body: CheckoutRequest, cart: CartItem[]): Promise<Order[]> => {
+  /** BE3: POST /api/checkout/preview — chỉ đọc, không giữ stock/slot */
+  preview: async (body: CheckoutRequest, cart: CartItem[]): Promise<CheckoutPreview> => {
     if (!USE_MOCK.checkout) {
-      return unwrap(http.post<ApiResponse<Order[]>>('/checkout', body))
+      return unwrap(http.post<ApiResponse<CheckoutPreview>>('/checkout/preview', body))
+    }
+    await delay(250)
+    return previewFromCart(body, cart)
+  },
+
+  /**
+   * BE3: POST /api/checkout -> ApiResponseDTO<List<OrderDetailResponse>>, mỗi Provider một Order.
+   * Một Provider lỗi -> BE rollback toàn bộ, trả 409 (xung đột) / 400 (đầu vào sai).
+   */
+  checkout: async (body: CheckoutRequest, cart: CartItem[]): Promise<OrderDetail[]> => {
+    if (!USE_MOCK.checkout) {
+      return unwrap(http.post<ApiResponse<OrderDetail[]>>('/checkout', body))
     }
     await delay(600)
-    const now = new Date()
-    const created: Order[] = body.groups.map((group, index) => {
-      // Mock dựng dòng đơn từ giỏ; BE thật tự tra giá theo variantId
-      const lines: OrderLine[] = cart
-        .filter((item) => item.providerId === group.providerId)
-        .map((item) => ({
-          variantId: item.variantId,
-          productName: item.productName,
-          variantName: item.variantName,
-          unitPrice: item.unitPrice,
-          quantity: item.quantity,
-          boxContents: item.slots?.map((slot) => `${slot.productName} ${slot.variantName}`),
-        }))
-      const total = lines.reduce((sum, line) => sum + line.unitPrice * line.quantity, 0)
-      const code = `NVD${now.getTime().toString().slice(-6)}${index + 1}`
+    const preview = previewFromCart(body, cart)
+    const orderedAt = new Date()
+
+    // Kiểm tra giống BE trước khi "lưu" (lỗi bất kỳ -> không tạo đơn nào)
+    body.groups.forEach((group, i) => {
+      if (group.paymentMethod === 'COD' && !preview.groups[i].codAllowed) {
+        throw new Error('COD chỉ áp dụng cho đơn dưới 2.000.000đ và không có hộp tự phối. Vui lòng chọn VietQR.')
+      }
+    })
+
+    const created: OrderDetail[] = body.groups.map((group, index) => {
+      const p = preview.groups[index]
+      const items = cart.filter((item) => item.providerId === group.providerId)
+      const lines: OrderLine[] = items.map((item) => ({
+        variantId: item.variantId,
+        productName: item.productName,
+        variantName: item.variantName,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        subtotal: item.unitPrice * item.quantity,
+        boxContents: item.slots?.map((slot) => `${slot.productName} ${slot.variantName}`),
+      }))
+      const code = `NVD${orderedAt.getTime().toString().slice(-6)}${index + 1}`
+      const isCod = group.paymentMethod === 'COD'
+      const depositAmount = isCod ? 0 : group.depositOption === 'FULL' ? p.totalAmount : p.minDepositAmount
       return {
         id: crypto.randomUUID(),
         code,
         providerId: group.providerId,
-        storeName: cart.find((item) => item.providerId === group.providerId)!.storeName,
+        storeName: items[0]?.storeName ?? '',
         deliveryDate: group.deliveryDate,
-        status: 'PENDING_DEPOSIT',
-        totalAmount: total,
-        depositAmount: Math.ceil(total * DEPOSIT_RATE),
-        holdExpiresAt: new Date(now.getTime() + HOLD_MINUTES * 60_000).toISOString(),
-        // QR demo chỉ chứa chữ, không phải tài khoản thật
-        qrImageUrl: `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(`DEMO - KHONG CHUYEN KHOAN - ${code}`)}`,
-        bankName: 'Ngân hàng của xưởng (demo)',
-        bankAccount: '0000 0000 0000',
-        transferNote: code,
-        createdAt: now.toISOString(),
+        status: isCod ? 'CONFIRMED' : 'PENDING_DEPOSIT',
+        paymentMethod: group.paymentMethod,
+        paymentStatus: 'UNPAID',
+        totalAmount: p.totalAmount,
+        paidAmount: 0,
+        remainingAmount: p.totalAmount,
+        createdAt: orderedAt.toISOString(),
+        receiverName: body.receiverName,
+        receiverPhone: body.receiverPhone,
+        shippingAddress: body.shippingAddress,
+        subtotalAmount: p.subtotalAmount,
+        shippingFee: p.shippingFee,
+        depositAmount,
+        holdExpiresAt: isCod ? null : new Date(orderedAt.getTime() + HOLD_MINUTES * 60_000).toISOString(),
         lines,
+        // QR demo chỉ chứa chữ, không phải tài khoản thật
+        payment: isCod
+          ? undefined
+          : {
+              qrImageUrl: `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(`DEMO - KHONG CHUYEN KHOAN - ${code}`)}`,
+              bankName: 'Ngân hàng của xưởng (demo)',
+              bankAccount: '0000 0000 0000',
+              transferNote: code,
+            },
       }
     })
-    writeStore(MOCK_KEY, [...created, ...readStore<Order[]>(MOCK_KEY, [])])
+    writeStore(MOCK_KEY, [...created, ...readMockOrders()])
     return created
   },
 
-  /** Đề xuất API cho BE4: GET /api/orders/me */
-  myOrders: async (): Promise<Order[]> => {
+  /** BE4: GET /api/orders/me — phân trang, lọc trạng thái và ngày nhận (from/to gồm cả hai đầu) */
+  myOrders: async (query: OrderQuery = {}): Promise<Page<OrderSummary>> => {
+    const { page = 0, size = 10, status, from, to } = query
     if (!USE_MOCK.orders) {
-      return unwrap(http.get<ApiResponse<Order[]>>('/orders/me'))
+      return unwrap(http.get<ApiResponse<Page<OrderSummary>>>('/orders/me', { params: { page, size, status, from, to } }))
     }
     await delay()
-    const now = Date.now()
-    // Giả lập @Scheduled: đơn quá hạn giữ chỗ thì tự huỷ
-    return readStore<Order[]>(MOCK_KEY, []).map((order) =>
-      order.status === 'PENDING_DEPOSIT' && order.holdExpiresAt && Date.parse(order.holdExpiresAt) < now
-        ? { ...order, status: 'CANCELLED' }
-        : order,
-    )
+    const all = readMockOrders()
+      .filter((o) => (!status || o.status === status) && (!from || o.deliveryDate >= from) && (!to || o.deliveryDate <= to))
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    const totalPages = Math.max(1, Math.ceil(all.length / size))
+    return {
+      content: all.slice(page * size, page * size + size).map(toSummary),
+      page,
+      size,
+      totalElements: all.length,
+      totalPages,
+      first: page === 0,
+      last: page >= totalPages - 1,
+    }
   },
 
-  /** Đề xuất API cho BE4: GET /api/orders/{id} */
-  byIds: async (ids: string[]): Promise<Order[]> => {
+  /** BE4: GET /api/orders/{id} — ngoài phạm vi trả 404 */
+  detail: async (id: string): Promise<OrderDetail> => {
     if (!USE_MOCK.orders) {
-      return Promise.all(ids.map((id) => unwrap(http.get<ApiResponse<Order>>(`/orders/${id}`))))
+      return unwrap(http.get<ApiResponse<OrderDetail>>(`/orders/${id}`))
     }
-    const all = await orderService.myOrders()
-    return all.filter((order) => ids.includes(order.id))
+    await delay(200)
+    const order = readMockOrders().find((o) => o.id === id)
+    if (!order) throw new Error('Không tìm thấy đơn hàng')
+    return order
+  },
+
+  /** BE3: POST /api/orders/{id}/cancel — chỉ khi PENDING_DEPOSIT hoặc CONFIRMED (COD chưa sản xuất) */
+  cancel: async (id: string): Promise<OrderDetail> => {
+    if (!USE_MOCK.orders) {
+      return unwrap(http.post<ApiResponse<OrderDetail>>(`/orders/${id}/cancel`))
+    }
+    await delay(400)
+    const orders = readMockOrders()
+    const order = orders.find((o) => o.id === id)
+    if (!order) throw new Error('Không tìm thấy đơn hàng')
+    if (!CANCELLABLE_STATUSES.includes(order.status)) throw new Error('Đơn đã cọc hoặc đang sản xuất, không thể tự huỷ.')
+    const cancelled: OrderDetail = { ...order, status: 'CANCELLED', holdExpiresAt: null }
+    writeStore(MOCK_KEY, orders.map((o) => (o.id === id ? cancelled : o)))
+    return cancelled
   },
 }

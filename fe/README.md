@@ -51,13 +51,18 @@ Tailwind v4 không cần `tailwind.config.js`: toàn bộ cấu hình (màu, fon
 
 ## API đang dùng dữ liệu giả
 
-Xem `src/apis/mock.ts`. Khi BE xong module nào thì đổi cờ tương ứng thành `false`:
+Xem `src/apis/mock.ts`. Hợp đồng chuẩn: `docs/BRD/04-agent-and-dev-guidelines/backend-ownership-and-order-contract.md`.
 
-| Cờ | Module BE | Endpoint đề xuất |
-|---|---|---|
-| `capacity` | BE2 Đạt | `GET /api/providers/{id}/available-dates?from=&to=` |
-| `checkout` | BE3 Phát | `POST /api/checkout` → danh sách đơn con |
-| `orders` | BE4 Luân | `GET /api/orders/me`, `GET /api/orders/{id}` |
-| `rfq` | BE3 Phát | `POST /api/rfqs` |
+| Cờ | Module BE | Endpoint | Trạng thái BE |
+|---|---|---|---|
+| `auth` | BE1 Tiến | `/api/auth/*` | Đã có |
+| `products` | BE2 Đạt | `GET /api/products`, `GET /api/products/{id}` | Đã có (chưa có ảnh) |
+| `orders` | BE4 Luân | `GET /api/orders/me` (page/size/status/from/to), `GET /api/orders/{id}` | Đã có |
+| `orders` | BE3 Phát | `POST /api/orders/{id}/cancel` | Chưa có |
+| `checkout` | BE3 Phát | `POST /api/checkout/preview`, `POST /api/checkout` | Chưa có |
+| `capacity` | BE2 Đạt | `GET /api/providers/{id}/available-dates?from=&to=` | Chưa có |
+| `rfq` | BE3 Phát | `POST /api/rfqs` | Chưa có |
 
-Định dạng request/response nằm trong `src/types/order.ts`; hàm gọi API nằm trong `src/services/`.
+`orders` cần token thật (role CUSTOMER) nên chỉ tắt mock `orders` khi đã tắt mock `auth`.
+Kiểu dữ liệu trong `src/types/order.ts` khớp DTO BE4 (`OrderSummaryResponse`, `OrderDetailResponse`); hộp tự phối (`boxes`)
+và thông tin VietQR (`payment`) là phần FE đề xuất — hợp đồng MVP chưa có.

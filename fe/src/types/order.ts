@@ -1,14 +1,25 @@
-// Hợp đồng dữ liệu đề xuất cho Checkout (BE3 Phát) và Orders (BE4 Luân).
-// Khi BE chốt API thật, chỉ cần sửa file này + src/apis/*.ts.
+// Kiểu dữ liệu đơn hàng — khớp hợp đồng BE (docs/BRD/04-agent-and-dev-guidelines/backend-ownership-and-order-contract.md)
+// và DTO BE4: OrderSummaryResponse, OrderDetailResponse, OrderLineResponse.
 
-export type OrderStatus = 'PENDING_DEPOSIT' | 'DEPOSITED' | 'BAKING' | 'DELIVERING' | 'COMPLETED' | 'CANCELLED'
+/** Trạng thái đơn chuẩn (mục 4 hợp đồng) */
+export type OrderStatus = 'PENDING_DEPOSIT' | 'CONFIRMED' | 'DEPOSITED' | 'BAKING_QUEUED' | 'DELIVERING' | 'COMPLETED' | 'CANCELLED'
+
+/** Enum BE có thêm PAYOS/VNPAY/MOMO/DIRECT_BANK; MVP chỉ dùng COD và VIETQR */
+export type PaymentMethod = 'COD' | 'VIETQR' | 'PAYOS' | 'VNPAY' | 'MOMO' | 'DIRECT_BANK'
+
+export type OrderPaymentStatus = 'UNPAID' | 'DEPOSITED' | 'PAID_FULL'
+
+/** VIETQR: cọc tối thiểu 50% hoặc trả đủ */
+export type DepositOption = 'MIN_DEPOSIT' | 'FULL'
+
+// ---------- Checkout (BE3: POST /api/checkout/preview, POST /api/checkout) ----------
 
 export interface CheckoutLine {
   variantId: string
   quantity: number
 }
 
-/** Hộp tự phối -> BE lưu vào custom_boxes + custom_box_items (mỗi phần tử cakeVariantIds là 1 ô) */
+/** [Phase 2 — FE đề xuất] Hộp tự phối; hợp đồng MVP chưa nhận trường này */
 export interface CheckoutBox {
   boxVariantId: string
   quantity: number
@@ -16,17 +27,21 @@ export interface CheckoutBox {
   note?: string
 }
 
-/** Mỗi Provider một nhóm: một ngày nhận, một đơn con */
+/** Mỗi Provider một nhóm = một Order: một ngày nhận, một phương thức thanh toán */
 export interface CheckoutGroup {
   providerId: string
   deliveryDate: string // yyyy-MM-dd
+  paymentMethod: PaymentMethod
+  /** Chỉ dùng khi paymentMethod = VIETQR */
+  depositOption?: DepositOption
   items: CheckoutLine[]
-  boxes: CheckoutBox[]
+  boxes?: CheckoutBox[]
 }
 
+/** Khớp CreateOrdersCommand.VatInfo */
 export interface VatInfo {
-  taxCode: string
   companyName: string
+  taxCode: string
   companyAddress: string
   invoiceEmail: string
 }
@@ -35,39 +50,86 @@ export interface CheckoutRequest {
   receiverName: string
   receiverPhone: string
   shippingAddress: string
-  note?: string
   vat?: VatInfo
   groups: CheckoutGroup[]
+}
+
+/** Kết quả preview (chỉ đọc, không giữ tài nguyên) cho từng Provider */
+export interface CheckoutPreviewGroup {
+  providerId: string
+  subtotalAmount: number
+  shippingFee: number
+  totalAmount: number
+  /** Cọc tối thiểu khi chọn VIETQR (50%, làm tròn lên) */
+  minDepositAmount: number
+  /** COD chỉ cho đơn tiêu chuẩn < 2.000.000đ, không in riêng */
+  codAllowed: boolean
+}
+
+export interface CheckoutPreview {
+  groups: CheckoutPreviewGroup[]
+  grandTotal: number
+}
+
+// ---------- Đơn hàng (BE4: GET /api/orders/me, GET /api/orders/{id}) ----------
+
+export interface OrderSummary {
+  id: string
+  code: string
+  providerId: string
+  storeName: string
+  deliveryDate: string // yyyy-MM-dd
+  status: OrderStatus
+  paymentMethod: PaymentMethod
+  paymentStatus: OrderPaymentStatus
+  totalAmount: number
+  paidAmount: number
+  remainingAmount: number
+  createdAt: string // ISO UTC (orderedAt)
 }
 
 export interface OrderLine {
   variantId: string
   productName: string
   variantName: string
-  unitPrice: number
   quantity: number
-  /** Tên các bánh trong hộp tự phối (theo thứ tự ô) */
+  unitPrice: number
+  subtotal: number
+  /** [Phase 2 — FE] Tên bánh trong hộp tự phối */
   boxContents?: string[]
 }
 
-export interface Order {
-  id: string
-  code: string
-  providerId: string
-  storeName: string
-  deliveryDate: string
-  status: OrderStatus
-  totalAmount: number
+/** [FE đề xuất cho BE3] Thông tin chuyển khoản VietQR — chưa có trong API đọc hiện tại */
+export interface VietQrPayment {
+  qrImageUrl: string | null
+  bankName: string
+  bankAccount: string
+  accountName?: string
+  transferNote: string
+}
+
+export interface OrderDetail extends OrderSummary {
+  receiverName: string
+  receiverPhone: string
+  shippingAddress: string
+  subtotalAmount: number
+  shippingFee: number
   depositAmount: number
   holdExpiresAt: string | null
-  /** Ảnh VietQR do BE sinh; null khi chưa có */
-  qrImageUrl: string | null
-  bankName: string | null
-  bankAccount: string | null
-  transferNote: string
-  createdAt: string
   lines: OrderLine[]
+  payment?: VietQrPayment
 }
+
+/** Bộ lọc GET /api/orders/me: from/to là ngày nhận, gồm cả hai đầu */
+export interface OrderQuery {
+  page?: number
+  size?: number
+  status?: OrderStatus
+  from?: string
+  to?: string
+}
+
+// ---------- RFQ ----------
 
 export interface RfqRequest {
   companyName: string

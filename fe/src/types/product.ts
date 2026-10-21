@@ -19,7 +19,6 @@ export interface Product {
   name: string
   description: string | null
   productType: ProductType
-  shelfLifeDays: number | null
   status: ProductStatus
   createdAt: string
   /** Ảnh đại diện — BE chưa trả, hiện chỉ có ở dữ liệu mock */

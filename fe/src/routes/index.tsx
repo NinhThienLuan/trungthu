@@ -8,6 +8,7 @@ import { CartPage } from '../pages/user/CartPage'
 import { CheckoutPage } from '../pages/user/CheckoutPage'
 import { PaymentPage } from '../pages/user/PaymentPage'
 import { MyOrdersPage } from '../pages/user/MyOrdersPage'
+import { OrderDetailPage } from '../pages/user/OrderDetailPage'
 import { PolicyPage } from '../pages/user/PolicyPage'
 import { LoginPage } from '../pages/auth/LoginPage'
 import { RegisterPage } from '../pages/auth/RegisterPage'
@@ -51,6 +52,7 @@ export const router = createBrowserRouter([
           { path: '/checkout', element: <CheckoutPage /> },
           { path: '/payment', element: <PaymentPage /> },
           { path: '/orders', element: <MyOrdersPage /> },
+          { path: '/orders/:id', element: <OrderDetailPage /> },
         ],
       },
       { path: '*', element: <NotFoundPage /> },
