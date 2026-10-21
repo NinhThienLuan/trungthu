@@ -1,0 +1,6 @@
+target
+
+.vscode
+.idea
+MEMORY.md
+src/main/resources/secrets.properties
