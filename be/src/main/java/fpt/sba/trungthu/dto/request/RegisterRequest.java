@@ -35,6 +35,15 @@ public class RegisterRequest implements Serializable {
     private UserRole role;
 
     private String storeName;
+    
+    private String address;
+
+    // Bank info for Provider (required for VietQR)
+    private String bankCode;
+    
+    private String bankAccountNumber;
+    
+    private String bankAccountName;
 
     public User toUserEntity(String encodedPassword) {
         return User.builder()
@@ -44,6 +53,12 @@ public class RegisterRequest implements Serializable {
                 .phone(this.phone != null ? this.phone.trim() : null)
                 .role(this.role)
                 .storeName(this.role == UserRole.PROVIDER && this.storeName != null ? this.storeName.trim() : null)
+                .address(this.address != null ? this.address.trim() : null)
+                .bankCode(this.bankCode != null ? this.bankCode.trim().toUpperCase() : null)
+                .bankAccountNumber(this.bankAccountNumber != null ? this.bankAccountNumber.trim() : null)
+                .bankAccountName(this.bankAccountName != null ? this.bankAccountName.trim().toUpperCase() : null)
+                .isComplianceApproved(false)
+                .isSeasonActive(true)
                 .status(UserStatus.ACTIVE)
                 .build();
     }
