@@ -2,10 +2,10 @@ import { NavLink, Outlet, ScrollRestoration, useNavigate } from 'react-router-do
 import { Icon } from '../Icon'
 import { handleStitchLinkClick } from '../../routes/stitchPaths'
 import { cn } from '../../lib/format'
+import { useAuthStore } from '../../stores/authStore'
 
 /**
- * Khung khu vực nghệ nhân / quản trị — chuyển nguyên sidebar + topbar từ bản Stitch.
- * (Phần của FE2 - Thạch: các trang bên trong hiện là giao diện tĩnh, chưa nối API.)
+ * Khung khu vực nghệ nhân / quản trị
  */
 const NAV = [
   { to: '/seller', icon: 'dashboard', label: 'Bảng Điều Khiển', end: true },
@@ -26,11 +26,23 @@ const linkClass = ({ isActive }: { isActive: boolean }) =>
 
 export function AdminLayout() {
   const navigate = useNavigate()
+  const { user, logout } = useAuthStore()
+
+  const handleLogout = async () => {
+    await logout()
+    navigate('/login')
+  }
+
+  const roleLabel =
+    user?.role === 'PLATFORM_ADMIN'
+      ? 'Quản Trị Viên Sàn'
+      : user?.storeName || 'Chủ Mẻ Trưởng Đài'
+
   return (
     <div className="min-h-dvh bg-surface font-body-md text-body-md text-on-surface antialiased">
-      <aside className="fixed left-0 top-0 h-full w-72 bg-primary-container z-50 flex flex-col justify-between shadow-[4px_0_24px_rgba(5,19,34,0.18)]">
+      <aside className="fixed left-0 top-0 h-full w-72 bg-primary-container z-50 flex flex-col justify-between shadow-[4px_0_24px_rgba(5,19,34,0.18)] no-print print:hidden">
         <div className="flex flex-col">
-          <NavLink to="/" className="h-20 px-space-lg flex items-center justify-between bg-ink-dark/40">
+          <NavLink to="/" className="h-20 px-space-lg flex items-center justify-between bg-ink-dark/40" title="Về trang chủ sàn">
             <div className="flex items-center gap-space-sm">
               <div className="w-9 h-9 rounded-[0.25rem] bg-primary flex items-center justify-center">
                 <Icon name="nest_clock_farsight_analog" className="text-secondary-fixed text-[22px]" aria-hidden />
@@ -41,15 +53,22 @@ export function AdminLayout() {
               </div>
             </div>
           </NavLink>
+
+          {/* Store / User Info Card */}
           <div className="px-space-md py-space-sm">
             <div className="p-space-sm rounded-[0.25rem] bg-ink-dark/30 flex items-center justify-between">
               <div className="flex flex-col min-w-0 pr-space-xs">
-                <span className="font-label-sm text-label-sm text-secondary-fixed-dim uppercase tracking-wider truncate">Xưởng Bánh Tinh Hoa</span>
-                <span className="font-body-sm text-body-sm text-champagne-light font-medium truncate">Đông Phương • Hải Phòng</span>
+                <span className="font-label-sm text-label-sm text-secondary-fixed-dim uppercase tracking-wider truncate">
+                  {user?.role === 'PLATFORM_ADMIN' ? 'Hệ Thống Sàn' : 'Gian Hàng Nghệ Nhân'}
+                </span>
+                <span className="font-body-sm text-body-sm text-champagne-light font-medium truncate">
+                  {user?.storeName || user?.fullName || 'Đông Phương • Hải Phòng'}
+                </span>
               </div>
               <Icon name="verified" className="text-secondary-fixed text-[18px]" aria-hidden />
             </div>
           </div>
+
           <div className="px-space-md mt-space-xs">
             <span className="font-label-sm text-label-sm text-outline-variant/60 uppercase tracking-[0.16em] px-space-sm mb-space-xs block">
               Hệ Thống Gian Hàng
@@ -63,6 +82,7 @@ export function AdminLayout() {
               </NavLink>
             ))}
           </nav>
+
           <div className="px-space-md mt-space-md">
             <span className="font-label-sm text-label-sm text-outline-variant/60 uppercase tracking-[0.16em] px-space-sm mb-space-xs block">
               Quản Trị Sàn
@@ -77,70 +97,89 @@ export function AdminLayout() {
             ))}
           </nav>
         </div>
+
         <div className="p-space-md flex flex-col gap-space-sm">
           <div className="p-space-sm rounded-[0.25rem] bg-ink-dark/40 flex flex-col gap-1">
             <div className="flex items-center justify-between">
               <span className="font-label-sm text-label-sm text-secondary-fixed-dim uppercase tracking-wider">Bảo Chứng Nghệ Nhân</span>
-              <span className="font-label-sm text-label-sm text-champagne-light">Hạng Vàng</span>
+              <span className="font-label-sm text-label-sm text-champagne-light">
+                {user?.role === 'PLATFORM_ADMIN' ? 'Hạng Tối Cao' : 'Hạng Vàng'}
+              </span>
             </div>
             <div className="w-full h-1.5 rounded-[0.75rem] bg-primary overflow-hidden">
               <div className="w-4/5 h-full bg-secondary-fixed" />
             </div>
             <span className="font-body-sm text-body-sm text-outline-variant/80 text-[11px]">Đã chuẩn hóa tiêu chuẩn OCOP 5★</span>
           </div>
-          <div className="flex items-center justify-between px-space-sm pt-space-xs text-outline-variant hover:text-champagne-light cursor-pointer transition-colors">
-            <span className="font-body-sm text-body-sm">Trợ giúp Pháp quy & B2B</span>
-            <Icon name="support_agent" className="text-[16px]" aria-hidden />
-          </div>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="flex items-center justify-between px-space-sm py-2 rounded-[0.25rem] text-danger-soft hover:bg-danger/20 transition-colors cursor-pointer w-full text-left"
+          >
+            <span className="font-body-sm text-body-sm font-medium">Đăng xuất tài khoản</span>
+            <Icon name="logout" className="text-[16px]" aria-hidden />
+          </button>
         </div>
       </aside>
 
-      <div className="pl-72">
-        <header className="fixed top-0 left-72 right-0 h-20 bg-primary-container z-40 shadow-[0_4px_20px_rgba(5,19,34,0.12)]">
+      <div className="pl-72 print:pl-0">
+        <header className="fixed top-0 left-72 right-0 h-20 bg-primary-container z-40 shadow-[0_4px_20px_rgba(5,19,34,0.12)] no-print print:hidden">
           <div className="h-20 w-full px-space-lg flex items-center justify-between">
             <div className="flex items-center gap-space-lg">
               <div className="flex items-center gap-space-sm px-space-md py-space-xs rounded-[0.25rem] bg-ink-dark/50 cursor-pointer">
                 <Icon name="storefront" className="text-secondary-fixed text-[20px]" aria-hidden />
                 <div className="flex flex-col text-left">
-                  <span className="font-headline-sm text-[15px] leading-tight text-champagne-light font-medium">Đông Phương - Cầu Đất Hải Phòng</span>
-                  <span className="font-label-sm text-label-sm text-secondary-fixed-dim uppercase tracking-wider">Lò Bánh Di Sản 70 Năm</span>
+                  <span className="font-headline-sm text-[15px] leading-tight text-champagne-light font-medium truncate max-w-[260px]">
+                    {user?.storeName || user?.fullName || 'Đông Phương - Cầu Đất Hải Phòng'}
+                  </span>
+                  <span className="font-label-sm text-label-sm text-secondary-fixed-dim uppercase tracking-wider">
+                    {user?.role === 'PLATFORM_ADMIN' ? 'Toàn quyền quản trị sàn' : 'Lò Bánh Di Sản'}
+                  </span>
                 </div>
-                <Icon name="expand_more" className="text-outline-variant text-[18px]" aria-hidden />
               </div>
               <div className="hidden xl:flex items-center gap-space-sm px-space-md py-space-xs rounded-[0.75rem] bg-tertiary-container text-tertiary-fixed">
                 <span className="w-2 h-2 rounded-[0.75rem] bg-tertiary-fixed animate-pulse" />
                 <span className="font-body-sm text-body-sm tracking-wide text-champagne-light">Lò nướng đang hoạt động • 18°C Chuỗi Lạnh B2B</span>
               </div>
             </div>
+
             <div className="flex items-center gap-space-md">
-              <button
-                type="button"
-                className="w-10 h-10 rounded-[0.25rem] bg-ink-dark/40 flex items-center justify-center text-champagne-light hover:bg-ink-dark transition-colors relative"
-                aria-label="Thông báo"
+              <NavLink
+                to="/"
+                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[0.25rem] bg-ink-dark/40 text-champagne-light hover:bg-ink-dark hover:text-white transition-colors text-body-sm font-medium"
               >
-                <Icon name="notifications" className="text-[20px]" aria-hidden />
-                <span className="absolute top-2 right-2 w-2 h-2 rounded-[0.75rem] bg-secondary-fixed" />
-              </button>
-              <button
-                type="button"
-                className="w-10 h-10 rounded-[0.25rem] bg-ink-dark/40 flex items-center justify-center text-champagne-light hover:bg-ink-dark transition-colors"
-                aria-label="Lịch"
-              >
-                <Icon name="schedule" className="text-[20px]" aria-hidden />
-              </button>
-              <div className="flex items-center gap-space-sm pl-space-sm">
+                <Icon name="arrow_back" className="text-[16px] text-secondary-fixed" aria-hidden />
+                <span>Về Sàn Bán Lẻ</span>
+              </NavLink>
+
+              <div className="flex items-center gap-space-sm pl-space-sm border-l border-white/10">
                 <div className="hidden md:flex flex-col text-right">
-                  <span className="font-body-sm text-body-sm font-semibold text-champagne-light">Nghệ Nhân Lương Thế Cường</span>
-                  <span className="font-label-sm text-label-sm text-secondary-fixed-dim uppercase tracking-wider">Chủ Mẻ Trưởng Đài</span>
+                  <span className="font-body-sm text-body-sm font-semibold text-champagne-light truncate max-w-[180px]">
+                    {user?.fullName || 'Nghệ Nhân Lương Thế Cường'}
+                  </span>
+                  <span className="font-label-sm text-label-sm text-secondary-fixed-dim uppercase tracking-wider">
+                    {roleLabel}
+                  </span>
                 </div>
-                <div className="w-8 h-8 rounded-[0.75rem] bg-primary flex items-center justify-center">
-                  <Icon name="person" className="text-on-primary text-[18px]" aria-hidden />
+                <div className="w-8 h-8 rounded-[0.75rem] bg-primary flex items-center justify-center font-bold text-champagne-light text-sm shadow-inner">
+                  {user?.fullName ? user.fullName.charAt(0).toUpperCase() : 'A'}
                 </div>
               </div>
+
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="p-2 rounded-[0.25rem] bg-danger/20 hover:bg-danger text-champagne-light hover:text-white transition-colors flex items-center justify-center cursor-pointer ml-1"
+                title="Đăng xuất"
+                aria-label="Đăng xuất"
+              >
+                <Icon name="logout" className="text-[18px]" aria-hidden />
+              </button>
             </div>
           </div>
         </header>
-        <main className="relative pt-20 bg-surface min-h-screen" onClick={(e) => handleStitchLinkClick(e, navigate)}>
+
+        <main className="relative pt-20 bg-surface min-h-screen print:pt-0 print:bg-white print:min-h-0" onClick={(e) => handleStitchLinkClick(e, navigate)}>
           <Outlet />
         </main>
       </div>

@@ -3,7 +3,7 @@
  * Khi BE xong module nào -> đổi cờ module đó thành false.
  */
 export const USE_MOCK = {
-  auth: true, // đăng nhập giả: demo@buyer.vn / 12345678 (đổi false để dùng BE thật)
+  auth: false, // Nối API thật /api/auth của Spring Boot backend
   products: true, // danh mục mẫu 14 sản phẩm có ảnh (đổi false để dùng BE thật)
   capacity: true, // BE2 Đạt: ngày khả dụng theo hạn ngạch
   checkout: true, // BE3 Phát: validate giỏ + tách đơn theo Provider

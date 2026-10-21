@@ -43,7 +43,7 @@ export const router = createBrowserRouter([
       { path: '/box-builder', element: stitch('Tự phối hộp quà', <BoxBuilderPage />) },
       { path: '/rfq', element: stitch('Báo giá doanh nghiệp', <RfqFormCatcher><B2bPortalView /></RfqFormCatcher>) },
       { path: '/b2b/checkout', element: stitch('Đặt hàng doanh nghiệp', <B2bCheckoutPage />) },
-      // Luồng đặt hàng chạy được (không có màn Stitch tương ứng)
+      // Luồng đặt hàng chạy được
       { path: '/cart', element: <CartPage /> },
       { path: '/policy', element: <PolicyPage /> },
       {
@@ -59,15 +59,27 @@ export const router = createBrowserRouter([
     ],
   },
   {
-    // Khu vực nghệ nhân / quản trị (FE2) — giao diện Stitch tĩnh
+    // Khu vực nghệ nhân / quản trị (FE2) — Có Route Guard phân quyền
     element: <AdminLayout />,
     children: [
-      { path: '/seller', element: stitch('Bảng điều khiển', <DashboardPage />) },
-      { path: '/seller/products', element: stitch('Menu & mẻ ra lò', <BakeBatchPage />) },
-      { path: '/seller/b2b', element: stitch('Điều phối B2B', <B2bDispatchPage />) },
-      { path: '/seller/orders', element: stitch('Đơn hàng & giao lạnh', <OrdersPage />) },
-      { path: '/seller/profile', element: stitch('Hồ sơ & thẩm định', <ProfilePage />) },
-      { path: '/admin/kyc', element: stitch('Thẩm định chất lượng', <QualityReviewPage />) },
+      {
+        // Khu vực Seller (Provider & Admin)
+        element: <ProtectedRoute allowedRoles={['PROVIDER', 'PLATFORM_ADMIN']} />,
+        children: [
+          { path: '/seller', element: stitch('Bảng điều khiển', <DashboardPage />) },
+          { path: '/seller/products', element: stitch('Menu & mẻ ra lò', <BakeBatchPage />) },
+          { path: '/seller/b2b', element: stitch('Điều phối B2B', <B2bDispatchPage />) },
+          { path: '/seller/orders', element: stitch('Đơn hàng & giao lạnh', <OrdersPage />) },
+          { path: '/seller/profile', element: stitch('Hồ sơ & thẩm định', <ProfilePage />) },
+        ],
+      },
+      {
+        // Khu vực Admin sàn duy nhất
+        element: <ProtectedRoute allowedRoles={['PLATFORM_ADMIN']} />,
+        children: [
+          { path: '/admin/kyc', element: stitch('Thẩm định chất lượng', <QualityReviewPage />) },
+        ],
+      },
     ],
   },
   {
