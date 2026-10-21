@@ -5,8 +5,6 @@ import fpt.sba.trungthu.entity.enumeration.ComplianceDocStatus;
 import fpt.sba.trungthu.entity.enumeration.ComplianceDocType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import jakarta.persistence.LockModeType;
@@ -36,17 +34,20 @@ public interface StoreComplianceDocRepository extends JpaRepository<StoreComplia
      * Tìm tài liệu với pessimistic lock (để update trạng thái)
      */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT d FROM StoreComplianceDoc d WHERE d.id = :id")
-    Optional<StoreComplianceDoc> findByIdWithLock(@Param("id") UUID id);
+    Optional<StoreComplianceDoc> findForUpdateById(UUID id);
+
+    default Optional<StoreComplianceDoc> findByIdWithLock(UUID id) {
+        return findForUpdateById(id);
+    }
 
     /**
      * Kiểm tra Provider đã có tài liệu APPROVED chưa
      */
-    @Query("SELECT CASE WHEN COUNT(d) > 0 THEN true ELSE false END " +
-           "FROM StoreComplianceDoc d " +
-           "WHERE d.provider.id = :providerId " +
-           "AND d.verificationStatus = 'APPROVED'")
-    boolean hasApprovedDocument(@Param("providerId") UUID providerId);
+    boolean existsByProviderIdAndVerificationStatus(UUID providerId, ComplianceDocStatus status);
+
+    default boolean hasApprovedDocument(UUID providerId) {
+        return existsByProviderIdAndVerificationStatus(providerId, ComplianceDocStatus.APPROVED);
+    }
 
     /**
      * Đếm số tài liệu APPROVED của Provider

@@ -15,6 +15,7 @@ import java.math.BigDecimal;
 @Checks({ @Check(name = "CK_ORDER_ITEM_quantity", constraints = "quantity > 0"),
         @Check(name = "CK_ORDER_ITEM_unit_price", constraints = "unit_price >= 0"),
         @Check(name = "CK_ORDER_ITEM_subtotal", constraints = "subtotal >= 0"),
+        @Check(name = "CK_ORDER_ITEM_personalization_fee", constraints = "personalization_fee >= 0"),
         @Check(name = "CK_ORDER_ITEM_bake_quantity", constraints = "bake_quantity >= 0") })
 @Getter
 @Setter
@@ -46,6 +47,13 @@ public class OrderItem extends CreatedEntity {
 
     @Column(name = "unit_price", nullable = false, precision = 18, scale = 2)
     private BigDecimal unitPrice;
+
+    @Column(name = "personalization_text", length = 50)
+    private String personalizationText;
+
+    @Builder.Default
+    @Column(name = "personalization_fee", precision = 18, scale = 2)
+    private BigDecimal personalizationFee = BigDecimal.ZERO;
 
     @Column(name = "subtotal", nullable = false, precision = 18, scale = 2)
     private BigDecimal subtotal;

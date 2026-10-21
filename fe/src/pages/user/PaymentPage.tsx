@@ -8,7 +8,7 @@ import { OrderPaymentPanel } from '../../components/OrderPaymentPanel'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { ErrorState, Spinner } from '../../components/ui/States'
 
-/** Sau Checkout: mỗi xưởng một đơn; đơn VietQR hiện mã QR, đơn COD báo đã xác nhận */
+/** Sau Checkout: mỗi xưởng một đơn; mỗi đơn PayOS có link và QR riêng. */
 export function PaymentPage() {
   useDocumentTitle('Đặt hàng thành công')
   const [params] = useSearchParams()
@@ -19,14 +19,14 @@ export function PaymentPage() {
   )
 
   if (loading) return <Spinner />
-  const hasVietQr = data?.some((o) => o.paymentMethod === 'VIETQR' && o.status === 'PENDING_DEPOSIT')
+  const hasOnlinePayment = data?.some((o) => o.paymentMethod === 'PAYOS' && o.status === 'PENDING_DEPOSIT')
 
   return (
     <div className="page section">
       <PageHeader
         eyebrow="Đặt hàng thành công"
-        title={hasVietQr ? 'Chuyển khoản đặt cọc' : 'Đơn hàng đã được xác nhận'}
-        description={hasVietQr ? 'Mỗi xưởng một mã QR riêng. Chuyển đúng số tiền và nội dung để xưởng đối soát.' : undefined}
+        title={hasOnlinePayment ? 'Thanh toán PayOS' : 'Đơn hàng đã được xác nhận'}
+        description={hasOnlinePayment ? 'Mỗi xưởng một mã QR riêng. Thanh toán từng đơn trước khi hết hạn 5 giờ.' : undefined}
       />
       {error ? (
         <ErrorState message={error} onRetry={reload} />

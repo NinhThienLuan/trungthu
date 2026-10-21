@@ -4,12 +4,12 @@
 /** Trạng thái đơn chuẩn (mục 4 hợp đồng) */
 export type OrderStatus = 'PENDING_DEPOSIT' | 'CONFIRMED' | 'DEPOSITED' | 'BAKING_QUEUED' | 'DELIVERING' | 'COMPLETED' | 'CANCELLED'
 
-/** Enum BE có thêm PAYOS/VNPAY/MOMO/DIRECT_BANK; MVP chỉ dùng COD và VIETQR */
+/** Enum BE; checkout dùng COD hoặc PAYOS. */
 export type PaymentMethod = 'COD' | 'VIETQR' | 'PAYOS' | 'VNPAY' | 'MOMO' | 'DIRECT_BANK'
 
 export type OrderPaymentStatus = 'UNPAID' | 'DEPOSITED' | 'PAID_FULL'
 
-/** VIETQR: cọc tối thiểu 50% hoặc trả đủ */
+/** Thanh toán online: cọc tối thiểu 50% hoặc trả đủ */
 export type DepositOption = 'MIN_DEPOSIT' | 'FULL'
 
 // ---------- Checkout (BE3: POST /api/checkout/preview, POST /api/checkout) ----------
@@ -31,8 +31,10 @@ export interface CheckoutBox {
 export interface CheckoutGroup {
   providerId: string
   deliveryDate: string // yyyy-MM-dd
+  province?: string
+  district?: string
   paymentMethod: PaymentMethod
-  /** Chỉ dùng khi paymentMethod = VIETQR */
+  /** Chỉ dùng khi thanh toán online */
   depositOption?: DepositOption
   items: CheckoutLine[]
   boxes?: CheckoutBox[]
@@ -60,7 +62,7 @@ export interface CheckoutPreviewGroup {
   subtotalAmount: number
   shippingFee: number
   totalAmount: number
-  /** Cọc tối thiểu khi chọn VIETQR (50%, làm tròn lên) */
+  /** Cọc tối thiểu khi thanh toán online (50%, làm tròn lên) */
   minDepositAmount: number
   /** COD chỉ cho đơn tiêu chuẩn < 2.000.000đ, không in riêng */
   codAllowed: boolean
@@ -106,6 +108,16 @@ export interface VietQrPayment {
   bankAccount: string
   accountName?: string
   transferNote: string
+}
+
+export interface PayosPayment {
+  orderId: string
+  payosOrderCode: number
+  amount: number
+  paymentLinkId: string
+  checkoutUrl: string | null
+  qrCode: string | null
+  expiresAt: string
 }
 
 export interface OrderDetail extends OrderSummary {

@@ -2,10 +2,10 @@ package fpt.sba.trungthu.repository;
 
 import fpt.sba.trungthu.entity.Product;
 import fpt.sba.trungthu.entity.enumeration.ProductType;
+import fpt.sba.trungthu.entity.enumeration.ProductStatus;
+import fpt.sba.trungthu.entity.enumeration.UserStatus;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import org.springframework.data.domain.Page;
@@ -26,16 +26,36 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
     Optional<Product> findByIdAndProviderEmail(UUID id, String email);
 
     @EntityGraph(attributePaths = {"variants", "provider"})
-    @Query("SELECT p FROM Product p WHERE p.status = 'ACTIVE' AND p.provider.status = 'ACTIVE' " +
-            "AND (:type IS NULL OR p.productType = :type) ORDER BY p.createdAt DESC")
-    List<Product> findPublic(@Param("type") ProductType type);
+    List<Product> findByStatusAndProviderStatusOrderByCreatedAtDesc(ProductStatus status, UserStatus providerStatus);
 
     @EntityGraph(attributePaths = {"variants", "provider"})
-    @Query("SELECT p FROM Product p WHERE p.status = 'ACTIVE' AND p.provider.status = 'ACTIVE' " +
-            "AND (:type IS NULL OR p.productType = :type)")
-    Page<Product> findPublic(@Param("type") ProductType type, Pageable pageable);
+    List<Product> findByStatusAndProviderStatusAndProductTypeOrderByCreatedAtDesc(ProductStatus status,
+            UserStatus providerStatus, ProductType type);
 
     @EntityGraph(attributePaths = {"variants", "provider"})
-    @Query("SELECT p FROM Product p WHERE p.id = :id AND p.status = 'ACTIVE' AND p.provider.status = 'ACTIVE'")
-    Optional<Product> findPublicById(@Param("id") UUID id);
+    Page<Product> findByStatusAndProviderStatus(ProductStatus status, UserStatus providerStatus, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"variants", "provider"})
+    Page<Product> findByStatusAndProviderStatusAndProductType(ProductStatus status, UserStatus providerStatus,
+            ProductType type, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"variants", "provider"})
+    Optional<Product> findByIdAndStatusAndProviderStatus(UUID id, ProductStatus status, UserStatus providerStatus);
+
+    default List<Product> findPublic(ProductType type) {
+        return type == null
+                ? findByStatusAndProviderStatusOrderByCreatedAtDesc(ProductStatus.ACTIVE, UserStatus.ACTIVE)
+                : findByStatusAndProviderStatusAndProductTypeOrderByCreatedAtDesc(
+                        ProductStatus.ACTIVE, UserStatus.ACTIVE, type);
+    }
+
+    default Page<Product> findPublic(ProductType type, Pageable pageable) {
+        return type == null
+                ? findByStatusAndProviderStatus(ProductStatus.ACTIVE, UserStatus.ACTIVE, pageable)
+                : findByStatusAndProviderStatusAndProductType(ProductStatus.ACTIVE, UserStatus.ACTIVE, type, pageable);
+    }
+
+    default Optional<Product> findPublicById(UUID id) {
+        return findByIdAndStatusAndProviderStatus(id, ProductStatus.ACTIVE, UserStatus.ACTIVE);
+    }
 }

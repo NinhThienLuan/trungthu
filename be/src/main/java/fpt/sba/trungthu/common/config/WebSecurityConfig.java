@@ -56,6 +56,7 @@ public class WebSecurityConfig {
             "/api/auth/authenticate/**",
             "/api/auth/forgot-password",
             "/api/auth/reset-password",
+            "/api/payments/payos/webhook",
             "/api/products/**",
             "/api/public/**"
     };

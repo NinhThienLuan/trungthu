@@ -25,9 +25,11 @@ Toàn bộ các thực thể trong cơ sở dữ liệu được giữ nguyên v
 8. **`Order` (`ORDER`)**: Đơn hàng mua sắm. **Quy tắc Hướng A**: Giỏ hàng cho phép nhặt đa Provider, nhưng lúc Checkout hệ thống **tự động tách thành các Order con độc lập theo từng `provider_id`**. Lưu tiền cọc, phương thức, phí ship, thông tin VAT và deadline/audit hold.
 9. **`OrderBatch` (`ORDER_BATCH`)**: Đợt giao hàng kết nối ngày nhận bánh tươi (`delivery_date`).
 10. **`OrderItem` (`ORDER_ITEM`)**: Chi tiết các biến thể bánh lẻ / set hộp tiêu chuẩn trong đơn hàng.
-11. **`PaymentTransaction` (`PAYMENT_TRANSACTION`)**: Giao dịch thanh toán cọc đơn hàng qua VietQR và nộp phí thuê SaaS (`SUBSCRIPTION_FEE`).
+11. **`PaymentTransaction` (`PAYMENT_TRANSACTION`)**: Giao dịch thanh toán cọc đơn hàng qua VietQR/PayOS và nộp phí thuê SaaS (`SUBSCRIPTION_FEE`). PayOS lưu mã đơn số, link, QR và tham chiếu ngân hàng riêng từng Order/Provider.
 12. **`BulkRequest` (`BULK_REQUEST` / `b2b_rfqs`)**: Tiếp nhận yêu cầu mua số lượng lớn ($\ge 20$ hộp) và hiển thị trên Dashboard Provider.
 13. **`SystemConfig` (`SYSTEM_CONFIG`)**: Cặp key-value lưu cấu hình hệ thống chung (hotline, thông báo sàn).
+13a. **`ProviderShippingRate` (`PROVIDER_SHIPPING_RATE`)**: Bảng cước theo Provider/tỉnh/quận-huyện; checkout không nhận phí ship từ client.
+13b. **`ProviderPayosAccount` (`PROVIDER_PAYOS_ACCOUNT`)**: Kênh PayOS riêng từng Provider; API Key và Checksum Key mã hóa AES-GCM bằng master key của server.
 
 ---
 
@@ -218,10 +220,12 @@ MVP bỏ batch_status vì mỗi Order có một Batch; tiến độ dùng Order.
 | `variant_id` | `UUID` | No | FK (`PRODUCT_VARIANT.id`)| Biến thể sản phẩm. |
 | `quantity` | `INT` | No | - | Số lượng đặt mua ($\ge 1$). |
 | `unit_price` | `DECIMAL(18,2)`| No | - | Đơn giá snapshot lúc tạo đơn. |
+| `personalization_text` | `VARCHAR(50)` | Yes | - | Chữ in trên hộp; chỉ áp dụng `BOX_SHELL`. |
+| `personalization_fee` | `DECIMAL(18,2)` | Yes | - | Phí in snapshot; NULL ở dòng lịch sử cũ được đọc thành 0. |
 | `product_name` | `VARCHAR(255)` | No | - | Tên sản phẩm snapshot. |
 | `variant_name` | `VARCHAR(255)` | No | - | Tên biến thể snapshot. |
 | `bake_quantity` | `INT` | No | - | Số chiếc bánh snapshot: bánh lẻ=quantity; set=quantity×số bánh/set; thiệp/dịch vụ=0. BE2 tính quy đổi, BE4 lưu. |
-| `subtotal` | `DECIMAL(18,2)`| No | - | Thành tiền: `quantity * unit_price`. |
+| `subtotal` | `DECIMAL(18,2)`| No | - | Thành tiền: `quantity * unit_price + personalization_fee`. |
 
 ---
 
@@ -256,11 +260,30 @@ BE4 tạo view v_bake_lines với cột, bộ lọc trạng thái và quy tắc 
 | `id` | `UUID` | No | PK | Định danh yêu cầu sỉ (`BaseEntity`). |
 | `customer_id` | `UUID` | No | FK (`USER.id`) | Người dùng gửi yêu cầu. |
 | `request_code` | `VARCHAR(255)` | No | UNIQUE | Mã định danh: `RFQ-YYYYMMDD-XXXX`. |
+| `company_name` | `VARCHAR(255)` | Yes | - | Tên doanh nghiệp; API tạo mới bắt buộc. |
+| `tax_code` | `VARCHAR(50)` | Yes | - | Mã số thuế; API tạo mới bắt buộc. |
+| `contact_name` | `VARCHAR(255)` | Yes | - | Người liên hệ; API tạo mới bắt buộc. |
+| `contact_position` | `VARCHAR(255)` | Yes | - | Chức vụ; API tạo mới bắt buộc. |
+| `contact_phone` | `VARCHAR(20)` | Yes | - | Số điện thoại liên hệ; API tạo mới bắt buộc. |
+| `contact_email` | `VARCHAR(254)` | Yes | - | Email liên hệ; API tạo mới bắt buộc. |
+| `logo_url` | `VARCHAR(2048)` | Yes | - | Đường dẫn logo do tầng upload cung cấp. |
 | `description` | `TEXT` | Yes | - | Mô tả yêu cầu hương vị, đóng gói, in ấn logo. |
 | `requested_quantity`| `INT` | No | - | Số lượng hộp dự kiến ($\ge 20$ hộp). |
 | `expected_date` | `DATE` | Yes | - | Mốc ngày mong muốn nhận bánh. |
 | `expected_budget` | `DECIMAL(18,2)`| Yes | - | Ngân sách dự kiến của doanh nghiệp. |
-| `status` | `VARCHAR(30)` | No | - | Enum: `OPEN`, `CONTACTED`, `CLOSED`. |
+| `status` | `VARCHAR(30)` | No | - | Enum hiện tại: `NEW`, `DISTRIBUTED`, `QUOTES_RECEIVED`, `WON`, `LOST`; MVP tạo `DISTRIBUTED`. |
+
+`company_name` và các trường liên hệ nullable ở DB để cập nhật bảng hiện có bằng `ddl-auto=update`; API tạo RFQ mới kiểm tra bắt buộc. `expected_date` được API mới yêu cầu, dù cột cũ nullable.
+
+### 2.12a Thực thể `ProviderShippingRate` (Bảng `PROVIDER_SHIPPING_RATE`) - `[MVP]`
+
+| Tên Trường | Kiểu dữ liệu | Nullable | Khóa | Ý nghĩa |
+| :--- | :--- | :--- | :--- | :--- |
+| `id` | `UUID` | No | PK | Định danh bản ghi. |
+| `provider_id` | `UUID` | No | FK USER | Provider sở hữu bảng cước. |
+| `province` | `VARCHAR(100)` | No | UNIQUE với provider/district | Tỉnh/thành đã trim và đổi chữ thường. |
+| `district` | `VARCHAR(100)` | No | UNIQUE với provider/province | Quận/huyện đã trim và đổi chữ thường. |
+| `fee` | `DECIMAL(18,2)` | No | CHECK >= 0 | Phí vận chuyển VNĐ nguyên cho một Order. |
 
 ---
 

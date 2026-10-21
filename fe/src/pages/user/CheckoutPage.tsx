@@ -15,16 +15,20 @@ import { PageHeader } from '../../components/ui/PageHeader'
 import { Notice, Spinner } from '../../components/ui/States'
 import type { CheckoutGroup, CheckoutPreviewGroup, CheckoutRequest } from '../../types/order'
 
-/** Lựa chọn thanh toán của một xưởng: COD hoặc VietQR (cọc 50% / trả đủ) */
+/** Lựa chọn thanh toán của một xưởng: COD hoặc PayOS (cọc 50% / trả đủ) */
 type PayChoice = 'COD' | 'MIN_DEPOSIT' | 'FULL'
+type ShippingZone = { province: string; district: string }
 
-const toGroups = (groups: CartGroup[], dates: Record<string, string>, choices: Record<string, PayChoice>): CheckoutGroup[] =>
+const toGroups = (groups: CartGroup[], dates: Record<string, string>, choices: Record<string, PayChoice>,
+  zones: Record<string, ShippingZone>): CheckoutGroup[] =>
   groups.map((g) => {
     const choice = choices[g.providerId] ?? 'MIN_DEPOSIT'
     return {
       providerId: g.providerId,
       deliveryDate: dates[g.providerId],
-      paymentMethod: choice === 'COD' ? 'COD' : 'VIETQR',
+      province: zones[g.providerId]?.province,
+      district: zones[g.providerId]?.district,
+      paymentMethod: choice === 'COD' ? 'COD' : 'PAYOS',
       depositOption: choice === 'COD' ? undefined : choice,
       items: g.items.filter((i) => i.kind === 'single').map((i) => ({ variantId: i.variantId, quantity: i.quantity })),
       boxes: g.items
@@ -40,26 +44,28 @@ export function CheckoutPage() {
   const navigate = useNavigate()
   const [wantVat, setWantVat] = useState(false)
   const [choices, setChoices] = useState<Record<string, PayChoice>>({})
+  const [zones, setZones] = useState<Record<string, ShippingZone>>({})
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitError, setSubmitError] = useState<string>()
   const [submitting, setSubmitting] = useState(false)
 
   const groups = groupByProvider(items)
   const ready = groups.length > 0 && groups.every((g) => deliveryDates[g.providerId])
+  const zonesReady = groups.every((g) => zones[g.providerId]?.province && zones[g.providerId]?.district)
 
   // Preview (BE3) chỉ đọc: tổng tiền, phí ship, cọc tối thiểu, có được COD không
   const { data: preview, loading: previewLoading, error: previewError } = useApi(
     () =>
-      ready
-        ? orderService.preview({ receiverName: '', receiverPhone: '', shippingAddress: '', groups: toGroups(groups, deliveryDates, {}) }, items)
+      ready && zonesReady
+        ? orderService.preview({ receiverName: '', receiverPhone: '', shippingAddress: '', groups: toGroups(groups, deliveryDates, {}, zones) }, items)
         : Promise.resolve(null),
-    [items, deliveryDates],
+    [items, deliveryDates, zones],
   )
 
   if (!ready) return <Navigate to={ROUTES.cart} replace />
 
   const previewOf = (providerId: string) => preview?.groups.find((p) => p.providerId === providerId)
-  // Mặc định: COD nếu được phép, không thì VietQR cọc 50%; lựa chọn COD không hợp lệ tự chuyển về VietQR
+  // Mặc định: COD nếu được phép, không thì PayOS cọc 50%.
   const choiceOf = (p?: CheckoutPreviewGroup): PayChoice => {
     if (!p) return 'MIN_DEPOSIT'
     const picked = choices[p.providerId] ?? (p.codAllowed ? 'COD' : 'MIN_DEPOSIT')
@@ -90,6 +96,10 @@ export function CheckoutPage() {
     }
     setErrors({})
     setSubmitError(undefined)
+    if (!zonesReady) {
+      setSubmitError('Nhập tỉnh/thành phố và quận/huyện giao hàng cho từng xưởng.')
+      return
+    }
     setSubmitting(true)
 
     const body: CheckoutRequest = {
@@ -97,7 +107,7 @@ export function CheckoutPage() {
       receiverPhone: parsed.data.receiverPhone,
       shippingAddress: parsed.data.shippingAddress,
       vat: parsed.data.vat,
-      groups: toGroups(groups, deliveryDates, effectiveChoices),
+      groups: toGroups(groups, deliveryDates, effectiveChoices, zones),
     }
     try {
       const orders = await orderService.checkout(body, items)
@@ -131,8 +141,27 @@ export function CheckoutPage() {
             <p className="mt-1 text-small text-muted">
               Mỗi xưởng là một đơn riêng. COD áp dụng cho đơn dưới {formatVnd(COD_MAX_TOTAL)}, không có hộp tự phối.
             </p>
+            <div className="mt-5 grid gap-4">
+              {groups.map((g) => (
+                <div key={g.providerId} className="grid gap-3 rounded-sm border border-line p-4 sm:grid-cols-2">
+                  <p className="font-semibold text-navy sm:col-span-2">Khu vực giao của {g.storeName}</p>
+                  <TextInput label="Tỉnh/thành phố" name={`province-${g.providerId}`} required
+                    defaultValue={zones[g.providerId]?.province ?? ''}
+                    onBlur={(event) => setZones((current) => ({ ...current, [g.providerId]: {
+                      province: event.target.value.trim(), district: current[g.providerId]?.district ?? '',
+                    } }))} />
+                  <TextInput label="Quận/huyện" name={`district-${g.providerId}`} required
+                    defaultValue={zones[g.providerId]?.district ?? ''}
+                    onBlur={(event) => setZones((current) => ({ ...current, [g.providerId]: {
+                      province: current[g.providerId]?.province ?? '', district: event.target.value.trim(),
+                    } }))} />
+                </div>
+              ))}
+            </div>
             {previewLoading ? (
               <Spinner label="Đang tính tiền..." />
+            ) : !zonesReady ? (
+              <div className="mt-4"><Notice>Nhập khu vực giao hàng để xem giá và phương thức thanh toán.</Notice></div>
             ) : previewError ? (
               <div className="mt-4">
                 <Notice tone="danger">{previewError}</Notice>
@@ -150,8 +179,8 @@ export function CheckoutPage() {
                       note: p.codAllowed ? 'Không cần cọc trước' : `Không áp dụng: đơn từ ${formatVnd(COD_MAX_TOTAL)} hoặc có hộp tự phối`,
                       disabled: !p.codAllowed,
                     },
-                    { value: 'MIN_DEPOSIT', title: `VietQR — cọc ${DEPOSIT_RATE * 100}%`, note: `Chuyển ngay ${formatVnd(p.minDepositAmount)}` },
-                    { value: 'FULL', title: 'VietQR — trả đủ', note: `Chuyển ngay ${formatVnd(p.totalAmount)}` },
+                    { value: 'MIN_DEPOSIT', title: `PayOS — cọc ${DEPOSIT_RATE * 100}%`, note: `Thanh toán ${formatVnd(p.minDepositAmount)} trong 5 giờ` },
+                    { value: 'FULL', title: 'PayOS — trả đủ', note: `Thanh toán ${formatVnd(p.totalAmount)} trong 5 giờ` },
                   ]
                   return (
                     <fieldset key={g.providerId} className="rounded-sm border border-line p-4">
@@ -217,7 +246,7 @@ export function CheckoutPage() {
               <dd className="font-serif text-h3 text-navy">{formatVnd(grandTotal)}</dd>
             </div>
             <div className="flex justify-between text-muted">
-              <dt>Chuyển khoản ngay (VietQR)</dt>
+              <dt>Thanh toán ngay (PayOS)</dt>
               <dd className="font-semibold text-navy">{formatVnd(payNow)}</dd>
             </div>
             <div className="flex justify-between text-muted">

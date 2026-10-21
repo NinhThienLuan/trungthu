@@ -97,7 +97,7 @@ class OrderPersistenceTests {
         assertThat(orders.findOwnedOrder(first.getId(), buyer.getId())).isPresent();
         assertThat(orders.findOwnedOrder(first.getId(), provider.getId())).isPresent();
         assertThat(orders.findOwnedOrder(first.getId(), otherProvider.getId())).isEmpty();
-        assertThat(orders.findByIdForUpdate(first.getId())).isPresent();
+        assertThat(orders.findForUpdateById(first.getId())).isPresent();
     }
 
     @Test

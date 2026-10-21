@@ -4,8 +4,6 @@ import fpt.sba.trungthu.entity.Subscription;
 import fpt.sba.trungthu.entity.enumeration.SubscriptionStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import jakarta.persistence.LockModeType;
@@ -25,14 +23,13 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, UUID
     /**
      * Kiểm tra Provider có subscription ACTIVE không
      */
-    @Query("SELECT CASE WHEN COUNT(s) > 0 THEN true ELSE false END " +
-           "FROM Subscription s " +
-           "WHERE s.provider.id = :providerId " +
-           "AND s.status = 'ACTIVE' " +
-           "AND s.startDate <= :today " +
-           "AND s.endDate >= :today")
-    boolean hasActiveSubscription(@Param("providerId") UUID providerId, 
-                                  @Param("today") LocalDate today);
+    boolean existsByProviderIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
+            UUID providerId, SubscriptionStatus status, LocalDate startDate, LocalDate endDate);
+
+    default boolean hasActiveSubscription(UUID providerId, LocalDate today) {
+        return existsByProviderIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
+                providerId, SubscriptionStatus.ACTIVE, today, today);
+    }
 
     /**
      * Tìm tất cả subscription theo trạng thái (cho Admin)
@@ -43,14 +40,18 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, UUID
      * Tìm subscription với pessimistic lock (để update trạng thái)
      */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT s FROM Subscription s WHERE s.id = :id")
-    Optional<Subscription> findByIdWithLock(@Param("id") UUID id);
+    Optional<Subscription> findForUpdateById(UUID id);
+
+    default Optional<Subscription> findByIdWithLock(UUID id) {
+        return findForUpdateById(id);
+    }
 
     /**
      * Tìm subscription hết hạn (cho cron job Phase 2)
      */
-    @Query("SELECT s FROM Subscription s " +
-           "WHERE s.status = 'ACTIVE' " +
-           "AND s.endDate < :today")
-    List<Subscription> findExpiredSubscriptions(@Param("today") LocalDate today);
+    List<Subscription> findByStatusAndEndDateBefore(SubscriptionStatus status, LocalDate today);
+
+    default List<Subscription> findExpiredSubscriptions(LocalDate today) {
+        return findByStatusAndEndDateBefore(SubscriptionStatus.ACTIVE, today);
+    }
 }

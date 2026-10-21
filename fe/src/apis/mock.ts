@@ -6,8 +6,8 @@ export const USE_MOCK = {
   auth: false, // Nối API thật /api/auth của Spring Boot backend
   products: true, // danh mục mẫu 14 sản phẩm có ảnh (đổi false để dùng BE thật)
   capacity: true, // BE2 Đạt: ngày khả dụng theo hạn ngạch
-  checkout: true, // BE3 Phát: validate giỏ + tách đơn theo Provider
-  orders: true, // BE4 Luân: đơn của tôi, trạng thái
+  checkout: true, // Demo PayOS; tắt khi cart dùng UUID sản phẩm thật và seller đã cấu hình kênh
+  orders: true, // Tắt cùng checkout để đọc trạng thái thanh toán từ backend
   rfq: true, // BE3 Phát: gửi yêu cầu báo giá sỉ
 }
 

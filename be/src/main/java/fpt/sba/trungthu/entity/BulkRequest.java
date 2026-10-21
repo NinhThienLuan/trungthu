@@ -34,6 +34,27 @@ public class BulkRequest extends BaseEntity {
     @Column(name = "description", length = 100000)
     private String description;
 
+    @Column(name = "company_name", length = 255)
+    private String companyName;
+
+    @Column(name = "tax_code", length = 50)
+    private String taxCode;
+
+    @Column(name = "contact_name", length = 255)
+    private String contactName;
+
+    @Column(name = "contact_position", length = 255)
+    private String contactPosition;
+
+    @Column(name = "contact_phone", length = 20)
+    private String contactPhone;
+
+    @Column(name = "contact_email", length = 254)
+    private String contactEmail;
+
+    @Column(name = "logo_url", length = 2048)
+    private String logoUrl;
+
     @Column(name = "requested_quantity", nullable = false)
     private Integer requestedQuantity;
 

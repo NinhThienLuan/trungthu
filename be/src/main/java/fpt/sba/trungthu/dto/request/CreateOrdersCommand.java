@@ -37,7 +37,14 @@ public record CreateOrdersCommand(
             @NotBlank @Size(max = 255) String variantName,
             @Positive int quantity,
             @NotNull @DecimalMin("0") @Digits(integer = 16, fraction = 2) BigDecimal unitPrice,
-            @PositiveOrZero int bakeQuantity) {}
+            @PositiveOrZero int bakeQuantity,
+            @Size(max = 50) String personalizationText,
+            @NotNull @DecimalMin("0") BigDecimal personalizationFee) {
+        public ItemSnapshot(UUID variantId, String productName, String variantName, int quantity,
+                BigDecimal unitPrice, int bakeQuantity) {
+            this(variantId, productName, variantName, quantity, unitPrice, bakeQuantity, null, BigDecimal.ZERO);
+        }
+    }
 
     public record VatInfo(
             @NotBlank @Size(max = 255) String companyName,

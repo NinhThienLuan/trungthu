@@ -1,0 +1,200 @@
+package fpt.sba.trungthu.service.impl;
+
+import fpt.sba.trungthu.common.security.SecurityContextService;
+import fpt.sba.trungthu.dto.response.OrderDetailResponse;
+import fpt.sba.trungthu.entity.*;
+import fpt.sba.trungthu.entity.enumeration.*;
+import fpt.sba.trungthu.repository.*;
+import fpt.sba.trungthu.service.OrderLifecycleService;
+import fpt.sba.trungthu.service.OrderService;
+import fpt.sba.trungthu.service.PayosCancelRequested;
+import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.Comparator;
+import java.util.List;
+import java.util.UUID;
+
+@Service
+@RequiredArgsConstructor
+public class OrderLifecycleServiceImpl implements OrderLifecycleService {
+    private final SecurityContextService security;
+    private final OrderRepository orders;
+    private final OrderBatchRepository batches;
+    private final OrderItemRepository items;
+    private final PaymentTransactionRepository payments;
+    private final ProductVariantRepository variants;
+    private final DailyCapacityRepository capacities;
+    private final OrderService orderService;
+    private final ApplicationEventPublisher events;
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public OrderDetailResponse confirmDeposit(UUID id, BigDecimal receivedAmount) {
+        Order order = lockedOwned(id, true);
+        Instant now = Instant.now();
+        requireActiveHold(order, now);
+        if (receivedAmount == null || receivedAmount.compareTo(order.getDepositAmount()) < 0
+                || receivedAmount.compareTo(order.getTotalAmount()) > 0) {
+            throw conflict("Received amount must be between deposit and order total");
+        }
+        PaymentTransaction pending = payments.findByOrderIdOrderByCreatedAtAsc(id).stream()
+                .filter(tx -> tx.getTransactionType() == TransactionType.ORDER_DEPOSIT
+                        && tx.getPaymentStatus() == TransactionStatus.PENDING)
+                .findFirst().orElseThrow(() -> conflict("Pending deposit transaction not found"));
+        pending.setAmount(receivedAmount);
+        pending.setPaidAt(now);
+        pending.transitionPaymentStatus(TransactionStatus.SUCCESS);
+        order.transitionPaymentStatus(receivedAmount.compareTo(order.getTotalAmount()) == 0
+                ? OrderPaymentStatus.PAID_FULL : OrderPaymentStatus.DEPOSITED);
+        order.transitionOrderStatus(OrderStatus.DEPOSITED);
+        order.setHoldExpiresAt(null);
+        return orderService.getOrderDetail(id);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public HoldResponse extendHold(UUID id, String reason) {
+        Order order = lockedOwned(id, true);
+        if (order.getPaymentMethod() == PaymentMethod.PAYOS) {
+            throw conflict("PayOS payment deadline cannot be extended");
+        }
+        Instant now = Instant.now();
+        requireActiveHold(order, now);
+        if (reason == null || reason.trim().isEmpty() || reason.trim().length() > 500) {
+            throw badRequest("Reason must contain 1 to 500 characters");
+        }
+        if (order.getHoldExtensionCount() != 0) throw conflict("Hold can be extended only once");
+        Instant max = order.getOrderedAt().plusSeconds(30 * 60);
+        Instant extended = order.getHoldExpiresAt().plusSeconds(15 * 60);
+        if (extended.isAfter(max)) extended = max;
+        if (!extended.isAfter(order.getHoldExpiresAt())) throw conflict("Hold cannot be extended further");
+        order.setHoldExpiresAt(extended);
+        order.setHoldExtensionCount(1);
+        order.setHoldExtendedAt(now);
+        order.setHoldExtendedBy(security.getCurrentUser());
+        order.setHoldExtensionReason(reason.trim());
+        return new HoldResponse(extended, 1);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public OrderDetailResponse cancel(UUID id) {
+        Order order = lockedOwned(id, false);
+        if (order.getOrderStatus() != OrderStatus.PENDING_DEPOSIT
+                && !(order.getOrderStatus() == OrderStatus.CONFIRMED && order.getPaymentMethod() == PaymentMethod.COD)) {
+            throw conflict("Order can no longer be cancelled through this API");
+        }
+        cancelAndRelease(order);
+        return orderService.getOrderDetail(id);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public OrderDetailResponse changeStatus(UUID id, OrderStatus target, BigDecimal collectedAmount) {
+        Order order = lockedOwned(id, true);
+        if (target != OrderStatus.BAKING_QUEUED && target != OrderStatus.DELIVERING
+                && target != OrderStatus.COMPLETED) throw badRequest("Unsupported target order status");
+        order.getOrderStatus().validateTransition(target);
+        if (target == OrderStatus.COMPLETED) {
+            BigDecimal paid = payments.sumSuccessfulAmountByOrderId(id);
+            BigDecimal remaining = order.getTotalAmount().subtract(paid);
+            if (remaining.signum() < 0) throw conflict("Recorded payments exceed order total");
+            if (remaining.signum() == 0) {
+                if (collectedAmount != null && collectedAmount.signum() != 0) throw conflict("Order is already paid in full");
+            } else {
+                if (collectedAmount == null || collectedAmount.compareTo(remaining) != 0) {
+                    throw conflict("Full remaining amount must be collected to complete delivery");
+                }
+                payments.save(PaymentTransaction.builder().order(order)
+                        .transactionCode("BAL-" + order.getOrderCode())
+                        .transactionType(TransactionType.ORDER_BALANCE)
+                        .paymentMethod(order.getPaymentMethod()).amount(remaining)
+                        .paymentStatus(TransactionStatus.SUCCESS).paidAt(Instant.now()).build());
+            }
+            if (order.getPaymentStatus() != OrderPaymentStatus.PAID_FULL) {
+                order.transitionPaymentStatus(OrderPaymentStatus.PAID_FULL);
+            }
+        } else if (collectedAmount != null) {
+            throw badRequest("collectedAmount is only accepted when completing delivery");
+        }
+        order.transitionOrderStatus(target);
+        return orderService.getOrderDetail(id);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void expire(UUID id) {
+        Order order = orders.findForUpdateById(id).orElse(null);
+        if (order != null && order.getOrderStatus() == OrderStatus.PENDING_DEPOSIT
+                && order.getHoldExpiresAt() != null && !Instant.now().isBefore(order.getHoldExpiresAt())) {
+            cancelAndRelease(order);
+        }
+    }
+
+    private Order lockedOwned(UUID id, boolean sellerOnly) {
+        User user = security.getCurrentUser();
+        Order order = orders.findForUpdateById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
+        if (!user.getId().equals(order.getProvider().getId())
+                && (sellerOnly || !user.getId().equals(order.getCustomer().getId()))) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found");
+        }
+        return order;
+    }
+
+    private void requireActiveHold(Order order, Instant now) {
+        if (order.getOrderStatus() != OrderStatus.PENDING_DEPOSIT || order.getPaymentMethod() != PaymentMethod.VIETQR
+                || order.getHoldExpiresAt() == null || !now.isBefore(order.getHoldExpiresAt())) {
+            throw conflict("Deposit hold is no longer active");
+        }
+    }
+
+    private void cancelAndRelease(Order order) {
+        OrderBatch batch = batches.findByOrderId(order.getId())
+                .orElseThrow(() -> new IllegalStateException("Order batch missing"));
+        List<OrderItem> lines = items.findByOrderBatchOrderId(order.getId()).stream()
+                .sorted(Comparator.comparing(item -> item.getVariant().getId())).toList();
+        int bakeQuantity = 0;
+        for (OrderItem line : lines) {
+            ProductVariant variant = variants.findForUpdateById(line.getVariant().getId())
+                    .orElseThrow(() -> new IllegalStateException("Reserved variant missing"));
+            variant.setStockQuantity(Math.addExact(variant.getStockQuantity(), line.getQuantity()));
+            bakeQuantity = Math.addExact(bakeQuantity, line.getBakeQuantity());
+        }
+        if (bakeQuantity > 0) {
+            DailyCapacity capacity = capacities.findForUpdateByProviderIdAndCapacityDate(order.getProvider().getId(),
+                            batch.getDeliveryDate().minusDays(1))
+                    .orElseThrow(() -> new IllegalStateException("Reserved capacity missing"));
+            if (batch.getCapacity() == null || !capacity.getId().equals(batch.getCapacity().getId())
+                    || capacity.getReservedQuantity() < bakeQuantity) {
+                throw new IllegalStateException("Reserved capacity does not match order");
+            }
+            capacity.setReservedQuantity(capacity.getReservedQuantity() - bakeQuantity);
+        }
+        for (PaymentTransaction tx : payments.findByOrderIdOrderByCreatedAtAsc(order.getId())) {
+            if (tx.getPaymentStatus() == TransactionStatus.PENDING) {
+                tx.transitionPaymentStatus(TransactionStatus.CANCELLED);
+                if (tx.getPaymentMethod() == PaymentMethod.PAYOS && tx.getPayosPaymentLinkId() != null) {
+                    events.publishEvent(new PayosCancelRequested(order.getProvider().getId(), tx.getPayosOrderCode()));
+                }
+            }
+        }
+        order.transitionOrderStatus(OrderStatus.CANCELLED);
+        order.setHoldExpiresAt(null);
+    }
+
+    private ResponseStatusException badRequest(String message) {
+        return new ResponseStatusException(HttpStatus.BAD_REQUEST, message);
+    }
+
+    private ResponseStatusException conflict(String message) {
+        return new ResponseStatusException(HttpStatus.CONFLICT, message);
+    }
+}

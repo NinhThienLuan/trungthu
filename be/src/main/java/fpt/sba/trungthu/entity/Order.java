@@ -27,7 +27,7 @@ import java.util.UUID;
         + "AND total_amount >= 0 AND deposit_amount >= 0 AND deposit_amount <= total_amount")
 @Check(name = "CK_ORDER_hold_count", constraints = "hold_extension_count BETWEEN 0 AND 1")
 @Check(name = "CK_ORDER_cod", constraints = "payment_method <> 'COD' OR (deposit_amount = 0 AND hold_expires_at IS NULL)")
-@Check(name = "CK_ORDER_hold_state", constraints = "(order_status = 'PENDING_DEPOSIT' AND payment_method = 'VIETQR' "
+@Check(name = "CK_ORDER_hold_state", constraints = "(order_status = 'PENDING_DEPOSIT' AND payment_method IN ('VIETQR', 'PAYOS') "
         + "AND hold_expires_at IS NOT NULL) OR (order_status <> 'PENDING_DEPOSIT' AND hold_expires_at IS NULL)")
 @Check(name = "CK_ORDER_hold_audit", constraints = "hold_extension_count = 0 OR "
         + "(hold_extended_at IS NOT NULL AND hold_extended_by IS NOT NULL AND hold_extension_reason IS NOT NULL)")

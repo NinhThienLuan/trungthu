@@ -48,7 +48,10 @@ public class OrderMapper {
     private OrderLineResponse toLine(OrderItem item) {
         return OrderLineResponse.builder().variantId(item.getVariant().getId())
                 .productName(item.getProductName()).variantName(item.getVariantName())
-                .quantity(item.getQuantity()).unitPrice(item.getUnitPrice()).subtotal(item.getSubtotal())
+                .quantity(item.getQuantity()).unitPrice(item.getUnitPrice())
+                .personalizationText(item.getPersonalizationText())
+                .personalizationFee(item.getPersonalizationFee() == null ? BigDecimal.ZERO : item.getPersonalizationFee())
+                .subtotal(item.getSubtotal())
                 .build();
     }
 }

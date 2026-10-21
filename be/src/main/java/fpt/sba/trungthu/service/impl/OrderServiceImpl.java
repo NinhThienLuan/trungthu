@@ -18,6 +18,7 @@ import fpt.sba.trungthu.entity.User;
 import fpt.sba.trungthu.entity.enumeration.OrderStatus;
 import fpt.sba.trungthu.entity.enumeration.PaymentMethod;
 import fpt.sba.trungthu.entity.enumeration.TransactionType;
+import fpt.sba.trungthu.entity.enumeration.TransactionStatus;
 import fpt.sba.trungthu.entity.enumeration.UserRole;
 import fpt.sba.trungthu.entity.enumeration.UserStatus;
 import fpt.sba.trungthu.repository.DailyCapacityRepository;
@@ -109,7 +110,8 @@ public class OrderServiceImpl implements OrderService {
         User provider = findUser(group.providerId(), UserRole.PROVIDER);
         Map<UUID, ProductVariant> variants = findGroupVariants(group);
         BigDecimal subtotal = group.items().stream()
-                .map(item -> item.unitPrice().multiply(BigDecimal.valueOf(item.quantity())))
+                .map(item -> item.unitPrice().multiply(BigDecimal.valueOf(item.quantity()))
+                        .add(item.personalizationFee()))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal total = subtotal.add(group.shippingFee());
         validatePayment(command, group, total);
@@ -130,11 +132,16 @@ public class OrderServiceImpl implements OrderService {
         itemRepository.saveAll(group.items().stream().map(item -> OrderItem.builder().orderBatch(batch)
                 .variant(variants.get(item.variantId())).productName(item.productName()).variantName(item.variantName())
                 .quantity(item.quantity()).unitPrice(item.unitPrice()).bakeQuantity(item.bakeQuantity())
-                .subtotal(item.unitPrice().multiply(BigDecimal.valueOf(item.quantity()))).build()).toList());
+                .personalizationText(item.personalizationText()).personalizationFee(item.personalizationFee())
+                .subtotal(item.unitPrice().multiply(BigDecimal.valueOf(item.quantity()))
+                        .add(item.personalizationFee())).build()).toList());
         if (!cod) {
             paymentRepository.save(PaymentTransaction.builder().order(order)
                     .transactionCode("DEP-" + order.getOrderCode()).transactionType(TransactionType.ORDER_DEPOSIT)
-                    .paymentMethod(PaymentMethod.VIETQR).amount(group.depositAmount()).build());
+                    .paymentMethod(group.paymentMethod()).amount(group.depositAmount())
+                    .payosOrderCode(group.paymentMethod() == PaymentMethod.PAYOS
+                            ? nextPayosOrderCode() : null)
+                    .build());
         }
         // Flush exposes DB errors inside this method; it does not commit the caller's transaction.
         orderRepository.flush();
@@ -147,6 +154,14 @@ public class OrderServiceImpl implements OrderService {
             throw invalidOrder("Invalid role for " + role);
         }
         return user;
+    }
+
+    private long nextPayosOrderCode() {
+        long code;
+        do {
+            code = 1 + (UUID.randomUUID().getMostSignificantBits() & ((1L << 52) - 2));
+        } while (paymentRepository.existsByPayosOrderCode(code));
+        return code;
     }
 
     private Map<UUID, ProductVariant> findGroupVariants(ProviderOrder group) {
@@ -185,13 +200,21 @@ public class OrderServiceImpl implements OrderService {
             if (group.depositAmount().signum() != 0 || group.holdExpiresAt() != null) {
                 throw invalidOrder("COD must have zero deposit and no deposit hold");
             }
-        } else if (group.paymentMethod() == PaymentMethod.VIETQR) {
+        } else if (group.paymentMethod() == PaymentMethod.VIETQR || group.paymentMethod() == PaymentMethod.PAYOS) {
             if (group.depositAmount().signum() <= 0 || group.holdExpiresAt() == null
                     || !group.holdExpiresAt().isAfter(command.orderedAt())) {
-                throw invalidOrder("VietQR requires a positive deposit and a hold after the order time");
+                throw invalidOrder("Online payment requires a positive amount and a hold after the order time");
+            }
+            if (group.paymentMethod() == PaymentMethod.PAYOS
+                    && group.holdExpiresAt().isAfter(command.orderedAt().plusSeconds(5 * 60 * 60))) {
+                throw invalidOrder("PayOS payment deadline cannot exceed five hours");
+            }
+            if (group.paymentMethod() == PaymentMethod.PAYOS
+                    && group.depositAmount().stripTrailingZeros().scale() > 0) {
+                throw invalidOrder("PayOS amount must be a whole number of VND");
             }
         } else {
-            throw invalidOrder("Only COD and VietQR are supported for order creation");
+            throw invalidOrder("Unsupported order payment method");
         }
     }
 
@@ -290,9 +313,10 @@ public class OrderServiceImpl implements OrderService {
         var ids = page.getContent().stream().map(Order::getId).toList();
         Map<UUID, LocalDate> dates = batchRepository.findByOrderIdIn(ids).stream()
                 .collect(Collectors.toMap(batch -> batch.getOrder().getId(), OrderBatch::getDeliveryDate));
-        Map<UUID, BigDecimal> amounts = paymentRepository.sumSuccessfulAmountsByOrderIds(ids).stream()
-                .collect(Collectors.toMap(PaymentTransactionRepository.OrderPaymentTotal::getOrderId,
-                        PaymentTransactionRepository.OrderPaymentTotal::getPaidAmount));
+        Map<UUID, BigDecimal> amounts = paymentRepository
+                .findByOrderIdInAndPaymentStatus(ids, TransactionStatus.SUCCESS).stream()
+                .collect(Collectors.toMap(payment -> payment.getOrder().getId(),
+                        PaymentTransaction::getAmount, BigDecimal::add));
         return PageResponse.from(page, order -> orderMapper.toSummary(order, dates.get(order.getId()),
                 amounts.getOrDefault(order.getId(), BigDecimal.ZERO)));
     }
