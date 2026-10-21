@@ -1,7 +1,15 @@
 // Hợp đồng dữ liệu đề xuất cho Checkout (BE3 Phát) và Orders (BE4 Luân).
 // Khi BE chốt API thật, chỉ cần sửa file này + src/apis/*.ts.
 
-export type OrderStatus = 'PENDING_DEPOSIT' | 'DEPOSITED' | 'BAKING' | 'DELIVERING' | 'COMPLETED' | 'CANCELLED'
+export type OrderStatus =
+  | 'PENDING_DEPOSIT'
+  | 'CONFIRMED'
+  | 'DEPOSITED'
+  | 'BAKING_QUEUED'
+  | 'BAKING' // Alias tương thích ngược với BAKING_QUEUED
+  | 'DELIVERING'
+  | 'COMPLETED'
+  | 'CANCELLED'
 
 export interface CheckoutLine {
   variantId: string

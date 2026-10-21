@@ -33,7 +33,9 @@ export const PRODUCT_TYPE_LABEL: Record<ProductType, string> = {
 
 export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
   PENDING_DEPOSIT: 'Chờ đặt cọc',
+  CONFIRMED: 'COD xác nhận',
   DEPOSITED: 'Đã nhận cọc',
+  BAKING_QUEUED: 'Đang nướng bánh',
   BAKING: 'Đang nướng',
   DELIVERING: 'Đang giao',
   COMPLETED: 'Hoàn tất',

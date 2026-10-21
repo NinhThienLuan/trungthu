@@ -1,7 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { errorMessage } from '../../apis/http'
-import { USE_MOCK } from '../../apis/mock'
 import { useAuthStore } from '../../stores/authStore'
 import { useDocumentTitle } from '../../hooks/useDocumentTitle'
 import { fieldErrors, loginSchema } from '../../schemas'
@@ -14,6 +13,8 @@ export function LoginPage() {
   const login = useAuthStore((s) => s.login)
   const navigate = useNavigate()
   const [params] = useSearchParams()
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitError, setSubmitError] = useState<string>()
   const [submitting, setSubmitting] = useState(false)
@@ -24,7 +25,7 @@ export function LoginPage() {
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    const parsed = loginSchema.safeParse(Object.fromEntries(new FormData(e.currentTarget)))
+    const parsed = loginSchema.safeParse({ email, password })
     if (!parsed.success) {
       setErrors(fieldErrors(parsed.error))
       return
@@ -33,7 +34,18 @@ export function LoginPage() {
     setSubmitError(undefined)
     setSubmitting(true)
     try {
-      await login(parsed.data.email, parsed.data.password)
+      const user = await login(parsed.data.email, parsed.data.password)
+      // Điều hướng thông minh theo vai trò nếu không có tham số next
+      if (!next) {
+        if (user.role === 'PLATFORM_ADMIN') {
+          navigate('/admin/kyc', { replace: true })
+          return
+        }
+        if (user.role === 'PROVIDER') {
+          navigate('/seller', { replace: true })
+          return
+        }
+      }
       navigate(target, { replace: true })
     } catch (err) {
       setSubmitError(errorMessage(err, 'Email hoặc mật khẩu không đúng'))
@@ -50,14 +62,28 @@ export function LoginPage() {
           <Notice tone="success">Đăng ký thành công. Mật khẩu đã được gửi tới email của bạn.</Notice>
         </div>
       )}
-      {USE_MOCK.auth && (
-        <div className="mt-4">
-          <Notice>Chế độ demo: đăng nhập bằng <strong>demo@buyer.vn</strong> / <strong>12345678</strong></Notice>
-        </div>
-      )}
+
       <form noValidate onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
-        <TextInput label="Email" name="email" type="email" autoComplete="email" error={errors.email} />
-        <TextInput label="Mật khẩu" name="password" type="password" autoComplete="current-password" error={errors.password} />
+        <TextInput
+          label="Email"
+          name="email"
+          type="email"
+          autoComplete="email"
+          placeholder="name@example.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          error={errors.email}
+        />
+        <TextInput
+          label="Mật khẩu"
+          name="password"
+          type="password"
+          autoComplete="current-password"
+          placeholder="Nhập mật khẩu..."
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          error={errors.password}
+        />
         {submitError && <Notice tone="danger">{submitError}</Notice>}
         <button type="submit" className="btn btn-primary w-full" disabled={submitting}>
           {submitting ? 'Đang đăng nhập...' : 'Đăng nhập'}

@@ -382,10 +382,34 @@
 }
 
 @media print {
-
   header,
   footer,
+  aside,
   .no-print {
     display: none !important;
+  }
+
+  body {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+    background-color: #ffffff !important;
+  }
+
+  table {
+    page-break-inside: auto;
+  }
+
+  tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+
+  thead {
+    display: table-header-group;
   }
 }

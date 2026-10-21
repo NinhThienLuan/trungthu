@@ -10,7 +10,9 @@ import type { OrderStatus } from '../../types/order'
 
 const STATUS_STYLE: Record<OrderStatus, string> = {
   PENDING_DEPOSIT: 'border-gold bg-champagne text-gold-ink',
+  CONFIRMED: 'border-navy/20 bg-ivory text-navy',
   DEPOSITED: 'border-success/30 bg-success-soft text-success',
+  BAKING_QUEUED: 'border-success/30 bg-success-soft text-success',
   BAKING: 'border-success/30 bg-success-soft text-success',
   DELIVERING: 'border-navy/20 bg-ivory text-navy',
   COMPLETED: 'border-navy bg-navy text-gold',

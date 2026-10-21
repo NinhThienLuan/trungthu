@@ -5,16 +5,91 @@ import type { AuthResult, User } from '../types/user'
 
 const SESSION_KEY = 'mock_session'
 
-const DEMO_USER: User = {
-  id: '99999999-9999-4999-8999-999999999999',
-  email: 'demo@buyer.vn',
-  fullName: 'Nguyễn Văn Demo',
-  phone: '0912345678',
-  role: 'CUSTOMER',
-  storeName: null,
-  address: '12 Tràng Tiền, Hoàn Kiếm, Hà Nội',
-  status: 'ACTIVE',
+export const DEMO_ACCOUNTS = [
+  {
+    label: 'Khách hàng (Buyer)',
+    email: 'buyer@gmail.com',
+    role: 'CUSTOMER',
+    fullName: 'Nguyễn Văn Mua',
+  },
+  {
+    label: 'Chủ xưởng (Seller)',
+    email: 'seller@kinhdo.vn',
+    role: 'PROVIDER',
+    fullName: 'Bánh Trung Thu Kinh Đô',
+  },
+  {
+    label: 'Quản trị sàn (Admin)',
+    email: 'admin@trungthu.fpt.edu.vn',
+    role: 'PLATFORM_ADMIN',
+    fullName: 'Platform Administrator',
+  },
+] as const
+
+const DEMO_USERS: Record<string, User> = {
+  'buyer@gmail.com': {
+    id: '7f9fe3e7-e457-4b58-ae5d-6ce8a762f3bf',
+    email: 'buyer@gmail.com',
+    fullName: 'Nguyễn Văn Mua',
+    phone: '0903000003',
+    role: 'CUSTOMER',
+    storeName: null,
+    address: '12 Tràng Tiền, Hoàn Kiếm, Hà Nội',
+    status: 'ACTIVE',
+  },
+  'seller@kinhdo.vn': {
+    id: '25631fbf-3df0-4167-ab72-f257a02c9e31',
+    email: 'seller@kinhdo.vn',
+    fullName: 'Kinh Do Mooncake Store',
+    phone: '0902000002',
+    role: 'PROVIDER',
+    storeName: 'Bánh Trung Thu Kinh Đô',
+    address: '172 Cầu Đất, Ngô Quyền, Hải Phòng',
+    status: 'ACTIVE',
+  },
+  'admin@trungthu.fpt.edu.vn': {
+    id: '00000000-0000-4000-8000-000000000000',
+    email: 'admin@trungthu.fpt.edu.vn',
+    fullName: 'Platform Administrator',
+    phone: '0901000001',
+    role: 'PLATFORM_ADMIN',
+    storeName: null,
+    address: 'Trụ sở Nguyệt Viên Đài, Hà Nội',
+    status: 'ACTIVE',
+  },
+  // Giữ alias cũ
+  'demo@buyer.vn': {
+    id: '99999999-9999-4999-8999-999999999999',
+    email: 'demo@buyer.vn',
+    fullName: 'Nguyễn Văn Demo',
+    phone: '0912345678',
+    role: 'CUSTOMER',
+    storeName: null,
+    address: '12 Tràng Tiền, Hoàn Kiếm, Hà Nội',
+    status: 'ACTIVE',
+  },
+  'seller@trungthu.vn': {
+    id: '11111111-1111-4111-8111-111111111111',
+    email: 'seller@trungthu.vn',
+    fullName: 'Nghệ Nhân Lương Thế Cường',
+    phone: '0988776655',
+    role: 'PROVIDER',
+    storeName: 'Đông Phương - Hải Phòng',
+    address: '172 Cầu Đất, Ngô Quyền, Hải Phòng',
+    status: 'ACTIVE',
+  },
+  'admin@trungthu.vn': {
+    id: '00000000-0000-4000-8000-000000000000',
+    email: 'admin@trungthu.vn',
+    fullName: 'Quản Trị Sàn Nguyệt Viên',
+    phone: '0909090909',
+    role: 'PLATFORM_ADMIN',
+    storeName: null,
+    address: 'Trụ sở Nguyệt Viên Đài, Hà Nội',
+    status: 'ACTIVE',
+  },
 }
+
 const DEMO_PASSWORD = '12345678'
 
 export const authService = {
@@ -23,11 +98,13 @@ export const authService = {
       return unwrap(http.post<ApiResponse<AuthResult>>('/auth/login', { email, password }))
     }
     await delay(300)
-    if (email.trim().toLowerCase() !== DEMO_USER.email || password !== DEMO_PASSWORD) {
-      throw new Error(`Tài khoản demo: ${DEMO_USER.email} / ${DEMO_PASSWORD}`)
+    const normalizedEmail = email.trim().toLowerCase()
+    const user = DEMO_USERS[normalizedEmail]
+    if (!user || password !== DEMO_PASSWORD) {
+      throw new Error(`Tài khoản demo: buyer@gmail.com, seller@kinhdo.vn, hoặc admin@trungthu.fpt.edu.vn (Mật khẩu: ${DEMO_PASSWORD})`)
     }
-    writeStore(SESSION_KEY, DEMO_USER)
-    return { accessToken: 'mock', tokenType: 'Bearer', expiresInSeconds: 900, user: DEMO_USER }
+    writeStore(SESSION_KEY, user)
+    return { accessToken: 'mock', tokenType: 'Bearer', expiresInSeconds: 900, user }
   },
 
   /** BE tự sinh mật khẩu và gửi qua email */
@@ -36,7 +113,13 @@ export const authService = {
       return unwrap(http.post<ApiResponse<User>>('/auth/register', { ...body, role: 'CUSTOMER' }))
     }
     await delay(400)
-    return { ...DEMO_USER, ...body }
+    const newUser: User = {
+      ...DEMO_USERS['buyer@gmail.com'],
+      id: crypto.randomUUID(),
+      ...body,
+      role: 'CUSTOMER',
+    }
+    return newUser
   },
 
   me: async (): Promise<User> => {
