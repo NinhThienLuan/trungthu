@@ -204,15 +204,6 @@ export function Header() {
                         </div>
                       </Link>
 
-                      <Link
-                        to={ROUTES.changePassword}
-                        onClick={() => setProfilePopupOpen(false)}
-                        className="flex items-center gap-3 px-3.5 py-2 text-body rounded-md hover:bg-champagne/30 transition-colors"
-                      >
-                        <Icon name="key" className="text-navy text-[18px]" aria-hidden />
-                        <span className="font-medium text-navy text-[13px]">Đổi mật khẩu</span>
-                      </Link>
-
                       {(user.role === 'PROVIDER' || user.role === 'PLATFORM_ADMIN') && (
                         <Link
                           to="/seller"
@@ -249,7 +240,6 @@ export function Header() {
                         onClick={handleLogout}
                         className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-md bg-danger-soft hover:bg-danger text-danger hover:text-white font-medium text-body-sm transition-all cursor-pointer"
                       >
-                        <Icon name="logout" className="text-[18px]" aria-hidden />
                         <span>Đăng xuất tài khoản</span>
                       </button>
                     </div>
@@ -257,9 +247,6 @@ export function Header() {
                 ) : (
                   /* ================= TRƯỜNG HỢP: CHƯA ĐĂNG NHẬP ================= */
                   <div className="p-5 text-center flex flex-col items-center">
-                    <div className="w-12 h-12 rounded-full bg-champagne text-gold-ink flex items-center justify-center mb-3">
-                      <Icon name="account_circle" className="text-[32px]" aria-hidden />
-                    </div>
                     <h3 className="font-headline-sm text-headline-sm text-navy font-bold">
                       Tài Khoản Cá Nhân
                     </h3>
@@ -274,7 +261,6 @@ export function Header() {
                         onClick={() => setProfilePopupOpen(false)}
                         className="btn btn-primary w-full justify-center py-2.5 text-body-sm font-semibold shadow-sm"
                       >
-                        <Icon name="login" className="text-[18px]" aria-hidden />
                         <span>Đăng nhập ngay</span>
                       </Link>
 

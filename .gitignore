@@ -1,0 +1,73 @@
+# ===== IntelliJ IDEA =====
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# ===== OS =====
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ===== Environment / secrets =====
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# ===== Logs =====
+*.log
+logs/
+
+# ===== Backend: Java / Spring Boot / Maven (be/) =====
+be/target/
+be/.mvn/wrapper/maven-wrapper.jar
+be/.mvn/timing.properties
+be/.mvn/.gradle-enterprise/
+be/HELP.md
+be/.apt_generated
+be/.classpath
+be/.factorypath
+be/.project
+be/.settings
+be/.springBeans
+be/.sts4-cache
+be/application-local.properties
+be/application-local.yml
+be/src/main/resources/application-local.properties
+be/src/main/resources/application-local.yml
+*.class
+*.jar
+*.war
+*.ear
+hs_err_pid*
+
+# ===== Frontend: Node / Vite / React (fe/) =====
+fe/node_modules/
+fe/dist/
+fe/dist-ssr/
+fe/build/
+fe/coverage/
+fe/.vite/
+fe/.cache/
+fe/*.local
+fe/*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+node_modules/
+
+# ===== Editors =====
+.vscode/*
+!.vscode/extensions.json
+*.swp
+*.swo
+*~
+
+# ===== Docs (draw.io backup/temp files) =====
+docs/*.bkp
+docs/*.dtmp
+docs/.$*
