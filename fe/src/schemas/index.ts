@@ -32,6 +32,28 @@ const vatSchema = z.object({
   invoiceEmail: email,
 })
 
+// Mật khẩu mới: 6–50 ký tự như ResetPasswordRequest / ChangePasswordRequest của BE
+const newPassword = z.string().min(6, 'Mật khẩu tối thiểu 6 ký tự').max(50, 'Mật khẩu tối đa 50 ký tự')
+
+export const forgotPasswordSchema = z.object({ email })
+
+export const resetPasswordSchema = z
+  .object({
+    token: z.string().trim().min(1, 'Vui lòng dán mã trong email'),
+    newPassword,
+    confirmPassword: z.string(),
+  })
+  .refine((d) => d.newPassword === d.confirmPassword, { path: ['confirmPassword'], message: 'Mật khẩu nhập lại không khớp' })
+
+export const changePasswordSchema = z
+  .object({
+    oldPassword: z.string().min(1, 'Vui lòng nhập mật khẩu hiện tại'),
+    newPassword,
+    confirmPassword: z.string(),
+  })
+  .refine((d) => d.newPassword === d.confirmPassword, { path: ['confirmPassword'], message: 'Mật khẩu nhập lại không khớp' })
+  .refine((d) => d.newPassword !== d.oldPassword, { path: ['newPassword'], message: 'Mật khẩu mới phải khác mật khẩu hiện tại' })
+
 export const checkoutSchema = z.object({
   receiverName: required('tên người nhận'),
   receiverPhone: phone,

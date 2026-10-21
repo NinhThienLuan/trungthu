@@ -204,6 +204,15 @@ export function Header() {
                         </div>
                       </Link>
 
+                      <Link
+                        to={ROUTES.changePassword}
+                        onClick={() => setProfilePopupOpen(false)}
+                        className="flex items-center gap-3 px-3.5 py-2 text-body rounded-md hover:bg-champagne/30 transition-colors"
+                      >
+                        <Icon name="key" className="text-navy text-[18px]" aria-hidden />
+                        <span className="font-medium text-navy text-[13px]">Đổi mật khẩu</span>
+                      </Link>
+
                       {(user.role === 'PROVIDER' || user.role === 'PLATFORM_ADMIN') && (
                         <Link
                           to="/seller"

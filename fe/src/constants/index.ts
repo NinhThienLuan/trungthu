@@ -24,6 +24,8 @@ export const ROUTES = {
   policy: '/policy',
   login: '/login',
   register: '/register',
+  forgotPassword: '/forgot-password',
+  changePassword: '/account/password',
 } as const
 
 export const PRODUCT_TYPE_LABEL: Record<ProductType, string> = {

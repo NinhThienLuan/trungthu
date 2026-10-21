@@ -12,6 +12,8 @@ import { OrderDetailPage } from '../pages/user/OrderDetailPage'
 import { PolicyPage } from '../pages/user/PolicyPage'
 import { LoginPage } from '../pages/auth/LoginPage'
 import { RegisterPage } from '../pages/auth/RegisterPage'
+import { ForgotPasswordPage } from '../pages/auth/ForgotPasswordPage'
+import { ChangePasswordPage } from '../pages/user/ChangePasswordPage'
 import { NotFoundPage } from '../pages/NotFoundPage'
 import { StitchPage } from '../components/layouts/StitchPage'
 import { HomePage } from '../pages/user/HomePage'
@@ -52,6 +54,7 @@ export const router = createBrowserRouter([
           { path: '/checkout', element: <CheckoutPage /> },
           { path: '/payment', element: <PaymentPage /> },
           { path: '/orders', element: <MyOrdersPage /> },
+          { path: '/account/password', element: <ChangePasswordPage /> },
           { path: '/orders/:id', element: <OrderDetailPage /> },
         ],
       },
@@ -87,6 +90,7 @@ export const router = createBrowserRouter([
     children: [
       { path: '/login', element: <LoginPage /> },
       { path: '/register', element: <RegisterPage /> },
+      { path: '/forgot-password', element: <ForgotPasswordPage /> },
     ],
   },
 ])

@@ -138,4 +138,32 @@ export const authService = {
     }
     writeStore(SESSION_KEY, null)
   },
+
+  /** POST /auth/forgot-password — BE gửi mã reset qua email (luôn trả 200, không lộ email có tồn tại hay không) */
+  forgotPassword: async (email: string): Promise<void> => {
+    if (!USE_MOCK.auth) {
+      await http.post('/auth/forgot-password', { email })
+      return
+    }
+    await delay(400)
+  },
+
+  /** POST /auth/reset-password — mã reset từ email + mật khẩu mới (6–50 ký tự) */
+  resetPassword: async (token: string, newPassword: string): Promise<void> => {
+    if (!USE_MOCK.auth) {
+      await http.post('/auth/reset-password', { token, newPassword })
+      return
+    }
+    await delay(400)
+  },
+
+  /** POST /auth/change-password — cần đăng nhập */
+  changePassword: async (oldPassword: string, newPassword: string): Promise<void> => {
+    if (!USE_MOCK.auth) {
+      await http.post('/auth/change-password', { oldPassword, newPassword })
+      return
+    }
+    await delay(400)
+    if (oldPassword !== DEMO_PASSWORD) throw new Error('Mật khẩu hiện tại không đúng')
+  },
 }

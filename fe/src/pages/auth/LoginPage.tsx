@@ -57,6 +57,11 @@ export function LoginPage() {
   return (
     <>
       <h1 className="text-h2">Đăng nhập</h1>
+      {params.get('reset') && (
+        <div className="mt-4">
+          <Notice tone="success">Đã đặt lại mật khẩu. Đăng nhập bằng mật khẩu mới.</Notice>
+        </div>
+      )}
       {params.get('registered') && (
         <div className="mt-4">
           <Notice tone="success">Đăng ký thành công. Mật khẩu đã được gửi tới email của bạn.</Notice>
@@ -84,6 +89,9 @@ export function LoginPage() {
           onChange={(e) => setPassword(e.target.value)}
           error={errors.password}
         />
+        <Link to={ROUTES.forgotPassword} className="-mt-2 self-end text-small text-navy underline">
+          Quên mật khẩu?
+        </Link>
         {submitError && <Notice tone="danger">{submitError}</Notice>}
         <button type="submit" className="btn btn-primary w-full" disabled={submitting}>
           {submitting ? 'Đang đăng nhập...' : 'Đăng nhập'}
