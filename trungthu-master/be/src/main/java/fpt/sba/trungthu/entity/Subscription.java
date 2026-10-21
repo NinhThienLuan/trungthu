@@ -14,7 +14,8 @@ import java.time.LocalDate;
 @Entity
 @Table(name = "SUBSCRIPTION", indexes = { @Index(name = "IX_SUBSCRIPTION_provider_id", columnList = "provider_id") })
 @Checks({ @Check(name = "CK_SUBSCRIPTION_price", constraints = "price >= 0"),
-        @Check(name = "CK_SUBSCRIPTION_dates", constraints = "end_date >= start_date") })
+        @Check(name = "CK_SUBSCRIPTION_dates", constraints = "end_date >= start_date"),
+        @Check(name = "CK_SUBSCRIPTION_max_products", constraints = "max_products_allowed IS NULL OR max_products_allowed > 0") })
 @Getter
 @Setter
 @SuperBuilder
@@ -37,6 +38,13 @@ public class Subscription extends CreatedEntity {
 
     @Column(name = "end_date", nullable = false)
     private LocalDate endDate;
+
+    @Column(name = "max_products_allowed", nullable = false)
+    private Integer maxProductsAllowed;
+
+    @Builder.Default
+    @Column(name = "is_featured", nullable = false)
+    private Boolean isFeatured = false;
 
     // Trạng thái đăng ký: PENDING → ACTIVE → EXPIRED / CANCELLED
     @Enumerated(EnumType.STRING)

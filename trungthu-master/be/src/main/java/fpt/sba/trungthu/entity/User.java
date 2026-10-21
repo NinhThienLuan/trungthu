@@ -40,6 +40,16 @@ public class User extends BaseEntity {
     @Column(name = "address", length = 100000)
     private String address;
 
+    // Bank info for VietQR (Provider only)
+    @Column(name = "bank_code", length = 20)
+    private String bankCode;
+
+    @Column(name = "bank_account_number", length = 50)
+    private String bankAccountNumber;
+
+    @Column(name = "bank_account_name", length = 150)
+    private String bankAccountName;
+
     @Builder.Default
     @Column(name = "is_compliance_approved", nullable = false)
     private Boolean isComplianceApproved = false;

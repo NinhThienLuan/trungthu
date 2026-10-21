@@ -80,8 +80,24 @@ public class AuthServiceImpl implements AuthService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Platform admin cannot self-register");
         }
 
-        if (request.getRole() == UserRole.PROVIDER && !StringUtils.hasText(request.getStoreName())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Store name is required for Provider account");
+        if (request.getRole() == UserRole.PROVIDER) {
+            if (!StringUtils.hasText(request.getStoreName())) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Store name is required for Provider account");
+            }
+            
+            // Validate bank info for VietQR generation (required for checkout)
+            if (!StringUtils.hasText(request.getBankCode())) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Bank code is required for Provider account");
+            }
+            if (!StringUtils.hasText(request.getBankAccountNumber())) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Bank account number is required for Provider account");
+            }
+            if (!StringUtils.hasText(request.getBankAccountName())) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Bank account name is required for Provider account");
+            }
+            
+            // Validate bank code against whitelist
+            validateBankCode(request.getBankCode());
         }
 
         String rawPassword = randomPassword();
@@ -98,6 +114,19 @@ public class AuthServiceImpl implements AuthService {
 
         log.info("Successfully registered user id: {}, email: {}", savedUser.getId(), savedUser.getEmail());
         return UserResponse.fromUserEntity(savedUser);
+    }
+    
+    private void validateBankCode(String bankCode) {
+        // Whitelist based on Vietnamese banks supporting VietQR
+        java.util.Set<String> validBankCodes = java.util.Set.of(
+            "VCB", "TCB", "MB", "ACB", "VIB", "TPB", "STB", 
+            "BIDV", "VPB", "AGR", "OCB", "MSB", "SEAB", "SCB"
+        );
+        
+        if (!validBankCodes.contains(bankCode.toUpperCase())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, 
+                "Invalid bank code. Supported banks: " + String.join(", ", validBankCodes));
+        }
     }
 
     @Override

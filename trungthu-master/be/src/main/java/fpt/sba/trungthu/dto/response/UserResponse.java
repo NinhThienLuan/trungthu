@@ -23,6 +23,9 @@ public class UserResponse implements Serializable {
     private UserRole role;
     private String storeName;
     private String address;
+    private String bankCode;
+    private String bankAccountNumber;
+    private String bankAccountName;
     private fpt.sba.trungthu.entity.enumeration.UserStatus status;
     private Boolean isComplianceApproved;
     private Boolean isSeasonActive;
@@ -40,6 +43,9 @@ public class UserResponse implements Serializable {
                 .role(user.getRole())
                 .storeName(user.getStoreName())
                 .address(user.getAddress())
+                .bankCode(user.getBankCode())
+                .bankAccountNumber(user.getBankAccountNumber())
+                .bankAccountName(user.getBankAccountName())
                 .status(user.getStatus())
                 .isComplianceApproved(user.getIsComplianceApproved())
                 .isSeasonActive(user.getIsSeasonActive())
