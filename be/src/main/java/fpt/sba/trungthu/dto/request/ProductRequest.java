@@ -4,6 +4,8 @@ import fpt.sba.trungthu.entity.enumeration.ProductType;
 import jakarta.validation.constraints.*;
 import lombok.*;
 
+import java.math.BigDecimal;
+
 @Getter
 @Setter
 @Builder
@@ -21,6 +23,10 @@ public class ProductRequest {
     @NotNull(message = "Product type is required (LOOSE_CAKE, BOX_SHELL, GREETING_CARD, ADDON_SERVICE)")
     private ProductType productType;
 
-    @Pattern(regexp = "ACTIVE|HIDDEN", message = "Status must be ACTIVE or HIDDEN")
+    @Pattern(regexp = "DRAFT|ACTIVE|ARCHIVED", message = "Status must be DRAFT, ACTIVE, or ARCHIVED")
     private String status;
+
+    @DecimalMin(value = "0", message = "Discounted price cannot be negative")
+    @Digits(integer = 16, fraction = 2)
+    private BigDecimal salePrice;
 }

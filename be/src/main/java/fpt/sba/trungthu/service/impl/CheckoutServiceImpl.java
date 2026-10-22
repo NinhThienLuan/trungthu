@@ -3,14 +3,17 @@ package fpt.sba.trungthu.service.impl;
 import fpt.sba.trungthu.common.security.SecurityContextService;
 import fpt.sba.trungthu.dto.request.CheckoutRequest;
 import fpt.sba.trungthu.dto.request.CreateOrdersCommand;
+import fpt.sba.trungthu.dto.request.ReserveStockCommand;
 import fpt.sba.trungthu.dto.response.CheckoutPreviewResponse;
 import fpt.sba.trungthu.dto.response.OrderDetailResponse;
+import fpt.sba.trungthu.dto.response.ReservedLineResponse;
 import fpt.sba.trungthu.entity.DailyCapacity;
 import fpt.sba.trungthu.entity.ProductVariant;
 import fpt.sba.trungthu.entity.User;
 import fpt.sba.trungthu.entity.enumeration.*;
 import fpt.sba.trungthu.repository.*;
 import fpt.sba.trungthu.service.CheckoutService;
+import fpt.sba.trungthu.service.InventoryService;
 import fpt.sba.trungthu.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -41,6 +44,7 @@ public class CheckoutServiceImpl implements CheckoutService {
     private final SubscriptionRepository subscriptions;
     private final ProviderPayosAccountService payosAccounts;
     private final OrderService orderService;
+    private final InventoryService inventory;
 
     @Override
     @Transactional(readOnly = true)
@@ -62,33 +66,44 @@ public class CheckoutServiceImpl implements CheckoutService {
         }
         Instant orderedAt = Instant.now();
         List<Plan> plans = plan(request, true);
-        // The entire cart, stock, capacity and BE4 persistence share this transaction.
-        List<CreateOrdersCommand.ProviderOrder> groups = new ArrayList<>();
+        List<ReserveStockCommand.ReserveLine> reserveLines = new ArrayList<>();
+        List<Snap> snaps = new ArrayList<>();
         for (Plan plan : plans) {
             for (Line line : plan.lines()) {
-                ProductVariant variant = line.variant();
-                if (variant.getStockQuantity() < line.quantity()) {
-                    throw conflict("STOCK_UNAVAILABLE provider=" + plan.provider().getId() + " variant=" + variant.getId());
-                }
-                variant.setStockQuantity(variant.getStockQuantity() - line.quantity());
+                reserveLines.add(new ReserveStockCommand.ReserveLine(line.variant().getId(), line.quantity(),
+                        plan.deliveryDate()));
+                snaps.add(new Snap(plan.provider().getId(), line.variant().getId(),
+                        line.variant().getProduct().getName(), line.variant().getVariantName(), line.quantity(),
+                        line.variant().getPrice(), line.personalizationText(), line.personalizationFee()));
             }
-            UUID capacityId = null;
-            if (plan.capacity() != null) {
-                DailyCapacity capacity = plan.capacity();
-                if (capacity.getReservedQuantity() > capacity.getMaxQuantity() - plan.bakeQuantity()) {
-                    throw conflict("CAPACITY_FULL provider=" + plan.provider().getId() + " date=" + capacity.getCapacityDate());
-                }
-                capacity.setReservedQuantity(capacity.getReservedQuantity() + plan.bakeQuantity());
-                capacityId = capacity.getId();
+        }
+        List<ReservedLineResponse> reserved = inventory.reserve(new ReserveStockCommand(reserveLines));
+        List<CreateOrdersCommand.ProviderOrder> groups = new ArrayList<>();
+        for (Plan plan : plans) {
+            UUID capacityId = reserved.stream()
+                    .filter(line -> plan.provider().getId().equals(line.providerId()) && line.capacityId() != null)
+                    .map(ReservedLineResponse::capacityId).findFirst().orElse(null);
+            if (plan.bakeQuantity() > 0 && capacityId == null) {
+                throw conflict("CAPACITY_MISSING provider=" + plan.provider().getId());
             }
+            List<CreateOrdersCommand.ItemSnapshot> items = snaps.stream()
+                    .filter(snap -> plan.provider().getId().equals(snap.providerId()))
+                    .map(snap -> {
+                        ReservedLineResponse held = reserved.stream()
+                                .filter(line -> snap.variantId().equals(line.variantId())
+                                        && snap.providerId().equals(line.providerId()))
+                                .findFirst()
+                                .orElseThrow(() -> conflict("STOCK_UNAVAILABLE provider=" + snap.providerId()
+                                        + " variant=" + snap.variantId()));
+                        return new CreateOrdersCommand.ItemSnapshot(snap.variantId(), snap.productName(),
+                                snap.variantName(), snap.quantity(), snap.unitPrice(), held.bakeQuantity(),
+                                snap.personalizationText(), snap.personalizationFee());
+                    }).toList();
             groups.add(new CreateOrdersCommand.ProviderOrder(plan.provider().getId(), plan.deliveryDate(),
                     capacityId, plan.shippingFee(), plan.deposit(), plan.paymentMethod(),
                     plan.paymentMethod() == PaymentMethod.PAYOS ? orderedAt.plusSeconds(5 * 60 * 60)
                             : plan.paymentMethod() == PaymentMethod.VIETQR ? orderedAt.plusSeconds(15 * 60) : null,
-                    plan.lines().stream().map(line -> new CreateOrdersCommand.ItemSnapshot(
-                            line.variant().getId(), line.variant().getProduct().getName(),
-                            line.variant().getVariantName(), line.quantity(), line.variant().getPrice(),
-                            line.bakeQuantity(), line.personalizationText(), line.personalizationFee())).toList()));
+                    items));
         }
         var command = new CreateOrdersCommand(UUID.randomUUID(), customer.getId(), orderedAt,
                 request.receiverName().trim(), request.receiverPhone().trim(), request.shippingAddress().trim(),
@@ -140,7 +155,7 @@ public class CheckoutServiceImpl implements CheckoutService {
                     throw badRequest("A group must contain variants from only one provider");
                 }
                 provider = owner;
-                if (variant.getStatus() != ProductStatus.ACTIVE || variant.getProduct().getStatus() != ProductStatus.ACTIVE
+                if (variant.getStatus() != VariantStatus.IN_STOCK || variant.getProduct().getStatus() != ProductStatus.ACTIVE
                         || variant.getStockQuantity() < item.quantity()) {
                     throw conflict("STOCK_UNAVAILABLE provider=" + owner.getId() + " variant=" + variant.getId());
                 }
@@ -157,7 +172,7 @@ public class CheckoutServiceImpl implements CheckoutService {
                 long bake = switch (type) {
                     case LOOSE_CAKE -> item.quantity();
                     case BOX_SHELL -> (long) item.quantity() * (variant.getBoxCapacity() == null ? 0 : variant.getBoxCapacity());
-                    case GREETING_CARD, ADDON_SERVICE -> 0;
+                    case GREETING_CARD, ADDON_SERVICE, GIFT_SET -> 0;
                 };
                 if (bake > Integer.MAX_VALUE - (long) bakeQuantity) throw badRequest("Baking quantity is too large");
                 bakeQuantity += (int) bake;
@@ -281,6 +296,9 @@ public class CheckoutServiceImpl implements CheckoutService {
     private ResponseStatusException conflict(String message) {
         return new ResponseStatusException(HttpStatus.CONFLICT, message);
     }
+
+    private record Snap(UUID providerId, UUID variantId, String productName, String variantName, int quantity,
+            BigDecimal unitPrice, String personalizationText, BigDecimal personalizationFee) {}
 
     private record Line(ProductVariant variant, int quantity, int bakeQuantity, String personalizationText,
             BigDecimal personalizationFee) {}

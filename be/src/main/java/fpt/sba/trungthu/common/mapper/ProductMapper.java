@@ -1,5 +1,6 @@
 package fpt.sba.trungthu.common.mapper;
 
+import fpt.sba.trungthu.dto.ProductView;
 import fpt.sba.trungthu.dto.request.ProductRequest;
 import fpt.sba.trungthu.dto.request.ProductVariantRequest;
 import fpt.sba.trungthu.dto.response.ProductResponse;
@@ -8,111 +9,64 @@ import fpt.sba.trungthu.entity.Product;
 import fpt.sba.trungthu.entity.ProductVariant;
 import fpt.sba.trungthu.entity.User;
 import fpt.sba.trungthu.entity.enumeration.ProductStatus;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
-
-import java.util.Collections;
-import java.util.List;
+import org.springframework.web.server.ResponseStatusException;
 
 @Component
 public class ProductMapper {
 
-    /**
-     * Chuyển đổi từ Product Entity sang ProductResponse DTO
-     * @param product Entity sản phẩm
-     * @param activeVariantsOnly Nếu là true (cho khách xem), chỉ lấy các biến thể ACTIVE
-     */
-    public ProductResponse toResponse(Product product, boolean activeVariantsOnly) {
+    public ProductResponse toResponse(Product product, ProductView view) {
         if (product == null) {
             return null;
         }
-
-        List<ProductVariantResponse> variantResponses = Collections.emptyList();
-        if (product.getVariants() != null) {
-            variantResponses = product.getVariants().stream()
-                    .filter(v -> !activeVariantsOnly || ProductStatus.ACTIVE == v.getStatus())
-                    .map(this::toVariantResponse)
-                    .toList();
-        }
-
-        return ProductResponse.builder()
-                .id(product.getId())
-                .providerId(product.getProvider() != null ? product.getProvider().getId() : null)
-                .storeName(product.getProvider() != null ? product.getProvider().getStoreName() : null)
-                .name(product.getName())
-                .description(product.getDescription())
-                .productType(product.getProductType())
-                .status(product.getStatus())
-                .createdAt(product.getCreatedAt())
-                .variants(variantResponses)
-                .build();
+        return ProductResponse.fromEntity(product, view);
     }
 
-    /**
-     * Chuyển đổi từ ProductVariant Entity sang ProductVariantResponse DTO
-     */
-    public ProductVariantResponse toVariantResponse(ProductVariant variant) {
+    public ProductVariantResponse toVariantResponse(ProductVariant variant, boolean includeStock) {
         if (variant == null) {
             return null;
         }
-        return ProductVariantResponse.builder()
-                .id(variant.getId())
-                .variantName(variant.getVariantName())
-                .sku(variant.getSku())
-                .price(variant.getPrice())
-                .stockQuantity(variant.getStockQuantity())
-                .weightGram(variant.getWeightGram())
-                .boxCapacity(variant.getBoxCapacity())
-                .status(variant.getStatus())
-                .build();
+        return ProductVariantResponse.fromEntity(variant, includeStock);
     }
 
-    /**
-     * Khởi tạo Product Entity mới từ ProductRequest
-     */
     public Product toEntity(ProductRequest request, User provider) {
-        ProductStatus status = ProductStatus.ACTIVE;
-        if (request.getStatus() != null) {
-            try {
-                status = ProductStatus.valueOf(request.getStatus().trim().toUpperCase());
-            } catch (IllegalArgumentException ignored) {}
-        }
         return Product.builder()
                 .provider(provider)
                 .name(request.getName().trim())
                 .description(request.getDescription())
                 .productType(request.getProductType())
-                .status(status)
+                .status(ProductStatus.DRAFT)
                 .build();
     }
 
-    /**
-     * Cập nhật thông tin Product Entity từ ProductRequest
-     */
     public void updateEntity(Product product, ProductRequest request) {
         product.setName(request.getName().trim());
         product.setDescription(request.getDescription());
         product.setProductType(request.getProductType());
-        if (request.getStatus() != null) {
-            try {
-                product.setStatus(ProductStatus.valueOf(request.getStatus().trim().toUpperCase()));
-            } catch (IllegalArgumentException ignored) {}
+        if (product.getProductType() == fpt.sba.trungthu.entity.enumeration.ProductType.GIFT_SET) {
+            product.setSalePrice(request.getSalePrice());
+        } else if (request.getSalePrice() != null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only a gift set can be discounted");
         }
     }
 
-    /**
-     * Cập nhật thông tin ProductVariant Entity từ ProductVariantRequest
-     */
     public void updateVariantEntity(ProductVariant variant, ProductVariantRequest request, String normalizedSku) {
         variant.setVariantName(request.getVariantName().trim());
         variant.setSku(normalizedSku);
         variant.setPrice(request.getPrice());
-        variant.setStockQuantity(request.getStockQuantity());
         variant.setWeightGram(request.getWeightGram());
         variant.setBoxCapacity(request.getBoxCapacity());
-        if (request.getStatus() != null) {
-            try {
-                variant.setStatus(ProductStatus.valueOf(request.getStatus().trim().toUpperCase()));
-            } catch (IllegalArgumentException ignored) {}
+    }
+
+    public ProductStatus parseStatus(String raw) {
+        if (raw == null || raw.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Status is required");
+        }
+        try {
+            return ProductStatus.valueOf(raw.trim().toUpperCase());
+        } catch (IllegalArgumentException exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Status must be DRAFT, ACTIVE, or ARCHIVED");
         }
     }
 }

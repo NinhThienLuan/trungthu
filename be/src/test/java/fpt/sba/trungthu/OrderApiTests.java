@@ -320,7 +320,7 @@ class OrderApiTests {
                 .productType(ProductType.LOOSE_CAKE).status(ProductStatus.ACTIVE).build());
         return variants.save(ProductVariant.builder().product(product).variantName("150g")
                 .sku(UUID.randomUUID().toString()).price(new BigDecimal("45000"))
-                .weightGram(150).status(ProductStatus.ACTIVE).build());
+                .weightGram(150).status(VariantStatus.IN_STOCK).build());
     }
 
     private void payment(Order order, String amount, TransactionStatus status) {

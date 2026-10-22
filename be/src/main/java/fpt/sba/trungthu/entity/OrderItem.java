@@ -32,10 +32,20 @@ public class OrderItem extends CreatedEntity {
     @JoinColumn(name = "variant_id", nullable = false, foreignKey = @ForeignKey(name = "FK_ORDER_ITEM_variant_id"))
     private ProductVariant variant;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "source_set_id", foreignKey = @ForeignKey(name = "FK_ORDER_ITEM_source_set_id"))
+    private Product sourceSet;
+
+    @lombok.Builder.Default
+    @Column(name = "direct_from_set", nullable = false)
+    private Integer directFromSet = 0;
+
     // Historical names stay stable when the provider edits the catalog.
+    @org.hibernate.annotations.Nationalized
     @Column(name = "product_name", nullable = false, length = 255)
     private String productName;
 
+    @org.hibernate.annotations.Nationalized
     @Column(name = "variant_name", nullable = false, length = 255)
     private String variantName;
 
@@ -48,11 +58,12 @@ public class OrderItem extends CreatedEntity {
     @Column(name = "unit_price", nullable = false, precision = 18, scale = 2)
     private BigDecimal unitPrice;
 
+    @org.hibernate.annotations.Nationalized
     @Column(name = "personalization_text", length = 50)
     private String personalizationText;
 
-    @Builder.Default
-    @Column(name = "personalization_fee", precision = 18, scale = 2)
+    @lombok.Builder.Default
+    @Column(name = "personalization_fee", nullable = false, precision = 18, scale = 2)
     private BigDecimal personalizationFee = BigDecimal.ZERO;
 
     @Column(name = "subtotal", nullable = false, precision = 18, scale = 2)

@@ -25,7 +25,6 @@ public class ProductVariantRequest {
     @Digits(integer = 16, fraction = 2, message = "Price has invalid format")
     private BigDecimal price;
 
-    @NotNull(message = "Stock quantity is required")
     @PositiveOrZero(message = "Stock quantity must not be negative")
     private Integer stockQuantity;
 
@@ -34,6 +33,5 @@ public class ProductVariantRequest {
 
     private Integer boxCapacity;
 
-    @Pattern(regexp = "ACTIVE|HIDDEN", message = "Status must be ACTIVE or HIDDEN")
     private String status;
 }

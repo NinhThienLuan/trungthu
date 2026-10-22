@@ -29,7 +29,17 @@ public record CreateOrdersCommand(
             @NotNull @DecimalMin("0") @Digits(integer = 16, fraction = 2) BigDecimal depositAmount,
             @NotNull PaymentMethod paymentMethod,
             Instant holdExpiresAt,
-            @NotEmpty List<@NotNull @Valid ItemSnapshot> items) {}
+            @DecimalMin("0") @Digits(integer = 16, fraction = 2) BigDecimal listAmount,
+            @DecimalMin("0") @Digits(integer = 16, fraction = 2) BigDecimal discountAmount,
+            @NotEmpty List<@NotNull @Valid ItemSnapshot> items) {
+
+        public ProviderOrder(UUID providerId, LocalDate deliveryDate, UUID capacityId, BigDecimal shippingFee,
+                BigDecimal depositAmount, PaymentMethod paymentMethod, Instant holdExpiresAt,
+                List<ItemSnapshot> items) {
+            this(providerId, deliveryDate, capacityId, shippingFee, depositAmount, paymentMethod, holdExpiresAt,
+                    null, null, items);
+        }
+    }
 
     public record ItemSnapshot(
             @NotNull UUID variantId,
@@ -38,11 +48,39 @@ public record CreateOrdersCommand(
             @Positive int quantity,
             @NotNull @DecimalMin("0") @Digits(integer = 16, fraction = 2) BigDecimal unitPrice,
             @PositiveOrZero int bakeQuantity,
+            UUID sourceSetId,
+            int directUnits,
             @Size(max = 50) String personalizationText,
             @NotNull @DecimalMin("0") BigDecimal personalizationFee) {
-        public ItemSnapshot(UUID variantId, String productName, String variantName, int quantity,
-                BigDecimal unitPrice, int bakeQuantity) {
-            this(variantId, productName, variantName, quantity, unitPrice, bakeQuantity, null, BigDecimal.ZERO);
+
+        public ItemSnapshot {
+            if (personalizationFee == null) {
+                personalizationFee = BigDecimal.ZERO;
+            }
+        }
+
+        public ItemSnapshot(UUID variantId, String productName, String variantName, int quantity, BigDecimal unitPrice,
+                int bakeQuantity) {
+            this(variantId, productName, variantName, quantity, unitPrice, bakeQuantity, null, 0, null,
+                    BigDecimal.ZERO);
+        }
+
+        public ItemSnapshot(UUID variantId, String productName, String variantName, int quantity, BigDecimal unitPrice,
+                int bakeQuantity, UUID sourceSetId) {
+            this(variantId, productName, variantName, quantity, unitPrice, bakeQuantity, sourceSetId, 0, null,
+                    BigDecimal.ZERO);
+        }
+
+        public ItemSnapshot(UUID variantId, String productName, String variantName, int quantity, BigDecimal unitPrice,
+                int bakeQuantity, UUID sourceSetId, int directUnits) {
+            this(variantId, productName, variantName, quantity, unitPrice, bakeQuantity, sourceSetId, directUnits, null,
+                    BigDecimal.ZERO);
+        }
+
+        public ItemSnapshot(UUID variantId, String productName, String variantName, int quantity, BigDecimal unitPrice,
+                int bakeQuantity, String personalizationText, BigDecimal personalizationFee) {
+            this(variantId, productName, variantName, quantity, unitPrice, bakeQuantity, null, 0, personalizationText,
+                    personalizationFee);
         }
     }
 

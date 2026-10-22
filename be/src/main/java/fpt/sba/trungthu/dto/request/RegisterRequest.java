@@ -35,14 +35,13 @@ public class RegisterRequest implements Serializable {
     private UserRole role;
 
     private String storeName;
-    
+
     private String address;
 
-    // Bank info for Provider (required for VietQR)
     private String bankCode;
-    
+
     private String bankAccountNumber;
-    
+
     private String bankAccountName;
 
     public User toUserEntity(String encodedPassword) {

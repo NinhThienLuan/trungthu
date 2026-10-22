@@ -1,5 +1,6 @@
 package fpt.sba.trungthu.service;
 
+import fpt.sba.trungthu.dto.request.ProductImagesRequest;
 import fpt.sba.trungthu.dto.request.ProductRequest;
 import fpt.sba.trungthu.dto.request.ProductVariantRequest;
 import fpt.sba.trungthu.dto.response.PageResponse;
@@ -32,9 +33,15 @@ public interface ProductService {
 
     ProductResponse updateProduct(String providerEmail, UUID productId, ProductRequest request);
 
+    ProductResponse archive(String providerEmail, UUID productId);
+
+    ProductResponse replaceImages(String providerEmail, UUID productId, ProductImagesRequest request);
+
     ProductVariantResponse addVariant(String providerEmail, UUID productId, ProductVariantRequest request);
 
     ProductVariantResponse updateVariant(String providerEmail, UUID productId, UUID variantId, ProductVariantRequest request);
+
+    void deleteVariant(String providerEmail, UUID productId, UUID variantId);
 
     // === Tác vụ tra cứu danh mục sản phẩm (Catalog) ===
 

@@ -235,7 +235,7 @@ class CheckoutFlowTests {
                 .productType(type).status(ProductStatus.ACTIVE).build());
         return variants.save(ProductVariant.builder().product(product).variantName("Variant")
                 .sku(UUID.randomUUID().toString()).price(new BigDecimal(price)).stockQuantity(10)
-                .boxCapacity(slots).status(ProductStatus.ACTIVE).build());
+                .boxCapacity(slots).status(VariantStatus.IN_STOCK).build());
     }
 
     private DailyCapacity capacity(User provider) {

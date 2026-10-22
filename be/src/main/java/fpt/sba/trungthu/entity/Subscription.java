@@ -39,7 +39,6 @@ public class Subscription extends CreatedEntity {
     @Column(name = "end_date", nullable = false)
     private LocalDate endDate;
 
-    // Cho phép null (khớp CK_SUBSCRIPTION_max_products); null = chưa cấu hình giới hạn -> ProviderPolicy coi như không được thêm SKU
     @Column(name = "max_products_allowed")
     private Integer maxProductsAllowed;
 

@@ -47,6 +47,7 @@ public class StoreComplianceDoc extends BaseEntity {
     @Column(name = "verified_at")
     private LocalDateTime verifiedAt;
 
+    @org.hibernate.annotations.Nationalized
     @Column(name = "rejection_reason", length = 500)
     private String rejectionReason;
 

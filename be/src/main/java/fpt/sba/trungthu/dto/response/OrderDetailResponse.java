@@ -16,6 +16,8 @@ public class OrderDetailResponse extends OrderSummaryResponse {
     private BigDecimal subtotalAmount;
     private BigDecimal shippingFee;
     private BigDecimal depositAmount;
+    private BigDecimal listAmount;
+    private BigDecimal discountAmount;
     private Instant holdExpiresAt;
     private List<OrderLineResponse> lines;
 }

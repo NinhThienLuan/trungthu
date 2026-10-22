@@ -10,6 +10,8 @@ import java.util.UUID;
 @Builder
 public class OrderLineResponse {
     private UUID variantId;
+    private UUID sourceSetId;
+    private String sourceSetName;
     private String productName;
     private String variantName;
     private int quantity;

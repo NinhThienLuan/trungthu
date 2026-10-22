@@ -4,3 +4,4 @@ target
 .idea
 MEMORY.md
 src/main/resources/secrets.properties
+.env
