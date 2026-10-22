@@ -4,21 +4,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
- * Trạng thái hiển thị và kinh doanh của sản phẩm hoặc biến thể.
+ * Vòng đời hiển thị của dòng sản phẩm. Khác với trạng thái bán của từng variant.
  */
 public enum ProductStatus {
-    // Đang mở bán công khai trên sàn
+    DRAFT,
     ACTIVE,
+    SOLD_OUT,
+    ARCHIVED;
 
-    // Tạm ẩn khỏi danh mục (chỉ Provider mới thấy)
-    HIDDEN,
-
-    // Tạm thời hết hàng (vẫn hiển thị nhưng không cho đặt thêm)
-    OUT_OF_STOCK;
-
-    /**
-     * Kiểm tra tính hợp lệ khi chuyển đổi trạng thái sản phẩm qua switch-case.
-     */
     public boolean canTransitionTo(ProductStatus target) {
         if (target == null) {
             return false;
@@ -27,9 +20,10 @@ public enum ProductStatus {
             return true;
         }
         return switch (this) {
-            case ACTIVE -> target == HIDDEN || target == OUT_OF_STOCK;
-            case HIDDEN -> target == ACTIVE;
-            case OUT_OF_STOCK -> target == ACTIVE || target == HIDDEN;
+            case DRAFT -> target == ACTIVE || target == ARCHIVED;
+            case ACTIVE -> target == SOLD_OUT || target == ARCHIVED;
+            case SOLD_OUT -> target == ACTIVE || target == ARCHIVED;
+            case ARCHIVED -> false;
         };
     }
 

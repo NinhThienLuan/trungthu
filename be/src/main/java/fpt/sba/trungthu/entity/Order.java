@@ -24,7 +24,8 @@ import java.util.UUID;
         @UniqueConstraint(name = "UQ_ORDER_checkout_provider", columnNames = {"checkout_id", "provider_id"})
 })
 @Check(name = "CK_ORDER_amounts", constraints = "subtotal_amount >= 0 AND shipping_fee >= 0 "
-        + "AND total_amount >= 0 AND deposit_amount >= 0 AND deposit_amount <= total_amount")
+        + "AND total_amount >= 0 AND deposit_amount >= 0 AND deposit_amount <= total_amount "
+        + "AND list_amount >= 0 AND discount_amount >= 0 AND discount_amount <= list_amount")
 @Check(name = "CK_ORDER_hold_count", constraints = "hold_extension_count BETWEEN 0 AND 1")
 @Check(name = "CK_ORDER_cod", constraints = "payment_method <> 'COD' OR (deposit_amount = 0 AND hold_expires_at IS NULL)")
 @Check(name = "CK_ORDER_hold_state", constraints = "(order_status = 'PENDING_DEPOSIT' AND payment_method IN ('VIETQR', 'PAYOS') "
@@ -56,6 +57,14 @@ public class Order extends BaseEntity {
     private BigDecimal subtotalAmount;
 
     @Builder.Default
+    @Column(name = "list_amount", nullable = false, precision = 18, scale = 2)
+    private BigDecimal listAmount = BigDecimal.ZERO;
+
+    @Builder.Default
+    @Column(name = "discount_amount", nullable = false, precision = 18, scale = 2)
+    private BigDecimal discountAmount = BigDecimal.ZERO;
+
+    @Builder.Default
     @Column(name = "shipping_fee", nullable = false, precision = 18, scale = 2)
     private BigDecimal shippingFee = BigDecimal.ZERO;
 
@@ -79,12 +88,14 @@ public class Order extends BaseEntity {
     @Column(name = "payment_status", nullable = false, length = 30)
     private OrderPaymentStatus paymentStatus = OrderPaymentStatus.UNPAID;
 
+    @org.hibernate.annotations.Nationalized
     @Column(name = "receiver_name", nullable = false, length = 255)
     private String receiverName;
 
     @Column(name = "receiver_phone", nullable = false, length = 20)
     private String receiverPhone;
 
+    @org.hibernate.annotations.Nationalized
     @Column(name = "shipping_address", nullable = false, length = 100000)
     private String shippingAddress;
 

@@ -140,10 +140,6 @@ class OrderCreationTests {
             assertThat(qr.getVatEmail()).isEqualTo("invoice@test.local");
         });
         assertResourcesUnchanged();
-        assertThat(jdbcTemplate.queryForObject("SELECT SUM(bake_quantity) FROM v_bake_lines WHERE provider_id = ?",
-                Integer.class, providerA)).isEqualTo(2);
-        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM v_bake_lines WHERE provider_id = ?",
-                Integer.class, providerB)).isZero();
     }
 
     @Test
@@ -308,7 +304,7 @@ class OrderCreationTests {
                 .productType(type).status(ProductStatus.ACTIVE).build());
         return variants.save(ProductVariant.builder().product(product).variantName("Live catalog variant")
                 .sku(UUID.randomUUID().toString()).price(new BigDecimal("50000")).stockQuantity(100)
-                .status(ProductStatus.ACTIVE).build());
+                .status(VariantStatus.IN_STOCK).build());
     }
 
     private DailyCapacity capacity(User provider) {

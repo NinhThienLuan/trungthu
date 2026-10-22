@@ -1,10 +1,12 @@
 package fpt.sba.trungthu.entity;
 
 import fpt.sba.trungthu.common.infrastructure.BaseEntity;
+import fpt.sba.trungthu.entity.enumeration.VariantStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.Nationalized;
 import org.hibernate.annotations.Check;
 import org.hibernate.annotations.Checks;
 
@@ -28,6 +30,7 @@ public class ProductVariant extends BaseEntity {
     @JoinColumn(name = "product_id", nullable = false, foreignKey = @ForeignKey(name = "FK_PRODUCT_VARIANT_product_id"))
     private Product product;
 
+    @Nationalized
     @Column(name = "variant_name", nullable = false, length = 255)
     private String variantName;
 
@@ -52,5 +55,5 @@ public class ProductVariant extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 30)
-    private fpt.sba.trungthu.entity.enumeration.ProductStatus status;
+    private VariantStatus status;
 }

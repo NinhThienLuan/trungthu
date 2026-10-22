@@ -46,7 +46,7 @@ class OrderPersistenceTests {
                 .productType(ProductType.LOOSE_CAKE).status(ProductStatus.ACTIVE).build());
         variant = variants.save(ProductVariant.builder().product(product).variantName("Original variant")
                 .sku(UUID.randomUUID().toString()).price(new BigDecimal("100000"))
-                .weightGram(150).status(ProductStatus.ACTIVE).build());
+                .weightGram(150).status(VariantStatus.IN_STOCK).build());
     }
 
     @Test
@@ -97,7 +97,7 @@ class OrderPersistenceTests {
         assertThat(orders.findOwnedOrder(first.getId(), buyer.getId())).isPresent();
         assertThat(orders.findOwnedOrder(first.getId(), provider.getId())).isPresent();
         assertThat(orders.findOwnedOrder(first.getId(), otherProvider.getId())).isEmpty();
-        assertThat(orders.findForUpdateById(first.getId())).isPresent();
+        assertThat(orders.findByIdForUpdate(first.getId())).isPresent();
     }
 
     @Test

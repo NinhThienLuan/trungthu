@@ -34,15 +34,18 @@ public class BulkRequest extends BaseEntity {
     @Column(name = "description", length = 100000)
     private String description;
 
+    @org.hibernate.annotations.Nationalized
     @Column(name = "company_name", length = 255)
     private String companyName;
 
     @Column(name = "tax_code", length = 50)
     private String taxCode;
 
+    @org.hibernate.annotations.Nationalized
     @Column(name = "contact_name", length = 255)
     private String contactName;
 
+    @org.hibernate.annotations.Nationalized
     @Column(name = "contact_position", length = 255)
     private String contactPosition;
 

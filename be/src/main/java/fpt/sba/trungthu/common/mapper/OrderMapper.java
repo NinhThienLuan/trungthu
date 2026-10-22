@@ -30,6 +30,8 @@ public class OrderMapper {
                 .subtotalAmount(order.getSubtotalAmount())
                 .shippingFee(order.getShippingFee())
                 .depositAmount(order.getDepositAmount())
+                .listAmount(order.getListAmount())
+                .discountAmount(order.getDiscountAmount())
                 .holdExpiresAt(order.getHoldExpiresAt())
                 .lines(items.stream().map(this::toLine).toList())
                 .build();
@@ -47,6 +49,8 @@ public class OrderMapper {
 
     private OrderLineResponse toLine(OrderItem item) {
         return OrderLineResponse.builder().variantId(item.getVariant().getId())
+                .sourceSetId(item.getSourceSet() == null ? null : item.getSourceSet().getId())
+                .sourceSetName(item.getSourceSet() == null ? null : item.getSourceSet().getName())
                 .productName(item.getProductName()).variantName(item.getVariantName())
                 .quantity(item.getQuantity()).unitPrice(item.getUnitPrice())
                 .personalizationText(item.getPersonalizationText())

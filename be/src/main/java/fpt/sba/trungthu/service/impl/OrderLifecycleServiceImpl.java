@@ -1,10 +1,12 @@
 package fpt.sba.trungthu.service.impl;
 
 import fpt.sba.trungthu.common.security.SecurityContextService;
+import fpt.sba.trungthu.dto.request.ReleaseStockCommand;
 import fpt.sba.trungthu.dto.response.OrderDetailResponse;
 import fpt.sba.trungthu.entity.*;
 import fpt.sba.trungthu.entity.enumeration.*;
 import fpt.sba.trungthu.repository.*;
+import fpt.sba.trungthu.service.InventoryService;
 import fpt.sba.trungthu.service.OrderLifecycleService;
 import fpt.sba.trungthu.service.OrderService;
 import fpt.sba.trungthu.service.PayosCancelRequested;
@@ -29,9 +31,8 @@ public class OrderLifecycleServiceImpl implements OrderLifecycleService {
     private final OrderBatchRepository batches;
     private final OrderItemRepository items;
     private final PaymentTransactionRepository payments;
-    private final ProductVariantRepository variants;
-    private final DailyCapacityRepository capacities;
     private final OrderService orderService;
+    private final InventoryService inventory;
     private final ApplicationEventPublisher events;
 
     @Override
@@ -150,7 +151,8 @@ public class OrderLifecycleServiceImpl implements OrderLifecycleService {
     }
 
     private void requireActiveHold(Order order, Instant now) {
-        if (order.getOrderStatus() != OrderStatus.PENDING_DEPOSIT || order.getPaymentMethod() != PaymentMethod.VIETQR
+        if (order.getOrderStatus() != OrderStatus.PENDING_DEPOSIT
+                || (order.getPaymentMethod() != PaymentMethod.VIETQR && order.getPaymentMethod() != PaymentMethod.PAYOS)
                 || order.getHoldExpiresAt() == null || !now.isBefore(order.getHoldExpiresAt())) {
             throw conflict("Deposit hold is no longer active");
         }
@@ -159,24 +161,16 @@ public class OrderLifecycleServiceImpl implements OrderLifecycleService {
     private void cancelAndRelease(Order order) {
         OrderBatch batch = batches.findByOrderId(order.getId())
                 .orElseThrow(() -> new IllegalStateException("Order batch missing"));
-        List<OrderItem> lines = items.findByOrderBatchOrderId(order.getId()).stream()
-                .sorted(Comparator.comparing(item -> item.getVariant().getId())).toList();
-        int bakeQuantity = 0;
-        for (OrderItem line : lines) {
-            ProductVariant variant = variants.findForUpdateById(line.getVariant().getId())
-                    .orElseThrow(() -> new IllegalStateException("Reserved variant missing"));
-            variant.setStockQuantity(Math.addExact(variant.getStockQuantity(), line.getQuantity()));
-            bakeQuantity = Math.addExact(bakeQuantity, line.getBakeQuantity());
-        }
-        if (bakeQuantity > 0) {
-            DailyCapacity capacity = capacities.findForUpdateByProviderIdAndCapacityDate(order.getProvider().getId(),
-                            batch.getDeliveryDate().minusDays(1))
-                    .orElseThrow(() -> new IllegalStateException("Reserved capacity missing"));
-            if (batch.getCapacity() == null || !capacity.getId().equals(batch.getCapacity().getId())
-                    || capacity.getReservedQuantity() < bakeQuantity) {
-                throw new IllegalStateException("Reserved capacity does not match order");
-            }
-            capacity.setReservedQuantity(capacity.getReservedQuantity() - bakeQuantity);
+        UUID capacityId = batch.getCapacity() == null ? null : batch.getCapacity().getId();
+        List<ReleaseStockCommand.ReleaseLine> lines = items.findByOrderBatchOrderId(order.getId()).stream()
+                .sorted(Comparator.comparing(item -> item.getVariant().getId()))
+                .map(line -> new ReleaseStockCommand.ReleaseLine(line.getVariant().getId(), line.getQuantity(),
+                        line.getBakeQuantity() > 0 ? capacityId : null, line.getBakeQuantity(),
+                        line.getSourceSet() == null ? null : line.getSourceSet().getId(),
+                        line.getDirectFromSet() == null ? 0 : line.getDirectFromSet()))
+                .toList();
+        if (!lines.isEmpty()) {
+            inventory.release(new ReleaseStockCommand(lines));
         }
         for (PaymentTransaction tx : payments.findByOrderIdOrderByCreatedAtAsc(order.getId())) {
             if (tx.getPaymentStatus() == TransactionStatus.PENDING) {
