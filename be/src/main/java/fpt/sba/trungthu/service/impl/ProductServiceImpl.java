@@ -420,15 +420,20 @@ public class ProductServiceImpl implements ProductService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "A product album must contain exactly one primary image");
         }
+        // Album trả về link ngắn /api/products/images/{id}; seller gửi lại album cũ thì lấy lại ảnh gốc trước khi xoá
+        java.util.Map<String, String> stored = new java.util.HashMap<>();
+        product.getImages().forEach(old -> stored.put(ProductResponse.IMAGE_PATH + old.getId(), old.getImageUrl()));
         product.getImages().clear();
         for (ProductImageRequest image : images) {
+            String url = image.getImageUrl().trim();
             product.getImages().add(ProductImage.builder()
                     .product(product)
-                    .imageUrl(image.getImageUrl().trim())
+                    .imageUrl(stored.getOrDefault(url, url))
                     .isPrimary(image.getIsPrimary())
                     .displayOrder(image.getDisplayOrder())
                     .build());
         }
+        productRepository.flush(); // ảnh mới cần id để trả link ngắn thay vì nguyên base64
         return productMapper.toResponse(product, ProductView.PROVIDER);
     }
 

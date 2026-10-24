@@ -128,6 +128,15 @@ public class ProductResponse {
         return status == VariantStatus.IN_STOCK || status == VariantStatus.OUT_OF_STOCK;
     }
 
+    /** Đường dẫn ảnh lưu dạng data URL (base64) trong DB; ProductController phục vụ file ở đây */
+    public static final String IMAGE_PATH = "/api/products/images/";
+
+    // Ảnh base64 ~500KB/ảnh: trả nguyên data URL làm 1 trang danh mục nặng ~9MB -> trả link ngắn, trình duyệt tự cache
+    private static String publicImageUrl(ProductImage image) {
+        String url = image.getImageUrl();
+        return url != null && url.startsWith("data:") && image.getId() != null ? IMAGE_PATH + image.getId() : url;
+    }
+
     private static List<ProductImageResponse> sortedImages(Product product) {
         if (product.getImages() == null) {
             return List.of();
@@ -138,7 +147,7 @@ public class ProductResponse {
                         .thenComparing(image -> image.getDisplayOrder() == null ? 0 : image.getDisplayOrder()))
                 .map(image -> ProductImageResponse.builder()
                         .id(image.getId())
-                        .imageUrl(image.getImageUrl())
+                        .imageUrl(publicImageUrl(image))
                         .isPrimary(image.getIsPrimary())
                         .displayOrder(image.getDisplayOrder())
                         .build())
