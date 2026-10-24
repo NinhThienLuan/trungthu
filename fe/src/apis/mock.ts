@@ -5,7 +5,7 @@
 export const USE_MOCK = {
   auth: false, // Nối API thật /api/auth của Spring Boot backend
   products: false, // BE2 Đạt: /api/products (sản phẩm demo do DemoProductSeeder tạo)
-  capacity: true, // BE2 Đạt: CHƯA có API ngày khả dụng -> vẫn giả lập
+  capacity: false, // BE2: /api/providers/{id}/available-dates
   checkout: false, // BE3 Phát: /api/checkout, /api/orders/{id}/vietqr
   orders: false, // BE4 Luân: /api/orders/me, /api/orders/{id}
   rfq: false, // BE3 Phát: /api/rfqs

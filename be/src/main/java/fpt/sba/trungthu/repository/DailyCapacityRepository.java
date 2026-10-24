@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -16,6 +17,9 @@ import java.util.UUID;
 public interface DailyCapacityRepository extends JpaRepository<DailyCapacity, UUID> {
 
     Optional<DailyCapacity> findByProviderIdAndCapacityDate(UUID providerId, LocalDate capacityDate);
+
+    List<DailyCapacity> findByProviderIdAndCapacityDateBetweenOrderByCapacityDateAsc(UUID providerId,
+            LocalDate from, LocalDate to);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<DailyCapacity> findForUpdateByProviderIdAndCapacityDate(UUID providerId, LocalDate capacityDate);

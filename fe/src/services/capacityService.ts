@@ -12,7 +12,7 @@ export interface DayAvailability {
 export const capacityService = {
   /**
    * Ngày nhận khả dụng của 1 Provider trong khoảng [from, to].
-   * Đề xuất API cho BE2: GET /api/providers/{providerId}/available-dates?from=&to=
+   * BE2: GET /api/providers/{providerId}/available-dates?from=&to= (công khai, tối đa 120 ngày)
    */
   availableDates: async (providerId: string, from: string, to: string): Promise<DayAvailability[]> => {
     if (!USE_MOCK.capacity) {
