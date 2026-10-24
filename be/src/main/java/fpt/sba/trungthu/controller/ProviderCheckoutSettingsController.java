@@ -26,7 +26,6 @@ import java.util.Locale;
 public class ProviderCheckoutSettingsController {
     private final SecurityContextService security;
     private final ProviderShippingRateRepository rates;
-    private final fpt.sba.trungthu.repository.ProviderPayosAccountRepository payosAccounts;
 
     public record BankAccountRequest(
             @NotBlank @Pattern(regexp = "[A-Za-z0-9]{2,20}") String bankCode,
@@ -39,20 +38,17 @@ public class ProviderCheckoutSettingsController {
 
     public record ShippingRateView(String province, String district, BigDecimal fee) {}
 
-    /** Không trả khoá PayOS: chỉ cho biết đã cấu hình / đã đăng ký webhook chưa */
     public record SettingsView(String bankCode, String accountNumber, String accountName,
-            java.util.List<ShippingRateView> shippingRates, boolean payosConfigured, boolean payosWebhookConfirmed) {}
+            java.util.List<ShippingRateView> shippingRates) {}
 
     @GetMapping
     @Transactional(readOnly = true)
     public ResponseEntity<ApiResponseDTO<SettingsView>> getSettings() {
         User provider = requireProvider();
-        var payos = payosAccounts.findByProviderId(provider.getId());
         return ResponseEntity.ok(ApiResponseDTO.success(new SettingsView(provider.getBankCode(),
                 provider.getBankAccountNumber(), provider.getBankAccountName(),
                 rates.findByProviderIdOrderByProvinceAscDistrictAsc(provider.getId()).stream()
-                        .map(r -> new ShippingRateView(r.getProvince(), r.getDistrict(), r.getFee())).toList(),
-                payos.isPresent(), payos.map(a -> a.getWebhookConfirmedAt() != null).orElse(false))));
+                        .map(r -> new ShippingRateView(r.getProvince(), r.getDistrict(), r.getFee())).toList())));
     }
 
     @PutMapping("/bank-account")

@@ -50,7 +50,7 @@ function Section({ title, hint, submitLabel, onSubmit, children }: {
   )
 }
 
-/** Seller: những cấu hình bắt buộc để buyer checkout được (năng lực nướng, phí giao, ngân hàng, payOS) */
+/** Seller: những cấu hình bắt buộc để buyer checkout được (năng lực nướng, phí giao, tài khoản nhận VietQR) */
 export function SettingsPage() {
   useDocumentTitle('Cài đặt bán hàng')
   const { data, loading, error, reload } = useApi(() => sellerSettingsService.get(), [])
@@ -115,6 +115,7 @@ export function SettingsPage() {
 
         <Section
           title="Tài khoản nhận tiền (VietQR)"
+          hint="Khách chuyển khoản cọc vào tài khoản này; bạn xác nhận đã nhận tiền ở trang đơn hàng."
           submitLabel="Lưu tài khoản"
           onSubmit={async (f) => {
             await sellerSettingsService.setBankAccount({ bankCode: f.bankCode, accountNumber: f.accountNumber, accountName: f.accountName })
@@ -129,30 +130,6 @@ export function SettingsPage() {
           </div>
         </Section>
 
-        <Section
-          title="Kênh PayOS"
-          hint={data.payosConfigured
-            ? data.payosWebhookConfirmed ? 'Đã kết nối và đăng ký webhook.' : 'Đã lưu khoá, cần đăng ký webhook.'
-            : 'Chưa kết nối: khách chỉ chọn được COD.'}
-          submitLabel="Lưu khoá PayOS"
-          onSubmit={async (f) => {
-            await sellerSettingsService.setPayos({ clientId: f.clientId, apiKey: f.apiKey, checksumKey: f.checksumKey })
-            reload()
-            return 'Đã lưu khoá. Bấm đăng ký webhook để bắt đầu nhận tiền.'
-          }}
-        >
-          <div className="grid gap-4 sm:grid-cols-3">
-            <TextInput label="Client ID" name="clientId" autoComplete="off" required />
-            <TextInput label="API key" name="apiKey" type="password" autoComplete="off" required />
-            <TextInput label="Checksum key" name="checksumKey" type="password" autoComplete="off" required />
-          </div>
-          {data.payosConfigured && !data.payosWebhookConfirmed && (
-            <button type="button" className="btn btn-ghost self-start"
-              onClick={() => void sellerSettingsService.registerPayosWebhook().then(reload, () => reload())}>
-              Đăng ký webhook
-            </button>
-          )}
-        </Section>
       </div>
     </div>
   )

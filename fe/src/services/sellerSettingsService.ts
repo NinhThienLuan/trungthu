@@ -12,8 +12,6 @@ export interface SellerSettings {
   accountNumber: string | null
   accountName: string | null
   shippingRates: ShippingRate[]
-  payosConfigured: boolean
-  payosWebhookConfirmed: boolean
 }
 
 export interface CapacityDay {
@@ -22,7 +20,7 @@ export interface CapacityDay {
   reservedQuantity: number
 }
 
-/** Cấu hình để buyer đặt được hàng: BE3 checkout-settings + payOS, BE2 capacity */
+/** Cấu hình để buyer đặt được hàng: BE3 checkout-settings (phí giao, VietQR), BE2 capacity */
 export const sellerSettingsService = {
   get: () => unwrap(http.get<ApiResponse<SellerSettings>>('/provider/checkout-settings')),
 
@@ -37,9 +35,4 @@ export const sellerSettingsService = {
 
   setCapacity: (body: { from: string; to: string; maxQuantity: number }) =>
     unwrap(http.put<ApiResponse<CapacityDay[]>>('/provider/capacities', body)),
-
-  setPayos: (body: { clientId: string; apiKey: string; checksumKey: string }) =>
-    unwrap(http.put<ApiResponse<string>>('/provider/payos/account', body)),
-
-  registerPayosWebhook: () => unwrap(http.post<ApiResponse<string>>('/provider/payos/account/webhook')),
 }
