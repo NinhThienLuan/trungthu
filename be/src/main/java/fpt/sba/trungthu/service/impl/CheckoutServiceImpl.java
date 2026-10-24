@@ -8,6 +8,8 @@ import fpt.sba.trungthu.dto.response.CheckoutPreviewResponse;
 import fpt.sba.trungthu.dto.response.OrderDetailResponse;
 import fpt.sba.trungthu.dto.response.ReservedLineResponse;
 import fpt.sba.trungthu.entity.DailyCapacity;
+import fpt.sba.trungthu.entity.GiftSetComponent;
+import fpt.sba.trungthu.entity.Product;
 import fpt.sba.trungthu.entity.ProductVariant;
 import fpt.sba.trungthu.entity.User;
 import fpt.sba.trungthu.entity.enumeration.*;
@@ -39,6 +41,8 @@ public class CheckoutServiceImpl implements CheckoutService {
 
     private final SecurityContextService security;
     private final ProductVariantRepository variants;
+    private final ProductRepository products;
+    private final GiftSetComponentRepository setComponents;
     private final DailyCapacityRepository capacities;
     private final ProviderShippingRateRepository shippingRates;
     private final SubscriptionRepository subscriptions;
@@ -69,6 +73,12 @@ public class CheckoutServiceImpl implements CheckoutService {
         List<Snap> snaps = new ArrayList<>();
         for (Plan plan : plans) {
             for (Line line : plan.lines()) {
+                if (line.set() != null) {
+                    // BE2 tách set thành các dòng thành phần (sourceSetId) khi giữ hàng
+                    reserveLines.add(new ReserveStockCommand.ReserveLine(null, line.quantity(), plan.deliveryDate(),
+                            line.set().getId()));
+                    continue;
+                }
                 reserveLines.add(new ReserveStockCommand.ReserveLine(line.variant().getId(), line.quantity(),
                         plan.deliveryDate()));
                 snaps.add(new Snap(plan.provider().getId(), line.variant().getId(),
@@ -85,11 +95,11 @@ public class CheckoutServiceImpl implements CheckoutService {
             if (plan.bakeQuantity() > 0 && capacityId == null) {
                 throw conflict("CAPACITY_MISSING provider=" + plan.provider().getId());
             }
-            List<CreateOrdersCommand.ItemSnapshot> items = snaps.stream()
+            List<CreateOrdersCommand.ItemSnapshot> items = new ArrayList<>(snaps.stream()
                     .filter(snap -> plan.provider().getId().equals(snap.providerId()))
                     .map(snap -> {
                         ReservedLineResponse held = reserved.stream()
-                                .filter(line -> snap.variantId().equals(line.variantId())
+                                .filter(line -> line.sourceSetId() == null && snap.variantId().equals(line.variantId())
                                         && snap.providerId().equals(line.providerId()))
                                 .findFirst()
                                 .orElseThrow(() -> conflict("STOCK_UNAVAILABLE provider=" + snap.providerId()
@@ -97,11 +107,18 @@ public class CheckoutServiceImpl implements CheckoutService {
                         return new CreateOrdersCommand.ItemSnapshot(snap.variantId(), snap.productName(),
                                 snap.variantName(), snap.quantity(), snap.unitPrice(), held.bakeQuantity(),
                                 snap.personalizationText(), snap.personalizationFee());
-                    }).toList();
+                    }).toList());
+            reserved.stream()
+                    .filter(line -> line.sourceSetId() != null && plan.provider().getId().equals(line.providerId()))
+                    .map(line -> new CreateOrdersCommand.ItemSnapshot(line.variantId(), line.productName(),
+                            line.variantName(), line.quantity(), line.unitPrice(), line.bakeQuantity(),
+                            line.sourceSetId(), line.directUnits()))
+                    .forEach(items::add);
+            BigDecimal list = plan.lines().stream().map(Line::listAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
             groups.add(new CreateOrdersCommand.ProviderOrder(plan.provider().getId(), plan.deliveryDate(),
                     capacityId, plan.shippingFee(), plan.deposit(), plan.paymentMethod(),
                     plan.paymentMethod() == PaymentMethod.VIETQR ? orderedAt.plusSeconds(5 * 60 * 60) : null,
-                    items));
+                    list, list.subtract(plan.merchandise()).max(BigDecimal.ZERO), items));
         }
         var command = new CreateOrdersCommand(UUID.randomUUID(), customer.getId(), orderedAt,
                 request.receiverName().trim(), request.receiverPhone().trim(), request.shippingAddress().trim(),
@@ -121,7 +138,7 @@ public class CheckoutServiceImpl implements CheckoutService {
         // Resolve provider IDs before taking locks; then lock every group in stable order.
         List<CheckoutRequest.Group> sorted = new ArrayList<>(request.groups());
         sorted.sort(Comparator.comparing(group -> group == null || group.items() == null || group.items().isEmpty()
-                ? "" : group.items().stream().map(item -> item.variantId() == null ? "" : item.variantId().toString())
+                ? "" : group.items().stream().map(item -> item == null || item.key() == null ? "" : item.key().toString())
                         .min(String::compareTo).orElse("")));
         for (CheckoutRequest.Group group : sorted) {
             if (group == null || group.items() == null || group.items().isEmpty() || group.items().size() > MAX_ITEMS) {
@@ -134,18 +151,39 @@ public class CheckoutServiceImpl implements CheckoutService {
                 throw badRequest("Delivery date must be at least 3 days from today in Vietnam");
             }
             List<CheckoutRequest.Item> sortedItems = new ArrayList<>(group.items());
-            if (sortedItems.stream().anyMatch(item -> item == null || item.variantId() == null
+            if (sortedItems.stream().anyMatch(item -> item == null
+                    || (item.variantId() == null) == (item.setProductId() == null)
                     || item.quantity() <= 0 || item.quantity() > 10_000)) {
                 throw badRequest("Invalid cart item");
             }
-            sortedItems.sort(Comparator.comparing(item -> item.variantId().toString()));
+            sortedItems.sort(Comparator.comparing(item -> item.key().toString()));
             Set<UUID> seenVariants = new HashSet<>();
             List<Line> lines = new ArrayList<>();
             User provider = null;
             int personalizedBoxes = 0;
             int bakeQuantity = 0;
             for (CheckoutRequest.Item item : sortedItems) {
-                if (!seenVariants.add(item.variantId())) throw badRequest("Duplicate variant in provider group");
+                if (!seenVariants.add(item.key())) throw badRequest("Duplicate variant in provider group");
+                if (item.setProductId() != null) {
+                    Product set = products.findById(item.setProductId())
+                            .filter(p -> p.getProductType() == ProductType.GIFT_SET && p.getStatus() == ProductStatus.ACTIVE)
+                            .orElseThrow(() -> conflict("SET_UNAVAILABLE set=" + item.setProductId()));
+                    User owner = set.getProvider();
+                    if (provider != null && !provider.getId().equals(owner.getId())) {
+                        throw badRequest("A group must contain variants from only one provider");
+                    }
+                    provider = owner;
+                    if (normalizePersonalization(item.personalizationText()) != null) {
+                        throw badRequest("Personalization is only available for gift boxes");
+                    }
+                    Line line = priceSet(set, item.quantity());
+                    if (line.bakeQuantity() > Integer.MAX_VALUE - (long) bakeQuantity) {
+                        throw badRequest("Baking quantity is too large");
+                    }
+                    bakeQuantity += line.bakeQuantity();
+                    lines.add(line);
+                    continue;
+                }
                 ProductVariant variant = (lock ? variants.findForUpdateById(item.variantId()) : variants.findById(item.variantId()))
                         .orElseThrow(() -> conflict("VARIANT_UNAVAILABLE variant=" + item.variantId()));
                 User owner = variant.getProduct().getProvider();
@@ -167,14 +205,11 @@ public class CheckoutServiceImpl implements CheckoutService {
                     throw badRequest("Personalization is only available for gift boxes");
                 }
                 if (personal != null) personalizedBoxes += item.quantity();
-                long bake = switch (type) {
-                    case LOOSE_CAKE -> item.quantity();
-                    case BOX_SHELL -> (long) item.quantity() * (variant.getBoxCapacity() == null ? 0 : variant.getBoxCapacity());
-                    case GREETING_CARD, ADDON_SERVICE, GIFT_SET -> 0;
-                };
+                long bake = bakeFor(variant, item.quantity());
                 if (bake > Integer.MAX_VALUE - (long) bakeQuantity) throw badRequest("Baking quantity is too large");
                 bakeQuantity += (int) bake;
-                lines.add(new Line(variant, item.quantity(), (int) bake, personal, BigDecimal.ZERO));
+                BigDecimal amount = variant.getPrice().multiply(BigDecimal.valueOf(item.quantity()));
+                lines.add(new Line(variant, null, item.quantity(), (int) bake, personal, BigDecimal.ZERO, amount, amount));
             }
             if (provider == null || !seenProviders.add(provider.getId())) {
                 throw badRequest("Only one delivery group per provider is supported");
@@ -186,7 +221,7 @@ public class CheckoutServiceImpl implements CheckoutService {
             if (group.paymentMethod() != PaymentMethod.COD && group.paymentMethod() != PaymentMethod.VIETQR) {
                 throw badRequest("Only COD and VIETQR are supported");
             }
-            if (group.paymentMethod() == PaymentMethod.COD && group.payInFull()) {
+            if (group.paymentMethod() == PaymentMethod.COD && Boolean.TRUE.equals(group.payInFull())) {
                 throw badRequest("payInFull only applies to online payment");
             }
             if (lock && group.paymentMethod() == PaymentMethod.VIETQR && !hasBankDetails(provider)) {
@@ -196,12 +231,12 @@ public class CheckoutServiceImpl implements CheckoutService {
             BigDecimal personalization = BigDecimal.ZERO;
             List<Line> pricedLines = new ArrayList<>();
             for (Line line : lines) {
-                BigDecimal itemPrice = line.variant().getPrice().multiply(BigDecimal.valueOf(line.quantity()));
                 BigDecimal fee = line.personalizationText() != null && personalizedBoxes < 5
                         ? PRINT_FEE.multiply(BigDecimal.valueOf(line.quantity())) : BigDecimal.ZERO;
-                merchandise = merchandise.add(itemPrice);
+                merchandise = merchandise.add(line.amount());
                 personalization = personalization.add(fee);
-                pricedLines.add(new Line(line.variant(), line.quantity(), line.bakeQuantity(), line.personalizationText(), fee));
+                pricedLines.add(new Line(line.variant(), line.set(), line.quantity(), line.bakeQuantity(),
+                        line.personalizationText(), fee, line.amount(), line.listAmount()));
             }
             String province = normalizeZone(group.province());
             String district = normalizeZone(group.district());
@@ -223,7 +258,7 @@ public class CheckoutServiceImpl implements CheckoutService {
                     && !group.depositOption().equals("MIN_DEPOSIT")) {
                 throw badRequest("Invalid deposit option");
             }
-            boolean payInFull = group.payInFull() || "FULL".equals(group.depositOption());
+            boolean payInFull = Boolean.TRUE.equals(group.payInFull()) || "FULL".equals(group.depositOption());
             BigDecimal deposit = group.paymentMethod() == PaymentMethod.COD ? BigDecimal.ZERO
                     : payInFull ? total : total.divide(BigDecimal.valueOf(2), 0, RoundingMode.CEILING);
             if (group.paymentMethod() != PaymentMethod.COD && deposit.signum() <= 0) {
@@ -243,6 +278,70 @@ public class CheckoutServiceImpl implements CheckoutService {
                     merchandise, personalization, shipping, total, deposit, bakeQuantity, capacity));
         }
         return result;
+    }
+
+    private static long bakeFor(ProductVariant variant, int quantity) {
+        return switch (variant.getProduct().getProductType()) {
+            case LOOSE_CAKE -> quantity;
+            case BOX_SHELL -> (long) quantity * (variant.getBoxCapacity() == null ? 0 : variant.getBoxCapacity());
+            case GREETING_CARD, ADDON_SERVICE, GIFT_SET -> 0;
+        };
+    }
+
+    /**
+     * Giá + số bánh nướng của `quantity` set, tính y như InventoryServiceImpl.expandSet (cùng hệ số chiết khấu,
+     * cùng làm tròn từng thành phần) để tổng preview khớp đúng các dòng đơn sau khi giữ hàng.
+     */
+    private Line priceSet(Product set, int quantity) {
+        List<GiftSetComponent> rows = setComponents.findBySetProductId(set.getId());
+        GiftSetComponent box = rows.stream()
+                .filter(row -> row.getComponentVariant().getProduct().getProductType() == ProductType.BOX_SHELL)
+                .findFirst().orElseThrow(() -> conflict("SET_UNAVAILABLE set=" + set.getId()));
+        int setsBefore = box.getQuantity();
+        if (setsBefore < quantity) {
+            throw conflict("STOCK_UNAVAILABLE provider=" + set.getProvider().getId() + " set=" + set.getId());
+        }
+        Map<GiftSetComponent, Integer> perSet = new LinkedHashMap<>();
+        BigDecimal unitList = BigDecimal.ZERO;
+        for (GiftSetComponent row : rows) {
+            boolean isBox = row == box;
+            if (row.getPerSetQuantity() == null && !isBox && row.getQuantity() % setsBefore != 0) {
+                throw conflict("SET_UNAVAILABLE set=" + set.getId());
+            }
+            int per = row.getPerSetQuantity() != null && row.getPerSetQuantity() > 0 ? row.getPerSetQuantity()
+                    : (isBox ? 1 : row.getQuantity() / setsBefore);
+            perSet.put(row, per);
+            unitList = unitList.add(row.getComponentVariant().getPrice().multiply(BigDecimal.valueOf(per)));
+        }
+        BigDecimal sale = set.getSalePrice();
+        BigDecimal factor = sale == null || unitList.signum() == 0 ? BigDecimal.ONE
+                : sale.divide(unitList, 8, RoundingMode.HALF_UP);
+        BigDecimal others = BigDecimal.ZERO;
+        BigDecimal boxUnit = BigDecimal.ZERO;
+        int boxTake = 0;
+        BigDecimal list = BigDecimal.ZERO;
+        long bake = 0;
+        for (Map.Entry<GiftSetComponent, Integer> entry : perSet.entrySet()) {
+            int take = entry.getValue() * quantity;
+            if (take <= 0) continue;
+            ProductVariant component = entry.getKey().getComponentVariant();
+            BigDecimal charged = component.getPrice().multiply(factor).setScale(2, RoundingMode.HALF_UP);
+            if (entry.getKey() == box) {
+                boxUnit = charged;
+                boxTake = take;
+            }
+            else others = others.add(charged.multiply(BigDecimal.valueOf(take)));
+            list = list.add(component.getPrice().multiply(BigDecimal.valueOf(take)));
+            bake += bakeFor(component, take);
+        }
+        // Như expandSet: phần lệch do làm tròn dồn vào vỏ hộp để tổng = salePrice × số set
+        if (sale != null) {
+            boxUnit = sale.multiply(BigDecimal.valueOf(quantity)).subtract(others);
+            if (quantity > 1) boxUnit = boxUnit.divide(BigDecimal.valueOf(quantity), 2, RoundingMode.HALF_UP);
+        }
+        BigDecimal amount = others.add(boxUnit.multiply(BigDecimal.valueOf(boxTake)));
+        if (bake > Integer.MAX_VALUE) throw badRequest("Baking quantity is too large");
+        return new Line(null, set, quantity, (int) bake, null, BigDecimal.ZERO, amount, list);
     }
 
     private User requireCustomer() {
@@ -294,8 +393,21 @@ public class CheckoutServiceImpl implements CheckoutService {
     private record Snap(UUID providerId, UUID variantId, String productName, String variantName, int quantity,
             BigDecimal unitPrice, String personalizationText, BigDecimal personalizationFee) {}
 
-    private record Line(ProductVariant variant, int quantity, int bakeQuantity, String personalizationText,
-            BigDecimal personalizationFee) {}
+    /** variant = dòng lẻ; set = dòng set quà (variant null). amount = tiền hàng, listAmount = theo giá gốc */
+    private record Line(ProductVariant variant, Product set, int quantity, int bakeQuantity,
+            String personalizationText, BigDecimal personalizationFee, BigDecimal amount, BigDecimal listAmount) {
+        UUID id() {
+            return set != null ? set.getId() : variant.getId();
+        }
+
+        String productName() {
+            return set != null ? set.getName() : variant.getProduct().getName();
+        }
+
+        String variantName() {
+            return set != null ? "Set quà" : variant.getVariantName();
+        }
+    }
 
     private record Plan(User provider, LocalDate deliveryDate, PaymentMethod paymentMethod, List<Line> lines,
             BigDecimal merchandise, BigDecimal personalization, BigDecimal shippingFee, BigDecimal total,
@@ -303,10 +415,9 @@ public class CheckoutServiceImpl implements CheckoutService {
         CheckoutPreviewResponse.ProviderPrice preview() {
             return new CheckoutPreviewResponse.ProviderPrice(provider.getId(), provider.getStoreName(), deliveryDate,
                     paymentMethod, lines.stream().map(line -> new CheckoutPreviewResponse.Line(
-                            line.variant().getId(), line.variant().getProduct().getName(),
-                            line.variant().getVariantName(), line.quantity(), line.variant().getPrice(),
-                            line.personalizationFee(), line.variant().getPrice()
-                                    .multiply(BigDecimal.valueOf(line.quantity())).add(line.personalizationFee()))).toList(),
+                            line.id(), line.productName(), line.variantName(), line.quantity(),
+                            line.amount().divide(BigDecimal.valueOf(line.quantity()), 2, RoundingMode.HALF_UP),
+                            line.personalizationFee(), line.amount().add(line.personalizationFee()))).toList(),
                     merchandise, personalization, shippingFee, total, deposit,
                     merchandise.add(personalization), total.divide(BigDecimal.valueOf(2), 0, RoundingMode.CEILING),
                     total.compareTo(COD_LIMIT) < 0 && personalization.signum() == 0);

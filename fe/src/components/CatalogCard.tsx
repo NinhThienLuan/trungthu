@@ -20,6 +20,7 @@ export function CatalogCard({ product }: { product: Product }) {
     add(
       {
         variantId: variant.id,
+        setProductId: product.productType === 'GIFT_SET' ? product.id : undefined,
         productId: product.id,
         providerId: product.providerId,
         storeName: product.storeName,

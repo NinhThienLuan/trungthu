@@ -14,8 +14,10 @@ export type DepositOption = 'MIN_DEPOSIT' | 'FULL'
 
 // ---------- Checkout (BE3: POST /api/checkout/preview, POST /api/checkout) ----------
 
+/** Một dòng là variant HOẶC set quà (GIFT_SET không có variant) */
 export interface CheckoutLine {
-  variantId: string
+  variantId?: string
+  setProductId?: string
   quantity: number
 }
 

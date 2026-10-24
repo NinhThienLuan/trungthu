@@ -151,9 +151,9 @@ class CheckoutFlowTests {
     void vietQrCreatesDistinctInstructionsPerSellerAndOnlyOwnerConfirms() {
         CheckoutRequest request = new CheckoutRequest("Buyer", "0123456789", "Address", null, List.of(
                 new CheckoutRequest.Group(delivery, "HCM", "District 1", PaymentMethod.VIETQR, true,
-                        List.of(new CheckoutRequest.Item(cake.getId(), 2, null))),
+                        List.of(new CheckoutRequest.Item(cake.getId(), null, 2, null))),
                 new CheckoutRequest.Group(delivery, "HCM", "District 1", PaymentMethod.VIETQR, true,
-                        List.of(new CheckoutRequest.Item(box.getId(), 1, "Chuc mung")))));
+                        List.of(new CheckoutRequest.Item(box.getId(), null, 1, "Chuc mung")))));
         when(security.getCurrentUserId()).thenReturn(customer.getId());
         var created = checkout.checkout(request);
         assertThat(created).hasSize(2);
@@ -185,9 +185,9 @@ class CheckoutFlowTests {
     private CheckoutRequest request() {
         return new CheckoutRequest("Buyer", "0123456789", "Address", null, List.of(
                 new CheckoutRequest.Group(delivery, "HCM", "District 1", PaymentMethod.COD, false,
-                        List.of(new CheckoutRequest.Item(cake.getId(), 2, null))),
+                        List.of(new CheckoutRequest.Item(cake.getId(), null, 2, null))),
                 new CheckoutRequest.Group(delivery, "HCM", "District 1", PaymentMethod.VIETQR, false,
-                        List.of(new CheckoutRequest.Item(box.getId(), 1, "Chuc mung")))));
+                        List.of(new CheckoutRequest.Item(box.getId(), null, 1, "Chuc mung")))));
     }
 
     private User user(UserRole role, boolean provider) {

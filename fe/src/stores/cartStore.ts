@@ -25,6 +25,8 @@ export interface CartItem {
   stock: number
   quantity: number
   imageUrl?: string | null
+  /** Set quà: checkout gửi setProductId thay cho variantId */
+  setProductId?: string
   /** Chỉ có ở hộp tự phối */
   slots?: BoxSlot[]
   note?: string

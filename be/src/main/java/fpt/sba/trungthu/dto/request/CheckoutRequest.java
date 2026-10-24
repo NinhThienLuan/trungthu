@@ -22,7 +22,7 @@ public record CheckoutRequest(
             String province,
             String district,
             @NotNull PaymentMethod paymentMethod,
-            boolean payInFull,
+            Boolean payInFull, // FE gửi depositOption, có thể bỏ trống trường này (null = false)
             String depositOption,
             @NotEmpty List<@NotNull @Valid Item> items,
             List<?> boxes) {
@@ -32,8 +32,15 @@ public record CheckoutRequest(
         }
     }
 
+    /** Một dòng là một variant HOẶC một set quà (GIFT_SET, không có variant) */
     public record Item(
-            @NotNull UUID variantId,
+            UUID variantId,
+            UUID setProductId,
             @Positive int quantity,
-            @Size(max = 50) String personalizationText) {}
+            @Size(max = 50) String personalizationText) {
+        // Không thêm constructor phụ: Jackson 3 khi đó không còn đọc được record từ JSON
+        public UUID key() {
+            return variantId != null ? variantId : setProductId;
+        }
+    }
 }

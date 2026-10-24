@@ -33,6 +33,7 @@ export const PRODUCT_TYPE_LABEL: Record<ProductType, string> = {
   BOX_SHELL: 'Hộp quà',
   GREETING_CARD: 'Thiệp chúc',
   ADDON_SERVICE: 'Dịch vụ kèm',
+  GIFT_SET: 'Set quà',
 }
 
 export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {

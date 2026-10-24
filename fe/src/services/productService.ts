@@ -17,10 +17,13 @@ interface BeProduct {
   storeName: string
   name: string
   description: string | null
-  productType: ProductType | 'GIFT_SET'
+  productType: ProductType
   status: 'DRAFT' | 'ACTIVE' | 'SOLD_OUT' | 'ARCHIVED'
   createdAt: string
   primaryImageUrl: string | null
+  salePrice: number
+  listPrice: number
+  assembledQuantity: number
   images: Array<{ imageUrl: string; displayOrder: number }> | null
   variants: Array<{
     id: string
@@ -44,13 +47,25 @@ const toProduct = (p: BeProduct): Product => {
     storeName: p.storeName,
     name: p.name,
     description: p.description,
-    productType: p.productType as ProductType,
+    productType: p.productType,
     status: p.status === 'ACTIVE' ? 'ACTIVE' : 'OUT_OF_STOCK',
     createdAt: p.createdAt,
     imageUrl: p.primaryImageUrl ?? gallery[0] ?? null,
     imageAlt: p.name,
     gallery,
-    variants: p.variants.map((v) => ({
+    // Set quà không có variant: dựng 1 "variant" ảo mang id của set, giá bán set và số set đã đóng sẵn
+    variants: p.productType === 'GIFT_SET'
+      ? [{
+          id: p.id,
+          variantName: 'Set quà',
+          sku: '',
+          price: p.salePrice || p.listPrice,
+          weightGram: null,
+          boxCapacity: null,
+          stockQuantity: p.assembledQuantity,
+          status: p.assembledQuantity > 0 ? 'ACTIVE' : 'OUT_OF_STOCK',
+        }]
+      : p.variants.map((v) => ({
       id: v.id,
       variantName: v.variantName,
       sku: v.sku,
@@ -63,14 +78,11 @@ const toProduct = (p: BeProduct): Product => {
   }
 }
 
-// Set quà (GIFT_SET) không có variant, mà checkout BE3 chỉ nhận variantId -> chưa bán được, ẩn khỏi danh mục
-const sellable = (p: BeProduct) => p.productType !== 'GIFT_SET'
-
 export const productService = {
   list: async ({ type, page = 0, size = 12 }: ProductQuery = {}): Promise<Page<Product>> => {
     if (!USE_MOCK.products) {
       const res = await unwrap(http.get<ApiResponse<Page<BeProduct>>>('/products', { params: { type, page, size } }))
-      return { ...res, content: res.content.filter(sellable).map(toProduct) }
+      return { ...res, content: res.content.map(toProduct) }
     }
     await delay(300)
     const all = MOCK_PRODUCTS.filter((p) => !type || p.productType === type)

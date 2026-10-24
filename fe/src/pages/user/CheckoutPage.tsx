@@ -30,7 +30,8 @@ const toGroups = (groups: CartGroup[], dates: Record<string, string>, choices: R
       district: zones[g.providerId]?.district,
       paymentMethod: choice === 'COD' ? 'COD' : 'VIETQR',
       depositOption: choice === 'COD' ? undefined : choice,
-      items: g.items.filter((i) => i.kind === 'single').map((i) => ({ variantId: i.variantId, quantity: i.quantity })),
+      items: g.items.filter((i) => i.kind === 'single').map((i) =>
+        i.setProductId ? { setProductId: i.setProductId, quantity: i.quantity } : { variantId: i.variantId, quantity: i.quantity }),
       boxes: g.items
         .filter((i) => i.kind === 'box')
         .map((i) => ({ boxVariantId: i.variantId, quantity: i.quantity, cakeVariantIds: (i.slots ?? []).map((s) => s.variantId), note: i.note })),

@@ -1,4 +1,4 @@
-export type ProductType = 'LOOSE_CAKE' | 'BOX_SHELL' | 'GREETING_CARD' | 'ADDON_SERVICE'
+export type ProductType = 'LOOSE_CAKE' | 'BOX_SHELL' | 'GREETING_CARD' | 'ADDON_SERVICE' | 'GIFT_SET'
 export type ProductStatus = 'ACTIVE' | 'HIDDEN' | 'OUT_OF_STOCK'
 
 export interface ProductVariant {
