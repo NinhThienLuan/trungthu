@@ -1,8 +1,0 @@
-{
-  "name": "Nguyệt Viên Đài - Tinh Hoa Bánh Trung Thu",
-  "description": "Thương hiệu bánh trung thu cao cấp Nguyệt Viên Đài: Bộ sưu tập quà tặng hoàng kim, hộp sơn mài thủ công nghệ nhân, giải pháp quà tặng doanh nghiệp B2B và tùy chỉnh hộp quà độc bản.",
-  "requestFramePermissions": [],
-  "majorCapabilities": [
-    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
-  ]
-}
