@@ -133,7 +133,7 @@ public class AuthServiceImpl implements AuthService {
                         + "- Vai trò: " + roleLabel(savedUser.getRole()) + "\n\n"
                         + "LƯU Ý QUAN TRỌNG:\n"
                         + "Vui lòng đăng nhập và đổi mật khẩu ngay ở lần đăng nhập đầu tiên.\n\n"
-                        + "Link đăng nhập: " + frontendUrl + "/login\n\n"
+                        + "Link đổi mật khẩu: " + frontendUrl + "/change-password\n\n"
                         + "Trân trọng,\nNguyệt Viên Đài");
 
         log.info("Successfully registered user id: {}, email: {}", savedUser.getId(), savedUser.getEmail());

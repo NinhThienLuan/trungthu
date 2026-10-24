@@ -2,6 +2,7 @@ import { Outlet, ScrollRestoration, useNavigate } from 'react-router-dom'
 import { Header } from './Header'
 import { Footer } from './Footer'
 import { handleStitchLinkClick } from '../../routes/stitchPaths'
+import { FlashToast } from '../ui/FlashToast'
 
 export function UserLayout() {
   const navigate = useNavigate()
@@ -16,6 +17,7 @@ export function UserLayout() {
         <Outlet />
       </main>
       <Footer />
+      <FlashToast />
       <ScrollRestoration />
     </div>
   )

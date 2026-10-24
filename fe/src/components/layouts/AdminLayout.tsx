@@ -1,6 +1,7 @@
 import { NavLink, Outlet, ScrollRestoration, useNavigate } from 'react-router-dom'
 import { Icon } from '../Icon'
 import { handleStitchLinkClick } from '../../routes/stitchPaths'
+import { FlashToast } from '../ui/FlashToast'
 import { cn } from '../../lib/format'
 import { useAuthStore } from '../../stores/authStore'
 
@@ -186,6 +187,7 @@ export function AdminLayout() {
           <Outlet />
         </main>
       </div>
+      <FlashToast />
       <ScrollRestoration />
     </div>
   )

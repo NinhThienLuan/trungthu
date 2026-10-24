@@ -35,7 +35,8 @@ export function ChangePasswordPage() {
     setSubmitting(true)
     try {
       const updated = await changePassword(parsed.data.oldPassword, parsed.data.newPassword)
-      if (forced) return navigate(HOME_BY_ROLE[updated.role], { replace: true })
+      // README 3.3: đổi xong -> trang theo vai trò + toast
+      if (forced) return navigate(HOME_BY_ROLE[updated.role], { replace: true, state: { flash: 'Đổi mật khẩu thành công' } })
       form.reset()
       setDone(true)
     } catch (err) {
