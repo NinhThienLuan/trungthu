@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { orderService } from '../../services/orderService'
 import { errorMessage } from '../../apis/http'
@@ -53,6 +53,7 @@ export function CheckoutPage() {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitError, setSubmitError] = useState<string>()
   const [submitting, setSubmitting] = useState(false)
+  const placed = useRef(false)
 
   const groups = groupByProvider(items)
   const ready = groups.length > 0 && groups.every((g) => deliveryDates[g.providerId])
@@ -67,7 +68,8 @@ export function CheckoutPage() {
     [items, deliveryDates, address],
   )
 
-  if (!ready) return <Navigate to={ROUTES.cart} replace />
+  // Đã đặt xong thì giỏ trống là bình thường: đừng chuyển về /cart, chờ sang trang QR
+  if (!ready && !placed.current) return <Navigate to={ROUTES.cart} replace />
 
   const previewOf = (providerId: string) => preview?.groups.find((p) => p.providerId === providerId)
   // Mặc định VietQR cọc 50% -> đặt xong hiện mã QR ngay; COD vẫn chọn được nếu đơn đủ điều kiện
@@ -119,8 +121,9 @@ export function CheckoutPage() {
     }
     try {
       const orders = await orderService.checkout(body, items)
-      clear()
+      placed.current = true
       navigate(`${ROUTES.payment}?ids=${orders.map((o) => o.id).join(',')}`, { replace: true })
+      clear()
     } catch (err) {
       // BE rollback toàn bộ nếu 1 xưởng lỗi (hết slot/hàng) -> giữ nguyên giỏ để khách chọn lại
       setSubmitError(errorMessage(err))

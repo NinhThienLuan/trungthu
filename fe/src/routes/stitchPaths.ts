@@ -33,6 +33,16 @@ const TEXT_PATHS: Record<string, string> = {
   'Đăng ký tham gia': '/seller/profile',
 }
 
+/** Chữ người dùng thấy trên nút: bỏ phần aria-hidden (icon Material là chữ ligature, vd "arrow_forward") */
+function visibleLabel(el: HTMLElement): string {
+  const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
+  let text = ''
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    if (!node.parentElement?.closest('[aria-hidden="true"]')) text += node.textContent
+  }
+  return text.replace(/\s+/g, ' ').trim()
+}
+
 /**
  * Gắn vào onClick của khung layout:
  * - link Stitch có data-path -> điều hướng SPA
@@ -44,7 +54,7 @@ export function handleStitchLinkClick(event: React.MouseEvent, navigate: (to: st
   // <button> không ghi type mặc định là submit -> chỉ bỏ qua khi thật sự nằm trong form
   if (!el || (el instanceof HTMLButtonElement && el.type === 'submit' && el.form)) return
   const isDeadLink = el instanceof HTMLAnchorElement && el.getAttribute('href') === '#'
-  const to = STITCH_PATHS[el.dataset.path ?? ''] ?? TEXT_PATHS[el.textContent?.trim() ?? '']
+  const to = STITCH_PATHS[el.dataset.path ?? ''] ?? TEXT_PATHS[visibleLabel(el)]
   if (isDeadLink) event.preventDefault()
   if (to) {
     event.preventDefault()

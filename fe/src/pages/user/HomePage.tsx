@@ -1,8 +1,46 @@
 // Tự sinh từ bản thiết kế Stitch — giữ nguyên nội dung. Sửa logic ở trang bọc ngoài.
+// Khu "Lễ vị" và "Thương hiệu" lấy dữ liệu thật (GET /api/products) thay cho dữ liệu mẫu của Stitch.
+import { Link } from 'react-router-dom'
 import { Icon } from '../../components/Icon'
 import { HeroMotion } from '../../components/HeroMotion'
+import { useApi } from '../../hooks/useApi'
+import { productService } from '../../services/productService'
+import { ROUTES } from '../../constants'
+import { formatVnd } from '../../lib/format'
+import type { Product } from '../../types/product'
+
+interface Shop {
+  providerId: string
+  storeName: string
+  imageUrl?: string | null
+  productCount: number
+  minPrice: number
+}
+
+const minPrice = (p: Product) => Math.min(...p.variants.map((v) => v.price))
+
+/** Gom sản phẩm theo xưởng để hiện khu "Thương hiệu" */
+function toShops(products: Product[]): Shop[] {
+  const shops = new Map<string, Shop>()
+  for (const p of products) {
+    if (!p.variants.length) continue
+    const shop = shops.get(p.providerId)
+    if (!shop) {
+      shops.set(p.providerId, { providerId: p.providerId, storeName: p.storeName, imageUrl: p.imageUrl, productCount: 1, minPrice: minPrice(p) })
+    } else {
+      shop.productCount += 1
+      shop.minPrice = Math.min(shop.minPrice, minPrice(p))
+    }
+  }
+  return [...shops.values()]
+}
 
 export function HomePage() {
+  // ponytail: một trang đầu (24 sp) đủ cho 4 sản phẩm + các xưởng; cần đủ xưởng khi > 24 sp thì thêm API danh sách xưởng
+  const { data, loading } = useApi(() => productService.list({ size: 24 }), [])
+  const products = (data?.content ?? []).filter((p) => p.status === 'ACTIVE' && p.variants.length > 0)
+  const featured = products.slice(0, 4)
+  const shops = toShops(products).slice(0, 4)
   return (
     <>
       <div className="flex flex-col w-full">
@@ -136,149 +174,7 @@ export function HomePage() {
                 </span>{' '}
               </div>{' '}
             </div>{' '}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-gutter">
-              {' '}
-              <div className="group relative rounded-[0.125rem] bg-surface-container-lowest border border-border-gold-subtle shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col justify-between overflow-hidden">
-                {' '}
-                <div className="relative h-60 w-full overflow-hidden bg-surface-container">
-                  {' '}
-                  <img
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    data-alt="Close up photograph of a baked golden imperial molten salted egg lava mooncake split in half, runny golden yolk lava oozing out on an antique lacquered wood plate, atmospheric ambient warm golden candlelight"
-                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuBhyHmtLQpkmb0X8Us__Kkf1VvlKQSI6Iq4HOb_21aC6-lWQRYagOZiBldLGVVIEfGNfMH47VzoPHMuY8ZeG2X-FfHm2Sf3brgd55s_cBw2kvcTGIDTY4RF4_YtvUT4qQQ0YtGkAm9rm4INmKWyNt4ut5NwxRZn_fBylkKBmXrVUdhGJQ0aHMkuW0-sK9wsbIrnGTjjrR7ynsLfhd9R5h3gl7iexLhlCOx2dB610GlVkcjQcplzZZf1"
-                  />{' '}
-                  <div className="absolute top-3 left-3 bg-primary/90 text-champagne-light border border-border-gold-subtle font-label-sm text-label-sm px-2.5 py-1 rounded-[0.125rem] uppercase tracking-wider backdrop-blur-sm">
-                    Đệ Nhất Mỹ Vị
-                  </div>{' '}
-                </div>{' '}
-                <div className="p-space-md flex flex-col gap-2">
-                  {' '}
-                  <h3 className="font-headline-sm text-headline-sm text-primary">Lava Trứng Muối Hoàng Kim</h3>{' '}
-                  <p className="font-body-sm text-body-sm text-on-surface-variant line-clamp-2">
-                    Vỏ nướng xốp mịn bọc lấy nhân trứng muối thơm lừng, chảy tan êm mượt khi dùng cùng trà Ô Long danh
-                    tiếng.
-                  </p>{' '}
-                  <div className="pt-2 flex items-center justify-between">
-                    {' '}
-                    <span className="font-label-md text-label-md text-secondary font-bold">
-                      Từ 165.000đ / bánh
-                    </span>{' '}
-                    <a
-                      className="w-8 h-8 rounded-[0.125rem] bg-surface-container flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-champagne-light transition-colors border border-border-gold-subtle"
-                      href="#"
-                    >
-                      {' '}
-                      <Icon name="arrow_forward" className="text-[17px]" aria-hidden />{' '}
-                    </a>{' '}
-                  </div>{' '}
-                </div>{' '}
-              </div>{' '}
-              <div className="group relative rounded-[0.125rem] bg-surface-container-lowest border border-border-gold-subtle shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col justify-between overflow-hidden">
-                {' '}
-                <div className="relative h-60 w-full overflow-hidden bg-surface-container">
-                  {' '}
-                  <img
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    data-alt="Traditional Vietnamese mixed savory mooncake with roasted pork, candied melon, lotus seeds, sesame and lime leaves, garnished on an ornate royal ceramic plate with rustic wood background"
-                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuBfIO7SFRrx7_6YPUhCPhmwxY5G6_2-bMqlou3538Vnq813Gn6g5lZh7A4_u0vcDZGkMulN5zjwqILIVb3VjrLA1-hgITosUR87ikj0p4nfk6lJzYppJ5A4xRa-Ytj10l8Z0j5ky9w9-cW0iGTLft-7TIlXtph9ksMtDI5YuQUzVpNfbQDDHfuRE9szqDpzSWGH8qJcOhrIal_rdJv1R1681iNFKm-nsMEoHCfi3u39p_Rx8wITup5d"
-                  />{' '}
-                  <div className="absolute top-3 left-3 bg-secondary text-surface-container-lowest font-label-sm text-label-sm px-2.5 py-1 rounded-[0.125rem] uppercase tracking-wider">
-                    Gia Truyền
-                  </div>{' '}
-                </div>{' '}
-                <div className="p-space-md flex flex-col gap-2">
-                  {' '}
-                  <h3 className="font-headline-sm text-headline-sm text-primary">Thập Cẩm Bát Bửu Cổ Truyền</h3>{' '}
-                  <p className="font-body-sm text-body-sm text-on-surface-variant line-clamp-2">
-                    Đượm vị lạp xưởng Mai Quế Lộ, mứt bí giòn rụm, hạt sen Tây Hồ kết hợp lá chanh thái chỉ thơm bùi
-                    thuần túy.
-                  </p>{' '}
-                  <div className="pt-2 flex items-center justify-between">
-                    {' '}
-                    <span className="font-label-md text-label-md text-secondary font-bold">
-                      Từ 140.000đ / bánh
-                    </span>{' '}
-                    <a
-                      className="w-8 h-8 rounded-[0.125rem] bg-surface-container flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-champagne-light transition-colors border border-border-gold-subtle"
-                      href="#"
-                    >
-                      {' '}
-                      <Icon name="arrow_forward" className="text-[17px]" aria-hidden />{' '}
-                    </a>{' '}
-                  </div>{' '}
-                </div>{' '}
-              </div>{' '}
-              <div className="group relative rounded-[0.125rem] bg-surface-container-lowest border border-border-gold-subtle shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col justify-between overflow-hidden">
-                {' '}
-                <div className="relative h-60 w-full overflow-hidden bg-surface-container">
-                  {' '}
-                  <img
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    data-alt="Elegant translucent white snow skin mooncake infused with lotus seed and jasmine blossom water, dusted with fine rice flour, resting on an emerald green porcelain dish"
-                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuC7JqrtN7bZXEbUTNh2Fczz5LSbgk8tNx9E9DLXZ6jyemMuaj2JppouJpMNJgRQTxnkHfqNkDUMM_G-5lQO03RHZix-Q_glHnOAbGJUkH46DaXJex6lgnhWi0KP580pY3H6Gw7nJ2dmPQDftTKDnwEdeWvPDSc7gNuB7oWoWhrY7m55nbxNpq8qEN0aO6HabDIO580idk1NQN4qz5-69vAyVzP7__aH4JXaYuhiyaexIPVJ6sAl6kUv"
-                  />{' '}
-                  <div className="absolute top-3 left-3 bg-tertiary-container text-champagne-light border border-border-gold-subtle font-label-sm text-label-sm px-2.5 py-1 rounded-[0.125rem] uppercase tracking-wider">
-                    Thanh Nhã
-                  </div>{' '}
-                </div>{' '}
-                <div className="p-space-md flex flex-col gap-2">
-                  {' '}
-                  <h3 className="font-headline-sm text-headline-sm text-primary">Dẻo Men Sen Bách Hoa</h3>{' '}
-                  <p className="font-body-sm text-body-sm text-on-surface-variant line-clamp-2">
-                    Lớp nếp nương hoa bưởi tinh khôi ôm trọn hạt sen nhuyễn ngọt dịu, đánh thức phong vị đêm rằm tinh
-                    tế.
-                  </p>{' '}
-                  <div className="pt-2 flex items-center justify-between">
-                    {' '}
-                    <span className="font-label-md text-label-md text-secondary font-bold">
-                      Từ 130.000đ / bánh
-                    </span>{' '}
-                    <a
-                      className="w-8 h-8 rounded-[0.125rem] bg-surface-container flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-champagne-light transition-colors border border-border-gold-subtle"
-                      href="#"
-                    >
-                      {' '}
-                      <Icon name="arrow_forward" className="text-[17px]" aria-hidden />{' '}
-                    </a>{' '}
-                  </div>{' '}
-                </div>{' '}
-              </div>{' '}
-              <div className="group relative rounded-[0.125rem] bg-surface-container-lowest border border-border-gold-subtle shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col justify-between overflow-hidden">
-                {' '}
-                <div className="relative h-60 w-full overflow-hidden bg-surface-container">
-                  {' '}
-                  <img
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    data-alt="Luxury gourmet mooncake infused with bird nest and cordyceps, decorated with edible gold leaf foil on dark obsidian lacquer plate with warm ambient tea house light"
-                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuDBRpRHlTy7SM4UHERDZBEN08d3YBF7LNtVsINd6g8U-G-8auXzDwzspPQl-2MbgUzat00ruCVHdDl8fTLYbMMadLsJWSQg0EHEM4eX585gevRPhtg0M8dXCUop9jVMM59GfQOhLBiwgtU1nNitaxiWSvAlPyozKmzL5r9vXPn2FBbAzwx8wW1gRiKmFLLUPfEDBk_4gMLMl4l0f228rqLdl5MxWEMRq170yewtuqPD44mawVzZcDNB"
-                  />{' '}
-                  <div className="absolute top-3 left-3 bg-primary text-secondary-fixed-dim border border-secondary-fixed-dim/40 font-label-sm text-label-sm px-2.5 py-1 rounded-[0.125rem] uppercase tracking-wider">
-                    Ngự Dược VIP
-                  </div>{' '}
-                </div>{' '}
-                <div className="p-space-md flex flex-col gap-2">
-                  {' '}
-                  <h3 className="font-headline-sm text-headline-sm text-primary">Yến Sào Ngự Dược & Đông Trùng</h3>{' '}
-                  <p className="font-body-sm text-body-sm text-on-surface-variant line-clamp-2">
-                    Bổ dưỡng thượng phẩm kết hợp yến đảo Khánh Hòa tự nhiên, bảo chứng sức khỏe trường thọ cho đối tác
-                    cao cấp.
-                  </p>{' '}
-                  <div className="pt-2 flex items-center justify-between">
-                    {' '}
-                    <span className="font-label-md text-label-md text-secondary font-bold">
-                      Từ 280.000đ / bánh
-                    </span>{' '}
-                    <a
-                      className="w-8 h-8 rounded-[0.125rem] bg-surface-container flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-champagne-light transition-colors border border-border-gold-subtle"
-                      href="#"
-                    >
-                      {' '}
-                      <Icon name="arrow_forward" className="text-[17px]" aria-hidden />{' '}
-                    </a>{' '}
-                  </div>{' '}
-                </div>{' '}
-              </div>{' '}
-            </div>{' '}
+            <FeaturedProducts products={featured} loading={loading} />{' '}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-gutter pt-space-sm">
               {' '}
               <div className="p-space-lg rounded-[0.125rem] bg-surface-container-lowest border border-border-gold-subtle shadow-sm hover:shadow-md transition-shadow flex items-start gap-space-md">
@@ -373,221 +269,8 @@ export function HomePage() {
                   thực phẩm ngự viện.
                 </p>{' '}
               </div>{' '}
-              <div className="flex flex-wrap items-center gap-2">
-                {' '}
-                <button className="px-4 py-2 rounded-[0.125rem] bg-primary text-champagne-light border border-border-gold-subtle font-label-md text-label-md shadow-sm">
-                  Tất cả thương hiệu (42)
-                </button>{' '}
-                <button className="px-4 py-2 rounded-[0.125rem] bg-surface-container text-on-surface-variant border border-border-gold-subtle font-label-md text-label-md hover:bg-surface-container-high transition-colors">
-                  Bắc Bộ Xưa (18)
-                </button>{' '}
-                <button className="px-4 py-2 rounded-[0.125rem] bg-surface-container text-on-surface-variant border border-border-gold-subtle font-label-md text-label-md hover:bg-surface-container-high transition-colors">
-                  Nam Bộ Phồn Hoa (14)
-                </button>{' '}
-                <button className="px-4 py-2 rounded-[0.125rem] bg-surface-container text-on-surface-variant border border-border-gold-subtle font-label-md text-label-md hover:bg-surface-container-high transition-colors">
-                  Cố Đô Huế (10)
-                </button>{' '}
-              </div>{' '}
             </div>{' '}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-gutter">
-              {' '}
-              <div className="rounded-[0.125rem] bg-surface-container-lowest border border-border-gold-subtle p-space-md shadow-sm hover:shadow-xl transition-all flex flex-col justify-between">
-                {' '}
-                <div className="flex flex-col gap-space-sm">
-                  {' '}
-                  <div className="relative h-48 w-full rounded-[0.125rem] overflow-hidden bg-surface-container border border-border-gold-subtle/50">
-                    {' '}
-                    <img
-                      className="w-full h-full object-cover"
-                      data-alt="Traditional bakery storefront of Dong Phuong Hai Phòng with antique wooden mooncake molds, red paper gift boxes and freshly baked mooncakes"
-                      src="https://lh3.googleusercontent.com/aida-public/AB6AXuAKNmBGpW8yPG8EsHgfpR7aOfgTkk31ziAhqhztVjN9KKp0HBblaFVBbD7ngdTQ5vO4jMxXwAN1rwl7uu8ElIQDu6VITie3UbbK91RWONDjuJuS0f8AUev57QcDLTZgt0voJZgEyJXB-UGr6MHzdfAEdnc2GK0349lo6A70HWpsubghfg-TquAVAD2Aol5b0TSiCZfTmo830z1UWsjlctv71ssok23HYpiFwLZm96yqdbNihtuiASu8"
-                    />{' '}
-                    <div className="absolute top-2 right-2 px-2 py-0.5 rounded-[0.125rem] bg-primary/90 text-champagne-light border border-border-gold-subtle font-label-sm text-label-sm backdrop-blur-sm">
-                      Date mới hôm nay
-                    </div>{' '}
-                  </div>{' '}
-                  <div className="flex items-center justify-between pt-1">
-                    {' '}
-                    <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">
-                      Hải Phòng • Từ 1950
-                    </span>{' '}
-                    <div className="flex items-center text-secondary font-semibold">
-                      {' '}
-                      <Icon name="star" className="text-[15px]" aria-hidden />{' '}
-                      <span className="font-label-md text-label-md ml-0.5">4.9 (1.2k)</span>{' '}
-                    </div>{' '}
-                  </div>{' '}
-                  <h3 className="font-headline-sm text-headline-sm text-primary">Đông Phương Cầu Đất</h3>{' '}
-                  <p className="font-body-sm text-body-sm text-on-surface-variant">
-                    Lừng danh bánh nướng lá chanh thập cẩm xá xíu truyền thống đất Cảng, vỏ mỏng vàng ruộm.
-                  </p>{' '}
-                </div>{' '}
-                <div className="pt-space-md flex flex-col gap-2 mt-2">
-                  {' '}
-                  <div className="flex items-baseline justify-between">
-                    {' '}
-                    <span className="font-body-sm text-body-sm text-on-surface-variant">Bán lẻ từ:</span>{' '}
-                    <span className="font-headline-sm text-headline-sm text-primary font-bold">120.000đ</span>{' '}
-                  </div>{' '}
-                  <div className="grid grid-cols-2 gap-2">
-                    {' '}
-                    <button className="py-2 px-3 rounded-[0.125rem] bg-surface-container text-primary border border-border-gold-subtle font-label-md text-label-md hover:bg-surface-container-high transition-colors">
-                      Xem Menu
-                    </button>{' '}
-                    <button className="py-2 px-3 rounded-[0.125rem] bg-primary text-champagne-light font-label-md text-label-md hover:bg-primary-container transition-colors">
-                      Báo Giá Sỉ
-                    </button>{' '}
-                  </div>{' '}
-                </div>{' '}
-              </div>{' '}
-              <div className="rounded-[0.125rem] bg-surface-container-lowest border border-border-gold-subtle p-space-md shadow-sm hover:shadow-xl transition-all flex flex-col justify-between">
-                {' '}
-                <div className="flex flex-col gap-space-sm">
-                  {' '}
-                  <div className="relative h-48 w-full rounded-[0.125rem] overflow-hidden bg-surface-container border border-border-gold-subtle/50">
-                    {' '}
-                    <img
-                      className="w-full h-full object-cover"
-                      data-alt="Traditional Hanoi mooncake bakery Bao Phuong Thuy Khue showcasing classic white dẻo mooncakes and baked mooncakes with hot lotus tea"
-                      src="https://lh3.googleusercontent.com/aida-public/AB6AXuCK64I6hKVS2LPIHK-120AxQmOigJsvHn5pCPZ_E5DC-IDgERqppqV_VOTg8b0SCgAIqTDVznwePFej-CW7ERDLv5rT0E1WCHOTj1NBSl8zrGqwrdsOaJXY9yNZuIs-l6werg746IdxXAXYn3nV6d0QpVfrwR2Rjx7F_gIZKLRTJksyfxu6GYA7ZaQ1AlTtpWHnflwWUIQtDkul2-QUx62SNOWmvzTyFSa3dwJ8i6CYUGh_2I6SDaEH"
-                    />{' '}
-                    <div className="absolute top-2 right-2 px-2 py-0.5 rounded-[0.125rem] bg-primary/90 text-champagne-light border border-border-gold-subtle font-label-sm text-label-sm backdrop-blur-sm">
-                      Date mới hôm nay
-                    </div>{' '}
-                  </div>{' '}
-                  <div className="flex items-center justify-between pt-1">
-                    {' '}
-                    <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">
-                      Hà Nội • Từ 1954
-                    </span>{' '}
-                    <div className="flex items-center text-secondary font-semibold">
-                      {' '}
-                      <Icon name="star" className="text-[15px]" aria-hidden />{' '}
-                      <span className="font-label-md text-label-md ml-0.5">5.0 (2.8k)</span>{' '}
-                    </div>{' '}
-                  </div>{' '}
-                  <h3 className="font-headline-sm text-headline-sm text-primary">Bảo Phương Thụy Khuê</h3>{' '}
-                  <p className="font-body-sm text-body-sm text-on-surface-variant">
-                    Biểu tượng bánh trung thu thủ đô, hương hoa bưởi thanh khiết và vị mứt sen Tây Hồ khó quên.
-                  </p>{' '}
-                </div>{' '}
-                <div className="pt-space-md flex flex-col gap-2 mt-2">
-                  {' '}
-                  <div className="flex items-baseline justify-between">
-                    {' '}
-                    <span className="font-body-sm text-body-sm text-on-surface-variant">Bán lẻ từ:</span>{' '}
-                    <span className="font-headline-sm text-headline-sm text-primary font-bold">115.000đ</span>{' '}
-                  </div>{' '}
-                  <div className="grid grid-cols-2 gap-2">
-                    {' '}
-                    <button className="py-2 px-3 rounded-[0.125rem] bg-surface-container text-primary border border-border-gold-subtle font-label-md text-label-md hover:bg-surface-container-high transition-colors">
-                      Xem Menu
-                    </button>{' '}
-                    <button className="py-2 px-3 rounded-[0.125rem] bg-primary text-champagne-light font-label-md text-label-md hover:bg-primary-container transition-colors">
-                      Báo Giá Sỉ
-                    </button>{' '}
-                  </div>{' '}
-                </div>{' '}
-              </div>{' '}
-              <div className="rounded-[0.125rem] bg-surface-container-lowest border border-border-gold-subtle p-space-md shadow-sm hover:shadow-xl transition-all flex flex-col justify-between">
-                {' '}
-                <div className="flex flex-col gap-space-sm">
-                  {' '}
-                  <div className="relative h-48 w-full rounded-[0.125rem] overflow-hidden bg-surface-container border border-border-gold-subtle/50">
-                    {' '}
-                    <img
-                      className="w-full h-full object-cover"
-                      data-alt="Nhu Lan Saigon famous mooncake assortment box showing rich vi cá sharks fin, roast chicken and double salted egg yolk mooncakes"
-                      src="https://lh3.googleusercontent.com/aida-public/AB6AXuAI3SP894zQbHVNPNxMxuAJTpYeiO88yqIw44pgEeHYx0uufYTIrMOPnoYDBxACzhqQeiyQwXEcsiuG2rC3TAYxDsO9TecTiq9MRmHXHwL2l46mQtX3FkYzU4CVBDGfxVJx39IV2Bl6P8rk1Gc9CfgIWv7lkC-_YXpn_EjZhS9i6-br5rUXtr9a2GencmT5RARtFELsE0ajeyFN9jshtGC7IhNvAPFhO14cP8aQMBGkkHsejCYgMlVR"
-                    />{' '}
-                    <div className="absolute top-2 right-2 px-2 py-0.5 rounded-[0.125rem] bg-primary/90 text-champagne-light border border-border-gold-subtle font-label-sm text-label-sm backdrop-blur-sm">
-                      Date mới hôm nay
-                    </div>{' '}
-                  </div>{' '}
-                  <div className="flex items-center justify-between pt-1">
-                    {' '}
-                    <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">
-                      TP. Hồ Chí Minh • Từ 1968
-                    </span>{' '}
-                    <div className="flex items-center text-secondary font-semibold">
-                      {' '}
-                      <Icon name="star" className="text-[15px]" aria-hidden />{' '}
-                      <span className="font-label-md text-label-md ml-0.5">4.8 (3.1k)</span>{' '}
-                    </div>{' '}
-                  </div>{' '}
-                  <h3 className="font-headline-sm text-headline-sm text-primary">Bánh Như Lan Sài Gòn</h3>{' '}
-                  <p className="font-body-sm text-body-sm text-on-surface-variant">
-                    Thương hiệu nức tiếng phương Nam với dòng bánh Vi Cá, Gà Quay Jambon 2 trứng đậm đà.
-                  </p>{' '}
-                </div>{' '}
-                <div className="pt-space-md flex flex-col gap-2 mt-2">
-                  {' '}
-                  <div className="flex items-baseline justify-between">
-                    {' '}
-                    <span className="font-body-sm text-body-sm text-on-surface-variant">Bán lẻ từ:</span>{' '}
-                    <span className="font-headline-sm text-headline-sm text-primary font-bold">135.000đ</span>{' '}
-                  </div>{' '}
-                  <div className="grid grid-cols-2 gap-2">
-                    {' '}
-                    <button className="py-2 px-3 rounded-[0.125rem] bg-surface-container text-primary border border-border-gold-subtle font-label-md text-label-md hover:bg-surface-container-high transition-colors">
-                      Xem Menu
-                    </button>{' '}
-                    <button className="py-2 px-3 rounded-[0.125rem] bg-primary text-champagne-light font-label-md text-label-md hover:bg-primary-container transition-colors">
-                      Báo Giá Sỉ
-                    </button>{' '}
-                  </div>{' '}
-                </div>{' '}
-              </div>{' '}
-              <div className="rounded-[0.125rem] bg-surface-container-lowest border border-border-gold-subtle p-space-md shadow-sm hover:shadow-xl transition-all flex flex-col justify-between">
-                {' '}
-                <div className="flex flex-col gap-space-sm">
-                  {' '}
-                  <div className="relative h-48 w-full rounded-[0.125rem] overflow-hidden bg-surface-container border border-border-gold-subtle/50">
-                    {' '}
-                    <img
-                      className="w-full h-full object-cover"
-                      data-alt="Traditional Ba Dan Hang Be Hanoi artisanal baked mooncakes with classic lattice wooden molds and handmade packaging details"
-                      src="https://lh3.googleusercontent.com/aida-public/AB6AXuAUMfg0chgIY-tl6hKzgZnYgdgWbXjctWSj66RulWvViP5e71YAe8_qzJnuWO2FhHfZQL25pX4RaeqHFeuDSu2hees2g69qS1wG7eyl-D0YXH13zAnD1h-vRfRgkdAfwLo2U_j5N5IvJlYrKJfZsDf_na-FbI4jDBEEY8EpFLu1BuYibl15nH7FLXnETkqVo1TFYRaFifi1Z3Mr6YUxKZHIK5m6VR0akeB2NxEtiJa_1g48tgYWlWUI"
-                    />{' '}
-                    <div className="absolute top-2 right-2 px-2 py-0.5 rounded-[0.125rem] bg-primary/90 text-champagne-light border border-border-gold-subtle font-label-sm text-label-sm backdrop-blur-sm">
-                      Date mới hôm nay
-                    </div>{' '}
-                  </div>{' '}
-                  <div className="flex items-center justify-between pt-1">
-                    {' '}
-                    <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">
-                      Phố Cổ Hà Nội • Gia Truyền
-                    </span>{' '}
-                    <div className="flex items-center text-secondary font-semibold">
-                      {' '}
-                      <Icon name="star" className="text-[15px]" aria-hidden />{' '}
-                      <span className="font-label-md text-label-md ml-0.5">4.9 (950)</span>{' '}
-                    </div>{' '}
-                  </div>{' '}
-                  <h3 className="font-headline-sm text-headline-sm text-primary">Bánh Cổ Truyền Bà Dần</h3>{' '}
-                  <p className="font-body-sm text-body-sm text-on-surface-variant">
-                    Bí quyết nướng bánh thủ công mộc mạc thơm dẻo, lưu giữ ký ức rằm Trung Thu Hà Thành xưa.
-                  </p>{' '}
-                </div>{' '}
-                <div className="pt-space-md flex flex-col gap-2 mt-2">
-                  {' '}
-                  <div className="flex items-baseline justify-between">
-                    {' '}
-                    <span className="font-body-sm text-body-sm text-on-surface-variant">Bán lẻ từ:</span>{' '}
-                    <span className="font-headline-sm text-headline-sm text-primary font-bold">110.000đ</span>{' '}
-                  </div>{' '}
-                  <div className="grid grid-cols-2 gap-2">
-                    {' '}
-                    <button className="py-2 px-3 rounded-[0.125rem] bg-surface-container text-primary border border-border-gold-subtle font-label-md text-label-md hover:bg-surface-container-high transition-colors">
-                      Xem Menu
-                    </button>{' '}
-                    <button className="py-2 px-3 rounded-[0.125rem] bg-primary text-champagne-light font-label-md text-label-md hover:bg-primary-container transition-colors">
-                      Báo Giá Sỉ
-                    </button>{' '}
-                  </div>{' '}
-                </div>{' '}
-              </div>{' '}
-            </div>{' '}
+            <FeaturedShops shops={shops} loading={loading} />{' '}
           </div>{' '}
         </section>{' '}
         <section className="w-full bg-surface-container-low py-space-xl px-margin-mobile md:px-margin" id="b2b-rfq">
@@ -758,5 +441,74 @@ export function HomePage() {
         </section>{' '}
       </div>
     </>
+  )
+}
+
+const CARD = 'group relative rounded-[0.125rem] bg-surface-container-lowest border border-border-gold-subtle shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col justify-between overflow-hidden'
+
+function FeaturedProducts({ products, loading }: { products: Product[]; loading: boolean }) {
+  if (!loading && products.length === 0) {
+    return <p className="font-body-md text-body-md text-on-surface-variant">Chưa có sản phẩm đang bán.</p>
+  }
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-gutter" aria-busy={loading}>
+      {products.map((p) => (
+        <Link key={p.id} to={`${ROUTES.products}/${p.id}`} className={CARD}>
+          <div className="relative h-60 w-full overflow-hidden bg-surface-container">
+            {p.imageUrl && (
+              <img className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src={p.imageUrl} alt={p.imageAlt ?? p.name} loading="lazy" />
+            )}
+            <div className="absolute top-3 left-3 bg-primary/90 text-champagne-light border border-border-gold-subtle font-label-sm text-label-sm px-2.5 py-1 rounded-[0.125rem] uppercase tracking-wider backdrop-blur-sm">
+              {p.storeName}
+            </div>
+          </div>
+          <div className="p-space-md flex flex-col gap-2">
+            <h3 className="font-headline-sm text-headline-sm text-primary">{p.name}</h3>
+            {p.description && <p className="font-body-sm text-body-sm text-on-surface-variant line-clamp-2">{p.description}</p>}
+            <div className="pt-2 flex items-center justify-between">
+              <span className="font-label-md text-label-md text-secondary font-bold">Từ {formatVnd(minPrice(p))}</span>
+              <span className="w-8 h-8 rounded-[0.125rem] bg-surface-container flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-champagne-light transition-colors border border-border-gold-subtle">
+                <Icon name="arrow_forward" className="text-[17px]" aria-hidden />
+              </span>
+            </div>
+          </div>
+        </Link>
+      ))}
+    </div>
+  )
+}
+
+function FeaturedShops({ shops, loading }: { shops: Shop[]; loading: boolean }) {
+  if (!loading && shops.length === 0) return null
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-gutter" aria-busy={loading}>
+      {shops.map((shop) => (
+        <div key={shop.providerId} className="rounded-[0.125rem] bg-surface-container-lowest border border-border-gold-subtle p-space-md shadow-sm hover:shadow-xl transition-all flex flex-col justify-between">
+          <div className="flex flex-col gap-space-sm">
+            <div className="relative h-48 w-full rounded-[0.125rem] overflow-hidden bg-surface-container border border-border-gold-subtle/50">
+              {shop.imageUrl && <img className="w-full h-full object-cover" src={shop.imageUrl} alt={shop.storeName} loading="lazy" />}
+            </div>
+            <span className="pt-1 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">
+              {shop.productCount} sản phẩm đang bán
+            </span>
+            <h3 className="font-headline-sm text-headline-sm text-primary">{shop.storeName}</h3>
+          </div>
+          <div className="pt-space-md flex flex-col gap-2 mt-2">
+            <div className="flex items-baseline justify-between">
+              <span className="font-body-sm text-body-sm text-on-surface-variant">Bán lẻ từ:</span>
+              <span className="font-headline-sm text-headline-sm text-primary font-bold">{formatVnd(shop.minPrice)}</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <Link to={ROUTES.products} className="py-2 px-3 text-center rounded-[0.125rem] bg-surface-container text-primary border border-border-gold-subtle font-label-md text-label-md hover:bg-surface-container-high transition-colors">
+                Xem Menu
+              </Link>
+              <Link to={ROUTES.rfq} className="py-2 px-3 text-center rounded-[0.125rem] bg-primary text-champagne-light font-label-md text-label-md hover:bg-primary-container transition-colors">
+                Báo Giá Sỉ
+              </Link>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
   )
 }
