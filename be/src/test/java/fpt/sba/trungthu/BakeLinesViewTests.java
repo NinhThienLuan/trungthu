@@ -83,8 +83,8 @@ class BakeLinesViewTests {
         box.setVariantName("New set name");
         box.getProduct().setName("New product name");
         cake.getProduct().setName("Renamed cake");
-        cake.getProduct().setStatus(ProductStatus.HIDDEN);
-        cake.setStatus(ProductStatus.HIDDEN);
+        cake.getProduct().setStatus(ProductStatus.ARCHIVED);
+        cake.setStatus(VariantStatus.OUT_OF_STOCK);
 
         List<Map<String, Object>> lines = lines(provider, delivery.minusDays(1));
         assertThat(lines).hasSize(2);
@@ -180,7 +180,7 @@ class BakeLinesViewTests {
         entityManager.persist(product);
         ProductVariant variant = ProductVariant.builder().product(product).variantName(variantName)
                 .sku(UUID.randomUUID().toString()).price(new BigDecimal("10000"))
-                .boxCapacity(capacity).status(ProductStatus.ACTIVE).build();
+                .boxCapacity(capacity).status(VariantStatus.IN_STOCK).build();
         entityManager.persist(variant);
         return variant;
     }
