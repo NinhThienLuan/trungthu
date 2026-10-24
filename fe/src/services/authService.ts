@@ -107,6 +107,17 @@ export const authService = {
     return { accessToken: 'mock', tokenType: 'Bearer', expiresInSeconds: 900, user }
   },
 
+  /** ID token từ nút Google; BE kiểm tra chữ ký + client id, tạo tài khoản CUSTOMER nếu chưa có */
+  loginWithGoogle: async (idToken: string): Promise<AuthResult> => {
+    if (!USE_MOCK.auth) {
+      return unwrap(http.post<ApiResponse<AuthResult>>('/auth/google', { idToken }))
+    }
+    await delay(300)
+    const user = DEMO_USERS['buyer@gmail.com']
+    writeStore(SESSION_KEY, user)
+    return { accessToken: 'mock', tokenType: 'Bearer', expiresInSeconds: 900, user }
+  },
+
   /** BE tự sinh mật khẩu và gửi qua email */
   register: async (body: { email: string; fullName: string; phone?: string }): Promise<User> => {
     if (!USE_MOCK.auth) {

@@ -8,6 +8,7 @@ interface AuthState {
   ready: boolean
   init: () => Promise<void>
   login: (email: string, password: string) => Promise<User>
+  loginWithGoogle: (idToken: string) => Promise<User>
   logout: () => Promise<void>
 }
 
@@ -27,6 +28,12 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   login: async (email, password) => {
     const { user } = await authService.login(email, password)
+    set({ user })
+    return user
+  },
+
+  loginWithGoogle: async (idToken) => {
+    const { user } = await authService.loginWithGoogle(idToken)
     set({ user })
     return user
   },

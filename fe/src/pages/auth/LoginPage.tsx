@@ -7,10 +7,13 @@ import { fieldErrors, loginSchema } from '../../schemas'
 import { ROUTES } from '../../constants'
 import { TextInput } from '../../components/ui/Field'
 import { Notice } from '../../components/ui/States'
+import { GoogleLoginButton } from '../../components/GoogleLoginButton'
+import type { User } from '../../types/user'
 
 export function LoginPage() {
   useDocumentTitle('Đăng nhập')
   const login = useAuthStore((s) => s.login)
+  const loginWithGoogle = useAuthStore((s) => s.loginWithGoogle)
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const [email, setEmail] = useState('')
@@ -23,36 +26,37 @@ export function LoginPage() {
   const next = params.get('next')
   const target = next && next.startsWith('/') && !next.startsWith('//') ? next : ROUTES.home
 
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+  // Điều hướng thông minh theo vai trò nếu không có tham số next
+  const goAfterLogin = (user: User) => {
+    if (!next && user.role === 'PLATFORM_ADMIN') return navigate('/admin/kyc', { replace: true })
+    if (!next && user.role === 'PROVIDER') return navigate('/seller', { replace: true })
+    navigate(target, { replace: true })
+  }
+
+  const run = async (action: () => Promise<User>, fallbackError: string) => {
+    setErrors({})
+    setSubmitError(undefined)
+    setSubmitting(true)
+    try {
+      goAfterLogin(await action())
+    } catch (err) {
+      setSubmitError(errorMessage(err, fallbackError))
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const parsed = loginSchema.safeParse({ email, password })
     if (!parsed.success) {
       setErrors(fieldErrors(parsed.error))
       return
     }
-    setErrors({})
-    setSubmitError(undefined)
-    setSubmitting(true)
-    try {
-      const user = await login(parsed.data.email, parsed.data.password)
-      // Điều hướng thông minh theo vai trò nếu không có tham số next
-      if (!next) {
-        if (user.role === 'PLATFORM_ADMIN') {
-          navigate('/admin/kyc', { replace: true })
-          return
-        }
-        if (user.role === 'PROVIDER') {
-          navigate('/seller', { replace: true })
-          return
-        }
-      }
-      navigate(target, { replace: true })
-    } catch (err) {
-      setSubmitError(errorMessage(err, 'Email hoặc mật khẩu không đúng'))
-    } finally {
-      setSubmitting(false)
-    }
+    void run(() => login(parsed.data.email, parsed.data.password), 'Email hoặc mật khẩu không đúng')
   }
+
+  const handleGoogle = (idToken: string) => void run(() => loginWithGoogle(idToken), 'Đăng nhập Google thất bại')
 
   return (
     <>
@@ -97,6 +101,9 @@ export function LoginPage() {
           {submitting ? 'Đang đăng nhập...' : 'Đăng nhập'}
         </button>
       </form>
+      <div className="mt-4">
+        <GoogleLoginButton onCredential={handleGoogle} />
+      </div>
       <p className="mt-6 text-center text-small text-muted">
         Chưa có tài khoản?{' '}
         <Link to={ROUTES.register} className="font-semibold text-navy underline">
