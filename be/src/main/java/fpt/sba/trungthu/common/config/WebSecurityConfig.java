@@ -56,6 +56,7 @@ public class WebSecurityConfig {
             "/api/auth/google",
             "/api/auth/authenticate/**",
             "/api/auth/forgot-password",
+            "/api/auth/verify-otp",
             "/api/auth/reset-password",
             "/api/public/**"
     };

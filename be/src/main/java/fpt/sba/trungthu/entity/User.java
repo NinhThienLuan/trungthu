@@ -7,6 +7,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.Check;
+import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.Nationalized;
 
 @Entity
@@ -61,6 +62,12 @@ public class User extends BaseEntity {
     @Builder.Default
     @Column(name = "is_season_active", nullable = false)
     private Boolean isSeasonActive = true;
+
+    /** Đăng ký nhận mật khẩu tạm qua email -> phải đổi mật khẩu ở lần đăng nhập đầu */
+    @Builder.Default
+    @ColumnDefault("0")
+    @Column(name = "require_password_change", nullable = false)
+    private Boolean requirePasswordChange = false;
 
     @Builder.Default
     @Enumerated(EnumType.STRING)

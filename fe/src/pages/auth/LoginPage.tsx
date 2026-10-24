@@ -4,7 +4,7 @@ import { errorMessage } from '../../apis/http'
 import { useAuthStore } from '../../stores/authStore'
 import { useDocumentTitle } from '../../hooks/useDocumentTitle'
 import { fieldErrors, loginSchema } from '../../schemas'
-import { ROUTES } from '../../constants'
+import { HOME_BY_ROLE, ROUTES } from '../../constants'
 import { TextInput } from '../../components/ui/Field'
 import { Notice } from '../../components/ui/States'
 import { GoogleLoginButton } from '../../components/GoogleLoginButton'
@@ -26,11 +26,10 @@ export function LoginPage() {
   const next = params.get('next')
   const target = next && next.startsWith('/') && !next.startsWith('//') ? next : ROUTES.home
 
-  // Điều hướng thông minh theo vai trò nếu không có tham số next
+  // Mật khẩu tạm -> bắt đổi trước; còn lại về `next` hoặc trang theo vai trò
   const goAfterLogin = (user: User) => {
-    if (!next && user.role === 'PLATFORM_ADMIN') return navigate('/admin/kyc', { replace: true })
-    if (!next && user.role === 'PROVIDER') return navigate('/seller', { replace: true })
-    navigate(target, { replace: true })
+    if (user.requirePasswordChange) return navigate(ROUTES.changePassword, { replace: true })
+    navigate(next ? target : HOME_BY_ROLE[user.role], { replace: true })
   }
 
   const run = async (action: () => Promise<User>, fallbackError: string) => {
@@ -63,12 +62,12 @@ export function LoginPage() {
       <h1 className="text-h2">Đăng nhập</h1>
       {params.get('reset') && (
         <div className="mt-4">
-          <Notice tone="success">Đã đặt lại mật khẩu. Đăng nhập bằng mật khẩu mới.</Notice>
+          <Notice tone="success">Đặt lại mật khẩu thành công. Đăng nhập bằng mật khẩu mới.</Notice>
         </div>
       )}
       {params.get('registered') && (
         <div className="mt-4">
-          <Notice tone="success">Đăng ký thành công. Mật khẩu đã được gửi tới email của bạn.</Notice>
+          <Notice tone="success">Đăng ký thành công. Mật khẩu tạm đã gửi tới email, đăng nhập rồi đổi mật khẩu.</Notice>
         </div>
       )}
 

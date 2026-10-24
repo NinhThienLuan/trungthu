@@ -108,22 +108,28 @@ public class AuthController {
             @Valid @RequestBody ChangePasswordRequest request,
             Authentication authentication) {
         authService.changePassword(authentication.getName(), request);
-        return ResponseEntity.ok(ApiResponseDTO.success("Password changed successfully", null));
+        return ResponseEntity.ok(ApiResponseDTO.success("Đổi mật khẩu thành công", null));
     }
 
     @PostMapping("/forgot-password")
-    @Operation(summary = "Email a one-time password reset token (always 200, even for unknown emails)")
+    @Operation(summary = "Bước 1: gửi OTP 6 số (hiệu lực 10 phút) tới email đã đăng ký")
     public ResponseEntity<ApiResponseDTO<String>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
         authService.forgotPassword(request);
-        return ResponseEntity.ok(ApiResponseDTO.success(
-                "If this email is registered, a password reset token has been sent", null));
+        return ResponseEntity.ok(ApiResponseDTO.success("Đã gửi mã OTP tới email", null));
+    }
+
+    @PostMapping("/verify-otp")
+    @Operation(summary = "Bước 2: kiểm tra OTP (chưa đánh dấu đã dùng)")
+    public ResponseEntity<ApiResponseDTO<String>> verifyOtp(@Valid @RequestBody VerifyOtpRequest request) {
+        authService.verifyOtp(request);
+        return ResponseEntity.ok(ApiResponseDTO.success("Mã OTP hợp lệ", null));
     }
 
     @PostMapping("/reset-password")
-    @Operation(summary = "Set a new password using the reset token from the email")
+    @Operation(summary = "Bước 3: đặt mật khẩu mới bằng OTP đã xác minh (không cần mật khẩu cũ)")
     public ResponseEntity<ApiResponseDTO<String>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         authService.resetPassword(request);
-        return ResponseEntity.ok(ApiResponseDTO.success("Password has been reset successfully", null));
+        return ResponseEntity.ok(ApiResponseDTO.success("Đặt lại mật khẩu thành công", null));
     }
 
     @PostMapping("/logout")

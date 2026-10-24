@@ -29,6 +29,8 @@ public class UserResponse implements Serializable {
     private fpt.sba.trungthu.entity.enumeration.UserStatus status;
     private Boolean isComplianceApproved;
     private Boolean isSeasonActive;
+    /** true -> FE chuyển thẳng tới /change-password sau khi đăng nhập */
+    private Boolean requirePasswordChange;
     private LocalDateTime createdAt;
 
     public static UserResponse fromEntity(User user) {
@@ -49,6 +51,7 @@ public class UserResponse implements Serializable {
                 .status(user.getStatus())
                 .isComplianceApproved(user.getIsComplianceApproved())
                 .isSeasonActive(user.getIsSeasonActive())
+                .requirePasswordChange(user.getRequirePasswordChange())
                 .createdAt(user.getCreatedAt())
                 .build();
     }

@@ -18,6 +18,12 @@ public interface AuthService {
     void logout(HttpServletResponse response);
     void changePassword(String email, ChangePasswordRequest request);
     AuthResponse authenticate(fpt.sba.trungthu.dto.request.AuthGatewayRequest request, HttpServletResponse response);
+    /** Bước 1: gửi OTP 6 số (10 phút) tới email đã đăng ký */
     void forgotPassword(ForgotPasswordRequest request);
+
+    /** Bước 2: kiểm tra OTP, chưa đánh dấu đã dùng */
+    void verifyOtp(fpt.sba.trungthu.dto.request.VerifyOtpRequest request);
+
+    /** Bước 3: kiểm tra lại OTP rồi đặt mật khẩu mới, OTP dùng một lần */
     void resetPassword(ResetPasswordRequest request);
 }

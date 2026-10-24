@@ -23,7 +23,8 @@ export const ICON_NAMES = [
   'severe_cold', 'shield', 'shopping_bag', 'shopping_cart', 'soup_kitchen', 'star', 'star_border', 'star_half',
   'stars', 'store', 'storefront', 'support_agent', 'sync', 'table_view', 'task_alt', 'thermostat', 'timer_10',
   'token', 'trending_down', 'trending_up', 'tune', 'two_wheeler', 'unfold_more', 'upload_file', 'verified',
-  'verified_user', 'view_agenda', 'visibility', 'warning', 'wb_twilight', 'wine_bar', 'workspace_premium',
+  'verified_user', 'view_agenda', 'visibility',
+  'visibility_off', 'warning', 'wb_twilight', 'wine_bar', 'workspace_premium',
 ] as const
 
 export const ICON_SET: ReadonlySet<string> = new Set(ICON_NAMES)

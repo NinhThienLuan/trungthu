@@ -1,5 +1,6 @@
 import type { ProductType } from '../types/product'
 import type { OrderPaymentStatus, OrderStatus, PaymentMethod } from '../types/order'
+import type { UserRole } from '../types/user'
 
 export const BRAND = 'Nguyệt Viên Đài'
 
@@ -24,9 +25,24 @@ export const ROUTES = {
   policy: '/policy',
   login: '/login',
   register: '/register',
+  // Quên mật khẩu (README 3.2): email -> OTP -> mật khẩu mới
   forgotPassword: '/forgot-password',
-  changePassword: '/account/password',
+  verifyCode: '/verify-code',
+  resetPassword: '/reset-password',
+  changePassword: '/change-password',
 } as const
+
+/** Trang đích sau khi đăng nhập / đổi mật khẩu, theo vai trò */
+export const HOME_BY_ROLE: Record<UserRole, string> = {
+  CUSTOMER: '/',
+  PROVIDER: '/seller',
+  PLATFORM_ADMIN: '/admin/kyc',
+}
+
+/** OTP quên mật khẩu: 6 số, hiệu lực 10 phút, gửi lại sau 60 giây (khớp AuthServiceImpl) */
+export const OTP_LENGTH = 6
+export const OTP_EXPIRE_SECONDS = 600
+export const OTP_RESEND_SECONDS = 60
 
 export const PRODUCT_TYPE_LABEL: Record<ProductType, string> = {
   LOOSE_CAKE: 'Bánh lẻ',

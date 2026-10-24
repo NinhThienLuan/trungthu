@@ -27,6 +27,11 @@ export function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
     return <Navigate to={`${ROUTES.login}?next=${next}`} replace />
   }
 
+  // Mật khẩu tạm (vừa đăng ký): chỉ cho vào trang đổi mật khẩu
+  if (user.requirePasswordChange && location.pathname !== ROUTES.changePassword) {
+    return <Navigate to={ROUTES.changePassword} replace />
+  }
+
   if (allowedRoles && allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
     return (
       <div className="min-h-[70vh] flex items-center justify-center p-6">

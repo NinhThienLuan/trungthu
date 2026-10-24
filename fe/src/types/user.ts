@@ -9,6 +9,8 @@ export interface User {
   storeName: string | null
   address: string | null
   status: string
+  /** Đăng ký nhận mật khẩu tạm qua email -> phải đổi ở lần đăng nhập đầu */
+  requirePasswordChange?: boolean
 }
 
 export interface AuthResult {

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { createBrowserRouter } from 'react-router-dom'
 import { UserLayout } from '../components/layouts/UserLayout'
+import { ROUTES } from '../constants'
 import { AuthLayout } from '../components/layouts/AuthLayout'
 import { AdminLayout } from '../components/layouts/AdminLayout'
 import { ProtectedRoute } from './ProtectedRoute'
@@ -13,6 +14,8 @@ import { PolicyPage } from '../pages/user/PolicyPage'
 import { LoginPage } from '../pages/auth/LoginPage'
 import { RegisterPage } from '../pages/auth/RegisterPage'
 import { ForgotPasswordPage } from '../pages/auth/ForgotPasswordPage'
+import { VerifyCodePage } from '../pages/auth/VerifyCodePage'
+import { ResetPasswordPage } from '../pages/auth/ResetPasswordPage'
 import { ChangePasswordPage } from '../pages/user/ChangePasswordPage'
 import { NotFoundPage } from '../pages/NotFoundPage'
 import { StitchPage } from '../components/layouts/StitchPage'
@@ -55,7 +58,7 @@ export const router = createBrowserRouter([
           { path: '/checkout', element: <CheckoutPage /> },
           { path: '/payment', element: <PaymentPage /> },
           { path: '/orders', element: <MyOrdersPage /> },
-          { path: '/account/password', element: <ChangePasswordPage /> },
+          { path: ROUTES.changePassword, element: <ChangePasswordPage /> },
           { path: '/orders/:id', element: <OrderDetailPage /> },
         ],
       },
@@ -92,7 +95,10 @@ export const router = createBrowserRouter([
     children: [
       { path: '/login', element: <LoginPage /> },
       { path: '/register', element: <RegisterPage /> },
-      { path: '/forgot-password', element: <ForgotPasswordPage /> },
+      // Quên mật khẩu: email -> OTP -> mật khẩu mới (README 3.2)
+      { path: ROUTES.forgotPassword, element: <ForgotPasswordPage /> },
+      { path: ROUTES.verifyCode, element: <VerifyCodePage /> },
+      { path: ROUTES.resetPassword, element: <ResetPasswordPage /> },
     ],
   },
 ])

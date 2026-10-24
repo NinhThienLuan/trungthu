@@ -150,7 +150,7 @@ export const authService = {
     writeStore(SESSION_KEY, null)
   },
 
-  /** POST /auth/forgot-password — BE gửi mã reset qua email (luôn trả 200, không lộ email có tồn tại hay không) */
+  /** Quên mật khẩu B1: POST /auth/forgot-password — gửi OTP 6 số (10 phút). Email chưa đăng ký -> 404 */
   forgotPassword: async (email: string): Promise<void> => {
     if (!USE_MOCK.auth) {
       await http.post('/auth/forgot-password', { email })
@@ -159,10 +159,20 @@ export const authService = {
     await delay(400)
   },
 
-  /** POST /auth/reset-password — mã reset từ email + mật khẩu mới (6–50 ký tự) */
-  resetPassword: async (token: string, newPassword: string): Promise<void> => {
+  /** Quên mật khẩu B2: POST /auth/verify-otp — kiểm tra OTP, chưa dùng mã */
+  verifyOtp: async (email: string, otp: string): Promise<void> => {
     if (!USE_MOCK.auth) {
-      await http.post('/auth/reset-password', { token, newPassword })
+      await http.post('/auth/verify-otp', { email, otp })
+      return
+    }
+    await delay(300)
+    if (otp !== '123456') throw new Error('Mã OTP không đúng (mock: 123456)')
+  },
+
+  /** Quên mật khẩu B3: POST /auth/reset-password — BE kiểm tra lại OTP rồi đặt mật khẩu mới */
+  resetPassword: async (email: string, otp: string, newPassword: string): Promise<void> => {
+    if (!USE_MOCK.auth) {
+      await http.post('/auth/reset-password', { email, otp, newPassword })
       return
     }
     await delay(400)

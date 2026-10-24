@@ -16,10 +16,11 @@ export const loginSchema = z.object({
   password: z.string().min(1, 'Vui lòng nhập mật khẩu'),
 })
 
+// Đăng ký chỉ 3 ô (không có mật khẩu): BE gửi mật khẩu tạm qua email
 export const registerSchema = z.object({
+  phone,
   fullName: required('họ tên').max(255),
   email,
-  phone,
 })
 
 const vatSchema = z.object({
@@ -32,26 +33,35 @@ const vatSchema = z.object({
   invoiceEmail: email,
 })
 
-// Mật khẩu mới: 6–50 ký tự như ResetPasswordRequest / ChangePasswordRequest của BE
-const newPassword = z.string().min(6, 'Mật khẩu tối thiểu 6 ký tự').max(50, 'Mật khẩu tối đa 50 ký tự')
+// Mật khẩu mới: khớp PasswordPolicy của BE (8–50 ký tự, hoa, thường, số, ký tự đặc biệt @$!%*?&#)
+export const PASSWORD_RULES = [
+  { test: (v: string) => v.length >= 8 && v.length <= 50, label: '8–50 ký tự' },
+  { test: (v: string) => /[A-Z]/.test(v), label: 'Chữ hoa' },
+  { test: (v: string) => /[a-z]/.test(v), label: 'Chữ thường' },
+  { test: (v: string) => /\d/.test(v), label: 'Chữ số' },
+  { test: (v: string) => /[@$!%*?&#]/.test(v), label: 'Ký tự đặc biệt @$!%*?&#' },
+]
+const strongPassword = z
+  .string()
+  .min(1, 'Vui lòng nhập mật khẩu mới')
+  .refine((v) => PASSWORD_RULES.every((r) => r.test(v)), 'Mật khẩu chưa đủ mạnh, xem các yêu cầu bên dưới')
+const matches = { path: ['confirmPassword'], message: 'Mật khẩu nhập lại không khớp' }
 
 export const forgotPasswordSchema = z.object({ email })
 
+export const otpSchema = z.string().regex(/^\d{6}$/, 'Vui lòng nhập đủ 6 chữ số')
+
 export const resetPasswordSchema = z
-  .object({
-    token: z.string().trim().min(1, 'Vui lòng dán mã trong email'),
-    newPassword,
-    confirmPassword: z.string(),
-  })
-  .refine((d) => d.newPassword === d.confirmPassword, { path: ['confirmPassword'], message: 'Mật khẩu nhập lại không khớp' })
+  .object({ newPassword: strongPassword, confirmPassword: z.string() })
+  .refine((d) => d.newPassword === d.confirmPassword, matches)
 
 export const changePasswordSchema = z
   .object({
     oldPassword: z.string().min(1, 'Vui lòng nhập mật khẩu hiện tại'),
-    newPassword,
+    newPassword: strongPassword,
     confirmPassword: z.string(),
   })
-  .refine((d) => d.newPassword === d.confirmPassword, { path: ['confirmPassword'], message: 'Mật khẩu nhập lại không khớp' })
+  .refine((d) => d.newPassword === d.confirmPassword, matches)
   .refine((d) => d.newPassword !== d.oldPassword, { path: ['newPassword'], message: 'Mật khẩu mới phải khác mật khẩu hiện tại' })
 
 export const checkoutSchema = z.object({

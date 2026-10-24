@@ -1,7 +1,7 @@
 package fpt.sba.trungthu.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.Pattern;
 import lombok.*;
 
 import java.io.Serializable;
@@ -14,10 +14,10 @@ import java.io.Serializable;
 public class ChangePasswordRequest implements Serializable {
     private static final long serialVersionUID = 1L;
 
-    @NotBlank(message = "Old password cannot be blank")
+    @NotBlank(message = "Vui lòng nhập mật khẩu hiện tại")
     private String oldPassword;
 
-    @NotBlank(message = "New password cannot be blank")
-    @Size(min = 6, max = 50, message = "Password must be between 6 and 50 characters")
+    @NotBlank(message = "Vui lòng nhập mật khẩu mới")
+    @Pattern(regexp = PasswordPolicy.REGEX, message = PasswordPolicy.MESSAGE)
     private String newPassword;
 }

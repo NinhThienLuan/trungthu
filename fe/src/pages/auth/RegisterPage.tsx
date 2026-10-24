@@ -38,11 +38,11 @@ export function RegisterPage() {
   return (
     <>
       <h1 className="text-h2">Tạo tài khoản</h1>
-      <p className="mt-2 text-small text-muted">Mật khẩu sẽ được gửi tới email sau khi đăng ký.</p>
+      <p className="mt-2 text-small text-muted">Mật khẩu tạm sẽ được gửi tới email. Lần đăng nhập đầu bạn cần đổi mật khẩu.</p>
       <form noValidate onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
+        <TextInput label="Số điện thoại" name="phone" type="tel" autoComplete="tel" placeholder="0912345678" error={errors.phone} />
         <TextInput label="Họ tên" name="fullName" autoComplete="name" error={errors.fullName} />
-        <TextInput label="Email" name="email" type="email" autoComplete="email" error={errors.email} />
-        <TextInput label="Số điện thoại" name="phone" type="tel" autoComplete="tel" error={errors.phone} />
+        <TextInput label="Email" name="email" type="email" autoComplete="email" placeholder="name@example.com" error={errors.email} />
         {submitError && <Notice tone="danger">{submitError}</Notice>}
         <button type="submit" className="btn btn-primary w-full" disabled={submitting}>
           {submitting ? 'Đang tạo...' : 'Đăng ký'}

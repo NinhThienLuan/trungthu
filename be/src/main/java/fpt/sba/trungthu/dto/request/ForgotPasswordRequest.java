@@ -14,7 +14,7 @@ import java.io.Serializable;
 public class ForgotPasswordRequest implements Serializable {
     private static final long serialVersionUID = 1L;
 
-    @NotBlank(message = "Email cannot be blank")
-    @Email(message = "Email should be valid")
+    @NotBlank(message = "Vui lòng nhập email")
+    @Email(message = "Email không hợp lệ")
     private String email;
 }

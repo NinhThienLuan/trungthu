@@ -17,7 +17,6 @@ import java.util.UUID;
 @Service
 public class JwtService {
 
-    public static final int PASSWORD_RESET_EXP_MINUTES = 15;
 
     private final JwtProperties jwtProperties;
     private final SecretKey key;
@@ -57,22 +56,6 @@ public class JwtService {
                         "uid", user.getId().toString(),
                         "role", "ROLE_" + user.getRole().name(),
                         "typ", "refresh"))
-                .issuedAt(Date.from(now))
-                .expiration(Date.from(exp))
-                .signWith(key, Jwts.SIG.HS256)
-                .compact();
-    }
-
-    // "pwd" ties the token to the current password hash, so it stops working once the password changes (single use)
-    public String generatePasswordResetToken(User user, String passwordFingerprint) {
-        Instant now = Instant.now();
-        Instant exp = now.plus(PASSWORD_RESET_EXP_MINUTES, ChronoUnit.MINUTES);
-
-        return Jwts.builder()
-                .subject(user.getEmail())
-                .claims(Map.of(
-                        "pwd", passwordFingerprint,
-                        "typ", "reset"))
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(exp))
                 .signWith(key, Jwts.SIG.HS256)
