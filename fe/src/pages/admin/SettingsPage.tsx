@@ -8,7 +8,6 @@ import { TextInput } from '../../components/ui/Field'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { ErrorState, Notice, Spinner } from '../../components/ui/States'
 
-const vnd = (n: number) => `${Math.round(n).toLocaleString('vi-VN')}₫`
 const today = () => toIsoDate(new Date())
 
 /** Một khối form: gửi, báo lỗi/thành công tại chỗ */
@@ -50,7 +49,7 @@ function Section({ title, hint, submitLabel, onSubmit, children }: {
   )
 }
 
-/** Seller: những cấu hình bắt buộc để buyer checkout được (năng lực nướng, phí giao, tài khoản nhận VietQR) */
+/** Seller: những cấu hình bắt buộc để buyer checkout được (năng lực nướng, tài khoản nhận VietQR) */
 export function SettingsPage() {
   useDocumentTitle('Cài đặt bán hàng')
   const { data, loading, error, reload } = useApi(() => sellerSettingsService.get(), [])
@@ -66,7 +65,7 @@ export function SettingsPage() {
   return (
     <div className="page section flex flex-col gap-6">
       <PageHeader eyebrow="Gian hàng" title="Cài đặt bán hàng"
-        description="Thiếu năng lực nướng hoặc phí giao thì khách không đặt được hàng." />
+        description="Thiếu năng lực nướng thì khách không đặt được hàng. Phí giao do sàn áp dụng: nội thành TP.HCM 35.000₫, nơi khác 70.000₫." />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Section
@@ -86,32 +85,6 @@ export function SettingsPage() {
           </div>
         </Section>
 
-        <Section
-          title="Phí giao theo khu vực"
-          hint="Khách nhập đúng tỉnh/thành và quận/huyện này ở bước thanh toán."
-          submitLabel="Lưu phí giao"
-          onSubmit={async (f) => {
-            await sellerSettingsService.setShippingRate({ province: f.province, district: f.district, fee: Number(f.fee) })
-            reload()
-            return 'Đã lưu phí giao.'
-          }}
-        >
-          {data.shippingRates.length > 0 && (
-            <ul className="flex flex-col gap-1 text-small">
-              {data.shippingRates.map((r) => (
-                <li key={`${r.province}-${r.district}`} className="flex justify-between gap-4">
-                  <span className="capitalize">{r.district}, {r.province}</span>
-                  <span className="font-semibold">{vnd(r.fee)}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-          <div className="grid gap-4 sm:grid-cols-3">
-            <TextInput label="Tỉnh/thành" name="province" required />
-            <TextInput label="Quận/huyện" name="district" required />
-            <TextInput label="Phí (₫)" name="fee" type="number" min={0} step={1000} required />
-          </div>
-        </Section>
 
         <Section
           title="Tài khoản nhận tiền (VietQR)"

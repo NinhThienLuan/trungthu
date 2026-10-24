@@ -3,10 +3,11 @@ import { orderService } from '../../services/orderService'
 import { useApi } from '../../hooks/useApi'
 import { useDocumentTitle } from '../../hooks/useDocumentTitle'
 import { PAYMENT_METHOD_LABEL, ROUTES } from '../../constants'
-import { formatDate } from '../../lib/format'
+import { formatDate, formatVnd } from '../../lib/format'
 import { OrderPaymentPanel } from '../../components/OrderPaymentPanel'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { ErrorState, Spinner } from '../../components/ui/States'
+import type { OrderDetail } from '../../types/order'
 
 /** Sau Checkout: mỗi xưởng một đơn và một mã thanh toán riêng. */
 export function PaymentPage() {
@@ -43,7 +44,10 @@ export function PaymentPage() {
                   Nhận {formatDate(order.deliveryDate)} · {PAYMENT_METHOD_LABEL[order.paymentMethod]}
                 </p>
               </div>
-              <OrderPaymentPanel order={order} />
+              <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
+                <OrderPaymentPanel order={order} />
+                <OrderSummary order={order} />
+              </div>
             </section>
           ))}
           <Link to={ROUTES.orders} className="btn btn-outline self-start">
@@ -51,6 +55,31 @@ export function PaymentPage() {
           </Link>
         </div>
       )}
+    </div>
+  )
+}
+
+/** Món trong đơn + tạm tính, phí giao, tổng (số liệu của BE) */
+function OrderSummary({ order }: { order: OrderDetail }) {
+  return (
+    <div className="rounded-sm border border-line p-4 text-small">
+      <h3 className="font-semibold text-navy">Chi tiết đơn hàng</h3>
+      <ul className="mt-3 flex flex-col gap-2">
+        {order.lines.map((line, i) => (
+          <li key={`${line.variantId}-${i}`} className="flex justify-between gap-3">
+            <span>
+              {line.productName} <span className="text-muted">· {line.variantName} × {line.quantity}</span>
+            </span>
+            <span className="shrink-0">{formatVnd(line.subtotal)}</span>
+          </li>
+        ))}
+      </ul>
+      <dl className="mt-3 flex flex-col gap-1 border-t border-line pt-3">
+        <div className="flex justify-between text-muted"><dt>Tạm tính</dt><dd>{formatVnd(order.subtotalAmount)}</dd></div>
+        <div className="flex justify-between text-muted"><dt>Phí giao hàng</dt><dd>{formatVnd(order.shippingFee)}</dd></div>
+        <div className="flex justify-between font-semibold text-navy"><dt>Tổng cộng</dt><dd>{formatVnd(order.totalAmount)}</dd></div>
+      </dl>
+      <p className="mt-3 text-muted">Giao tới: {order.receiverName} · {order.receiverPhone}<br />{order.shippingAddress}</p>
     </div>
   )
 }

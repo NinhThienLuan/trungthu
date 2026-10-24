@@ -41,7 +41,6 @@ class CheckoutFlowTests {
     @Autowired private ProductRepository products;
     @Autowired private ProductVariantRepository variants;
     @Autowired private DailyCapacityRepository capacities;
-    @Autowired private ProviderShippingRateRepository rates;
     @Autowired private SubscriptionRepository subscriptions;
     @Autowired private OrderRepository orders;
     @Autowired private PaymentTransactionRepository payments;
@@ -77,7 +76,7 @@ class CheckoutFlowTests {
         CheckoutRequest request = request();
         CheckoutPreviewResponse preview = checkout.preview(request);
         assertThat(preview.groups()).hasSize(2);
-        assertThat(preview.grandTotal()).isEqualByComparingTo("440000");
+        assertThat(preview.grandTotal()).isEqualByComparingTo("490000");
         assertThat(variants.findById(cake.getId()).orElseThrow().getStockQuantity()).isEqualTo(10);
         assertThat(capacities.findById(cakeCapacity.getId()).orElseThrow().getReservedQuantity()).isZero();
 
@@ -90,12 +89,12 @@ class CheckoutFlowTests {
         assertThat(cod.getOrderStatus()).isEqualTo(OrderStatus.CONFIRMED);
         assertThat(qr.getOrderStatus()).isEqualTo(OrderStatus.PENDING_DEPOSIT);
         assertThat(qr.getHoldExpiresAt()).isEqualTo(qr.getOrderedAt().plusSeconds(5 * 60 * 60));
-        assertThat(qr.getDepositAmount()).isEqualByComparingTo("115000");
+        assertThat(qr.getDepositAmount()).isEqualByComparingTo("127500");
         when(security.getCurrentUserId()).thenReturn(customer.getId());
         var instruction = vietQr.getVietQr(qr.getId()).getBody().getData();
-        assertThat(instruction.amount()).isEqualByComparingTo("115000");
+        assertThat(instruction.amount()).isEqualByComparingTo("127500");
         assertThat(instruction.imageUrl()).contains("img.vietqr.io/image/VCB-123456789-compact2.svg")
-                .contains("amount=115000");
+                .contains("amount=127500");
         assertThat(variants.findById(cake.getId()).orElseThrow().getStockQuantity()).isEqualTo(8);
         assertThat(capacities.findById(cakeCapacity.getId()).orElseThrow().getReservedQuantity()).isEqualTo(2);
         assertThat(capacities.findById(boxCapacity.getId()).orElseThrow().getReservedQuantity()).isEqualTo(2);
@@ -133,14 +132,14 @@ class CheckoutFlowTests {
         Order qr = created.stream().map(detail -> orders.findById(detail.getId()).orElseThrow())
                 .filter(order -> order.getPaymentMethod() == PaymentMethod.VIETQR).findFirst().orElseThrow();
         when(security.getCurrentUser()).thenReturn(users.findById(qr.getProvider().getId()).orElseThrow());
-        lifecycle.confirmDeposit(qr.getId(), new BigDecimal("115000"));
+        lifecycle.confirmDeposit(qr.getId(), new BigDecimal("127500"));
         assertThat(orders.findById(qr.getId()).orElseThrow().getOrderStatus()).isEqualTo(OrderStatus.DEPOSITED);
         assertThat(orders.findById(qr.getId()).orElseThrow().getHoldExpiresAt()).isNull();
         lifecycle.expire(qr.getId());
         lifecycle.changeStatus(qr.getId(), OrderStatus.BAKING_QUEUED, null);
         lifecycle.changeStatus(qr.getId(), OrderStatus.DELIVERING, null);
-        lifecycle.changeStatus(qr.getId(), OrderStatus.COMPLETED, new BigDecimal("115000"));
-        assertThat(payments.sumSuccessfulAmountByOrderId(qr.getId())).isEqualByComparingTo("230000");
+        lifecycle.changeStatus(qr.getId(), OrderStatus.COMPLETED, new BigDecimal("127500"));
+        assertThat(payments.sumSuccessfulAmountByOrderId(qr.getId())).isEqualByComparingTo("255000");
         assertThat(orders.findById(qr.getId()).orElseThrow().getPaymentStatus())
                 .isEqualTo(OrderPaymentStatus.PAID_FULL);
         assertThat(capacities.findById(boxCapacity.getId()).orElseThrow().getReservedQuantity()).isEqualTo(2);
@@ -150,9 +149,9 @@ class CheckoutFlowTests {
     @WithMockUser(roles = "CUSTOMER")
     void vietQrCreatesDistinctInstructionsPerSellerAndOnlyOwnerConfirms() {
         CheckoutRequest request = new CheckoutRequest("Buyer", "0123456789", "Address", null, List.of(
-                new CheckoutRequest.Group(delivery, "HCM", "District 1", PaymentMethod.VIETQR, true,
+                new CheckoutRequest.Group(delivery, "Hồ Chí Minh", "Quận 1", PaymentMethod.VIETQR, true,
                         List.of(new CheckoutRequest.Item(cake.getId(), null, 2, null))),
-                new CheckoutRequest.Group(delivery, "HCM", "District 1", PaymentMethod.VIETQR, true,
+                new CheckoutRequest.Group(delivery, "Hồ Chí Minh", "Quận 1", PaymentMethod.VIETQR, true,
                         List.of(new CheckoutRequest.Item(box.getId(), null, 1, "Chuc mung")))));
         when(security.getCurrentUserId()).thenReturn(customer.getId());
         var created = checkout.checkout(request);
@@ -184,9 +183,9 @@ class CheckoutFlowTests {
 
     private CheckoutRequest request() {
         return new CheckoutRequest("Buyer", "0123456789", "Address", null, List.of(
-                new CheckoutRequest.Group(delivery, "HCM", "District 1", PaymentMethod.COD, false,
+                new CheckoutRequest.Group(delivery, "Hồ Chí Minh", "Quận 1", PaymentMethod.COD, false,
                         List.of(new CheckoutRequest.Item(cake.getId(), null, 2, null))),
-                new CheckoutRequest.Group(delivery, "HCM", "District 1", PaymentMethod.VIETQR, false,
+                new CheckoutRequest.Group(delivery, "Hồ Chí Minh", "Quận 1", PaymentMethod.VIETQR, false,
                         List.of(new CheckoutRequest.Item(box.getId(), null, 1, "Chuc mung")))));
     }
 
@@ -200,8 +199,6 @@ class CheckoutFlowTests {
             subscriptions.save(Subscription.builder().provider(user).planName("MVP")
                     .price(BigDecimal.ZERO).startDate(delivery.minusDays(6)).endDate(delivery.plusDays(30))
                     .status(SubscriptionStatus.ACTIVE).build());
-            rates.save(ProviderShippingRate.builder().provider(user).province("hcm")
-                    .district("district 1").fee(new BigDecimal("10000")).build());
         }
         return user;
     }

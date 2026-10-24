@@ -31,6 +31,11 @@ public class RegisterRequest implements Serializable {
     @Pattern(regexp = "(84|0[3|5|7|8|9])+([0-9]{8})\\b", message = "Phone number is not a valid Vietnamese format")
     private String phone;
 
+    /** Khách tự đặt mật khẩu khi đăng ký (cùng quy tắc với đặt lại / đổi mật khẩu) */
+    @NotBlank(message = "Vui lòng nhập mật khẩu")
+    @Pattern(regexp = PasswordPolicy.REGEX, message = PasswordPolicy.MESSAGE)
+    private String password;
+
     @NotNull(message = "User role is required (CUSTOMER, PROVIDER)")
     private UserRole role;
 

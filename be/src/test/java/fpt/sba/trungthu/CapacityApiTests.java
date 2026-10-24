@@ -38,7 +38,6 @@ class CapacityApiTests {
     @Autowired private JwtService jwtService;
     @Autowired private UserRepository users;
     @Autowired private DailyCapacityRepository capacities;
-    @Autowired private fpt.sba.trungthu.repository.ProviderShippingRateRepository shippingRates;
     @MockitoBean private JavaMailSender mailSender;
 
     private final LocalDate today = LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh"));
@@ -103,17 +102,6 @@ class CapacityApiTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"from\":\"%s\",\"to\":\"%s\",\"maxQuantity\":80}".formatted(from, from)))
                 .andExpect(status().isForbidden());
-    }
-
-    @Test
-    void shippingZonesArePublicForCheckoutPicker() throws Exception {
-        shippingRates.saveAndFlush(fpt.sba.trungthu.entity.ProviderShippingRate.builder().provider(provider)
-                .province("hồ chí minh").district("quận 1").fee(new java.math.BigDecimal("30000")).build());
-        mvc.perform(get("/api/providers/{id}/shipping-zones", provider.getId()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.length()").value(1))
-                .andExpect(jsonPath("$.data[0].district").value("quận 1"))
-                .andExpect(jsonPath("$.data[0].fee").value(30000));
     }
 
     private String token(User user) {

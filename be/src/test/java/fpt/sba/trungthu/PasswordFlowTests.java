@@ -25,7 +25,7 @@ import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
-/** README 3.2–3.3: đăng ký -> mật khẩu tạm -> bắt đổi; quên mật khẩu bằng OTP 6 số */
+/** Đăng ký tự đặt mật khẩu, đổi mật khẩu, quên mật khẩu bằng OTP 6 số (README 3.2) */
 @SpringBootTest(properties = {
         "spring.datasource.url=jdbc:h2:mem:${random.uuid};DB_CLOSE_DELAY=-1",
         "spring.jpa.open-in-view=false"
@@ -40,33 +40,24 @@ class PasswordFlowTests {
     @MockitoBean private JavaMailSender mailSender;
 
     @Test
-    void registeredMemberGetsTemporaryPasswordAndMustChangeIt() throws Exception {
+    void memberRegistersWithOwnPasswordThenChangesIt() throws Exception {
         String email = UUID.randomUUID().toString().substring(0, 8) + "@Buyer.Test"; // chữ hoa: BE phải chuẩn hoá
-        assertThat(call(post("/api/auth/register"), """
-                {"email":"%s","fullName":"Nguyễn Văn Khách","phone":"0912345678","role":"CUSTOMER"}""".formatted(email), null)
-                .getStatus()).isEqualTo(201);
-        String temp = find(lastMail().getText(), "Mật khẩu tạm: (\\S+)");
-        assertThat(temp).matches("TempPass#\\d{4}[A-Z]{3}\\d{3}");
-        assertThat(lastMail().getFrom()).contains("<");
-
+        assertThat(call(post("/api/auth/register"), register(email, "yeu123"), null).getStatus())
+                .as("mật khẩu yếu").isEqualTo(400);
+        assertThat(call(post("/api/auth/register"), register(email, NEW_PASSWORD), null).getStatus()).isEqualTo(201);
         // Đăng ký lại cùng email khác hoa/thường -> 409, không phải lỗi 500 từ ràng buộc unique
-        assertThat(call(post("/api/auth/register"), """
-                {"email":"%s","fullName":"Trùng","phone":"0912345679","role":"CUSTOMER"}""".formatted(email.toLowerCase()), null)
-                .getStatus()).isEqualTo(409);
+        assertThat(call(post("/api/auth/register"), register(email.toLowerCase(), NEW_PASSWORD), null).getStatus())
+                .isEqualTo(409);
 
-        JsonNode login = body(call(post("/api/auth/login"), credentials(email, temp), null));
-        assertThat(login.at("/data/user/requirePasswordChange").asBoolean()).isTrue();
+        JsonNode login = body(call(post("/api/auth/login"), credentials(email, NEW_PASSWORD), null));
+        assertThat(login.at("/data/user/requirePasswordChange").asBoolean()).isFalse();
         String token = login.at("/data/accessToken").asText();
 
-        assertThat(call(post("/api/auth/change-password"), change(temp, "yeu123"), token).getStatus())
-                .as("mật khẩu yếu").isEqualTo(400);
-        MockHttpServletResponse wrongOld = call(post("/api/auth/change-password"), change("Sai#2026xx", NEW_PASSWORD), token);
+        MockHttpServletResponse wrongOld = call(post("/api/auth/change-password"), change("Sai#2026xx", "Sun#2026ok"), token);
         assertThat(wrongOld.getStatus()).isEqualTo(400);
         assertThat(wrongOld.getContentAsString(StandardCharsets.UTF_8)).contains("Mật khẩu hiện tại không đúng");
-        assertThat(call(post("/api/auth/change-password"), change(temp, NEW_PASSWORD), token).getStatus()).isEqualTo(200);
-
-        JsonNode again = body(call(post("/api/auth/login"), credentials(email, NEW_PASSWORD), null));
-        assertThat(again.at("/data/user/requirePasswordChange").asBoolean()).isFalse();
+        assertThat(call(post("/api/auth/change-password"), change(NEW_PASSWORD, "Sun#2026ok"), token).getStatus()).isEqualTo(200);
+        assertThat(call(post("/api/auth/login"), credentials(email, "Sun#2026ok"), null).getStatus()).isEqualTo(200);
     }
 
     @Test
@@ -127,6 +118,12 @@ class PasswordFlowTests {
         String text = res.getContentAsString(StandardCharsets.UTF_8);
         assertThat(res.getStatus()).as(text).isEqualTo(200);
         return json.readTree(text);
+    }
+
+    private static String register(String email, String password) {
+        return """
+                {"email":"%s","fullName":"Nguyễn Văn Khách","phone":"0912345678","role":"CUSTOMER","password":"%s"}"""
+                .formatted(email, password);
     }
 
     private static String credentials(String email, String password) {

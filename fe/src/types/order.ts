@@ -15,13 +15,6 @@ export type DepositOption = 'MIN_DEPOSIT' | 'FULL'
 // ---------- Checkout (BE3: POST /api/checkout/preview, POST /api/checkout) ----------
 
 /** Một dòng là variant HOẶC set quà (GIFT_SET không có variant) */
-/** Khu vực seller giao được (GET /api/providers/{id}/shipping-zones), tỉnh/quận dạng chữ thường */
-export interface ShippingZoneRate {
-  province: string
-  district: string
-  fee: number
-}
-
 export interface CheckoutLine {
   variantId?: string
   setProductId?: string

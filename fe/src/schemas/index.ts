@@ -16,12 +16,6 @@ export const loginSchema = z.object({
   password: z.string().min(1, 'Vui lòng nhập mật khẩu'),
 })
 
-// Đăng ký chỉ 3 ô (không có mật khẩu): BE gửi mật khẩu tạm qua email
-export const registerSchema = z.object({
-  phone,
-  fullName: required('họ tên').max(255),
-  email,
-})
 
 const vatSchema = z.object({
   taxCode: z
@@ -46,6 +40,17 @@ const strongPassword = z
   .min(1, 'Vui lòng nhập mật khẩu mới')
   .refine((v) => PASSWORD_RULES.every((r) => r.test(v)), 'Mật khẩu chưa đủ mạnh, xem các yêu cầu bên dưới')
 const matches = { path: ['confirmPassword'], message: 'Mật khẩu nhập lại không khớp' }
+
+// Đăng ký: khách tự đặt mật khẩu (cùng quy tắc PasswordPolicy của BE)
+export const registerSchema = z
+  .object({
+    phone,
+    fullName: required('họ tên').max(255),
+    email,
+    password: strongPassword,
+    confirmPassword: z.string(),
+  })
+  .refine((d) => d.password === d.confirmPassword, matches)
 
 export const forgotPasswordSchema = z.object({ email })
 

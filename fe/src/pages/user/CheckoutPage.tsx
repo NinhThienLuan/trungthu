@@ -11,7 +11,8 @@ import { COD_MAX_TOTAL, DEPOSIT_RATE, ROUTES } from '../../constants'
 import { cn, formatVnd } from '../../lib/format'
 import { TextInput } from '../../components/ui/Field'
 import { OrderItemsSummary } from '../../components/OrderItemsSummary'
-import { ShippingZoneSelect, type ShippingZone } from '../../components/ShippingZoneSelect'
+import { Field } from '../../components/ui/Field'
+import { HCM, HCM_INNER_DISTRICTS, HCM_OUTER_DISTRICTS, OTHER_PROVINCE, SHIPPING_FEE, isInnerHcm } from '../../constants/shipping'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { Notice, Spinner } from '../../components/ui/States'
 import type { CheckoutGroup, CheckoutPreviewGroup, CheckoutRequest } from '../../types/order'
@@ -19,15 +20,18 @@ import type { CheckoutGroup, CheckoutPreviewGroup, CheckoutRequest } from '../..
 /** Lựa chọn thanh toán của một xưởng: COD hoặc VietQR (cọc 50% / trả đủ) */
 type PayChoice = 'COD' | 'MIN_DEPOSIT' | 'FULL'
 
+/** Địa chỉ giao chung cho cả giỏ: tỉnh/thành + quận/huyện quyết định phí giao (BE tính) */
+type Address = { province: string; district: string }
+
 const toGroups = (groups: CartGroup[], dates: Record<string, string>, choices: Record<string, PayChoice>,
-  zones: Record<string, ShippingZone>): CheckoutGroup[] =>
+  address: Address): CheckoutGroup[] =>
   groups.map((g) => {
     const choice = choices[g.providerId] ?? 'MIN_DEPOSIT'
     return {
       providerId: g.providerId,
       deliveryDate: dates[g.providerId],
-      province: zones[g.providerId]?.province,
-      district: zones[g.providerId]?.district,
+      province: address.province,
+      district: address.district,
       paymentMethod: choice === 'COD' ? 'COD' : 'VIETQR',
       depositOption: choice === 'COD' ? undefined : choice,
       items: g.items.filter((i) => i.kind === 'single').map((i) =>
@@ -45,31 +49,31 @@ export function CheckoutPage() {
   const navigate = useNavigate()
   const [wantVat, setWantVat] = useState(false)
   const [choices, setChoices] = useState<Record<string, PayChoice>>({})
-  const [zones, setZones] = useState<Record<string, ShippingZone>>({})
+  const [address, setAddress] = useState<Address>({ province: HCM, district: '' })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitError, setSubmitError] = useState<string>()
   const [submitting, setSubmitting] = useState(false)
 
   const groups = groupByProvider(items)
   const ready = groups.length > 0 && groups.every((g) => deliveryDates[g.providerId])
-  const zonesReady = groups.every((g) => zones[g.providerId]?.province && zones[g.providerId]?.district)
+  const addressReady = address.province === OTHER_PROVINCE || !!address.district
 
   // Preview (BE3) chỉ đọc: tổng tiền, phí ship, cọc tối thiểu, có được COD không
   const { data: preview, loading: previewLoading, error: previewError } = useApi(
     () =>
-      ready && zonesReady
-        ? orderService.preview({ receiverName: '', receiverPhone: '', shippingAddress: '', groups: toGroups(groups, deliveryDates, {}, zones) }, items)
+      ready && addressReady
+        ? orderService.preview({ receiverName: '', receiverPhone: '', shippingAddress: '', groups: toGroups(groups, deliveryDates, {}, address) }, items)
         : Promise.resolve(null),
-    [items, deliveryDates, zones],
+    [items, deliveryDates, address],
   )
 
   if (!ready) return <Navigate to={ROUTES.cart} replace />
 
   const previewOf = (providerId: string) => preview?.groups.find((p) => p.providerId === providerId)
-  // Mặc định: COD nếu được phép, không thì VietQR cọc 50%.
+  // Mặc định VietQR cọc 50% -> đặt xong hiện mã QR ngay; COD vẫn chọn được nếu đơn đủ điều kiện
   const choiceOf = (p?: CheckoutPreviewGroup): PayChoice => {
     if (!p) return 'MIN_DEPOSIT'
-    const picked = choices[p.providerId] ?? (p.codAllowed ? 'COD' : 'MIN_DEPOSIT')
+    const picked = choices[p.providerId] ?? 'MIN_DEPOSIT'
     return picked === 'COD' && !p.codAllowed ? 'MIN_DEPOSIT' : picked
   }
   const effectiveChoices = Object.fromEntries(groups.map((g) => [g.providerId, choiceOf(previewOf(g.providerId))]))
@@ -97,8 +101,8 @@ export function CheckoutPage() {
     }
     setErrors({})
     setSubmitError(undefined)
-    if (!zonesReady) {
-      setSubmitError('Nhập tỉnh/thành phố và quận/huyện giao hàng cho từng xưởng.')
+    if (!addressReady) {
+      setSubmitError('Vui lòng chọn quận/huyện giao hàng.')
       return
     }
     setSubmitting(true)
@@ -106,9 +110,12 @@ export function CheckoutPage() {
     const body: CheckoutRequest = {
       receiverName: parsed.data.receiverName,
       receiverPhone: parsed.data.receiverPhone,
-      shippingAddress: parsed.data.shippingAddress,
+      // Địa chỉ đầy đủ cho xưởng: số nhà/đường + quận/huyện + tỉnh/thành
+      shippingAddress: address.province === HCM
+        ? `${parsed.data.shippingAddress}, ${address.district}, ${HCM}`
+        : parsed.data.shippingAddress,
       vat: parsed.data.vat,
-      groups: toGroups(groups, deliveryDates, effectiveChoices, zones),
+      groups: toGroups(groups, deliveryDates, effectiveChoices, address),
     }
     try {
       const orders = await orderService.checkout(body, items)
@@ -133,26 +140,45 @@ export function CheckoutPage() {
             <div className="mt-5 grid gap-4 md:grid-cols-2">
               <TextInput label="Họ tên" name="receiverName" defaultValue={user?.fullName} autoComplete="name" error={errors.receiverName} />
               <TextInput label="Số điện thoại" name="receiverPhone" type="tel" defaultValue={user?.phone ?? ''} autoComplete="tel" error={errors.receiverPhone} />
-              <TextInput label="Địa chỉ giao hàng" name="shippingAddress" defaultValue={user?.address ?? ''} autoComplete="street-address" error={errors.shippingAddress} className="md:col-span-2" />
+              <Field label="Tỉnh/thành phố" name="province">
+                <select id="province" className="input" value={address.province}
+                  onChange={(e) => setAddress({ province: e.target.value, district: '' })}>
+                  <option value={HCM}>{HCM}</option>
+                  <option value={OTHER_PROVINCE}>{OTHER_PROVINCE}</option>
+                </select>
+              </Field>
+              {address.province === HCM ? (
+                <Field label="Quận/huyện" name="district"
+                  hint={address.district
+                    ? `Phí giao ${formatVnd(isInnerHcm(address.province, address.district) ? SHIPPING_FEE.inner : SHIPPING_FEE.outer)}`
+                    : `Nội thành ${formatVnd(SHIPPING_FEE.inner)} · ngoại thành ${formatVnd(SHIPPING_FEE.outer)}`}>
+                  <select id="district" className="input" value={address.district}
+                    onChange={(e) => setAddress((a) => ({ ...a, district: e.target.value }))}>
+                    <option value="" disabled>Chọn quận/huyện</option>
+                    <optgroup label={`Nội thành · ${formatVnd(SHIPPING_FEE.inner)}`}>
+                      {HCM_INNER_DISTRICTS.map((d) => <option key={d} value={d}>{d}</option>)}
+                    </optgroup>
+                    <optgroup label={`Ngoại thành · ${formatVnd(SHIPPING_FEE.outer)}`}>
+                      {HCM_OUTER_DISTRICTS.map((d) => <option key={d} value={d}>{d}</option>)}
+                    </optgroup>
+                  </select>
+                </Field>
+              ) : (
+                <p className="self-end text-small text-muted">Phí giao ngoài TP.HCM: {formatVnd(SHIPPING_FEE.outer)}</p>
+              )}
+              <TextInput
+                label={address.province === HCM ? 'Số nhà, tên đường, phường' : 'Địa chỉ đầy đủ (số nhà, đường, phường, quận/huyện, tỉnh/thành)'}
+                name="shippingAddress" defaultValue={user?.address ?? ''} autoComplete="street-address"
+                error={errors.shippingAddress} className="md:col-span-2" />
             </div>
           </section>
 
           <section className="card p-5 md:p-6" aria-labelledby="pay-title">
             <h2 id="pay-title" className="text-h3">Thanh toán</h2>
-            <p className="mt-1 text-small text-muted">
-              Mỗi xưởng là một đơn riêng. COD áp dụng cho đơn dưới {formatVnd(COD_MAX_TOTAL)}, không có hộp tự phối.
-            </p>
-            <div className="mt-5 grid gap-4">
-              {groups.map((g) => (
-                <ShippingZoneSelect key={g.providerId} providerId={g.providerId} storeName={g.storeName}
-                  value={zones[g.providerId]}
-                  onChange={(zone) => setZones((current) => ({ ...current, [g.providerId]: zone }))} />
-              ))}
-            </div>
             {previewLoading ? (
               <Spinner label="Đang tính tiền..." />
-            ) : !zonesReady ? (
-              <div className="mt-4"><Notice>Chọn khu vực giao hàng để xem giá và phương thức thanh toán.</Notice></div>
+            ) : !addressReady ? (
+              <div className="mt-4"><Notice>Chọn quận/huyện giao hàng để xem phí giao và tổng tiền.</Notice></div>
             ) : previewError ? (
               <div className="mt-4">
                 <Notice tone="danger">{previewError}</Notice>
@@ -232,6 +258,18 @@ export function CheckoutPage() {
             <OrderItemsSummary groups={groups} deliveryDates={deliveryDates} />
           </div>
           <dl className="mt-4 flex flex-col gap-1 border-t border-line pt-4 text-small">
+            {preview && (
+              <>
+                <div className="flex justify-between text-muted">
+                  <dt>Tạm tính</dt>
+                  <dd>{formatVnd(preview.groups.reduce((sum, p) => sum + p.subtotalAmount, 0))}</dd>
+                </div>
+                <div className="flex justify-between text-muted">
+                  <dt>Phí giao hàng</dt>
+                  <dd>{formatVnd(preview.groups.reduce((sum, p) => sum + p.shippingFee, 0))}</dd>
+                </div>
+              </>
+            )}
             <div className="flex justify-between">
               <dt className="font-semibold text-ink">Tổng cộng</dt>
               <dd className="font-serif text-h3 text-navy">{formatVnd(grandTotal)}</dd>

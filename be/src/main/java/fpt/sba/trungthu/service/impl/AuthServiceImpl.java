@@ -73,8 +73,6 @@ public class AuthServiceImpl implements AuthService {
     @Value("${spring.mail.from-name:Nguyệt Viên Đài}")
     private String mailFromName;
 
-    @Value("${app.frontend-url:http://localhost:5173}")
-    private String frontendUrl;
 
     private static final int OTP_EXPIRE_MINUTES = 10;
     private static final int OTP_RESEND_COOLDOWN_SECONDS = 60;
@@ -118,23 +116,7 @@ public class AuthServiceImpl implements AuthService {
             validateBankCode(request.getBankCode());
         }
 
-        String temporaryPassword = temporaryPassword();
-        User user = request.toUserEntity(passwordEncoder.encode(temporaryPassword));
-        user.setRequirePasswordChange(true);
-        User savedUser = userRepository.save(user);
-
-        // Gửi mail lỗi -> ném lỗi -> rollback insert: không có tài khoản nào thiếu mật khẩu
-        sendMail(savedUser.getEmail(), "Tài khoản Nguyệt Viên Đài của bạn",
-                "Xin chào " + savedUser.getFullName() + ",\n\n"
-                        + "Tài khoản của bạn đã được tạo thành công!\n\n"
-                        + "Thông tin đăng nhập:\n"
-                        + "- Email: " + savedUser.getEmail() + "\n"
-                        + "- Mật khẩu tạm: " + temporaryPassword + "\n"
-                        + "- Vai trò: " + roleLabel(savedUser.getRole()) + "\n\n"
-                        + "LƯU Ý QUAN TRỌNG:\n"
-                        + "Vui lòng đăng nhập và đổi mật khẩu ngay ở lần đăng nhập đầu tiên.\n\n"
-                        + "Link đổi mật khẩu: " + frontendUrl + "/change-password\n\n"
-                        + "Trân trọng,\nNguyệt Viên Đài");
+        User savedUser = userRepository.save(request.toUserEntity(passwordEncoder.encode(request.getPassword())));
 
         log.info("Successfully registered user id: {}, email: {}", savedUser.getId(), savedUser.getEmail());
         return UserResponse.fromUserEntity(savedUser);
@@ -334,22 +316,6 @@ public class AuthServiceImpl implements AuthService {
         } catch (NoSuchAlgorithmException e) {
             throw new IllegalStateException(e);
         }
-    }
-
-    /** Mật khẩu tạm khi đăng ký: TempPass#{năm}{3 chữ hoa}{3 số}, vd TempPass#2026ABC123 */
-    private static String temporaryPassword() {
-        StringBuilder sb = new StringBuilder("TempPass#").append(java.time.Year.now().getValue());
-        for (int i = 0; i < 3; i++) sb.append((char) ('A' + RANDOM.nextInt(26)));
-        for (int i = 0; i < 3; i++) sb.append(RANDOM.nextInt(10));
-        return sb.toString();
-    }
-
-    private static String roleLabel(UserRole role) {
-        return switch (role) {
-            case CUSTOMER -> "Khách hàng";
-            case PROVIDER -> "Nhà cung cấp";
-            case PLATFORM_ADMIN -> "Quản trị sàn";
-        };
     }
 
     private static String randomPassword() {

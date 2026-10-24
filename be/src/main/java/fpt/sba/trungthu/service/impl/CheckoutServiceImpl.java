@@ -44,7 +44,6 @@ public class CheckoutServiceImpl implements CheckoutService {
     private final ProductRepository products;
     private final GiftSetComponentRepository setComponents;
     private final DailyCapacityRepository capacities;
-    private final ProviderShippingRateRepository shippingRates;
     private final SubscriptionRepository subscriptions;
     private final OrderService orderService;
     private final InventoryService inventory;
@@ -238,15 +237,10 @@ public class CheckoutServiceImpl implements CheckoutService {
                 pricedLines.add(new Line(line.variant(), line.set(), line.quantity(), line.bakeQuantity(),
                         line.personalizationText(), fee, line.amount(), line.listAmount()));
             }
-            String province = normalizeZone(group.province());
-            String district = normalizeZone(group.district());
             UUID providerId = provider.getId();
-            BigDecimal shipping = shippingRates.findByProviderIdAndProvinceAndDistrict(providerId, province, district)
-                    .orElseThrow(() -> conflict("SHIPPING_RATE_MISSING provider=" + providerId
-                            + " province=" + province + " district=" + district)).getFee();
-            if (shipping.signum() < 0 || shipping.stripTrailingZeros().scale() > 0) {
-                throw conflict("INVALID_SHIPPING_RATE provider=" + providerId);
-            }
+            // Nội thành TP.HCM 35k, còn lại 70k (mỗi đơn/xưởng); quận/huyện có thể trống khi giao tỉnh khác
+            BigDecimal shipping = ShippingFeePolicy.fee(requireZone(group.province(), true),
+                    requireZone(group.district(), false));
             BigDecimal total = merchandise.add(personalization).add(shipping);
             if (lock && group.paymentMethod() == PaymentMethod.COD && personalizedBoxes > 0) {
                 throw badRequest("Personalized orders require online payment");
@@ -377,9 +371,11 @@ public class CheckoutServiceImpl implements CheckoutService {
         return value;
     }
 
-    private String normalizeZone(String zone) {
-        if (zone == null || zone.isBlank() || zone.trim().length() > 100) throw badRequest("Invalid shipping zone");
-        return zone.trim().toLowerCase(Locale.ROOT);
+    private String requireZone(String zone, boolean required) {
+        if ((required && (zone == null || zone.isBlank())) || (zone != null && zone.trim().length() > 100)) {
+            throw badRequest("Vui lòng chọn tỉnh/thành và quận/huyện giao hàng");
+        }
+        return zone;
     }
 
     private ResponseStatusException badRequest(String message) {

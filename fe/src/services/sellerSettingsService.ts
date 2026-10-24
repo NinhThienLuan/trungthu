@@ -1,17 +1,10 @@
 import { http, unwrap } from '../apis/http'
 import type { ApiResponse } from '../types/api'
 
-export interface ShippingRate {
-  province: string
-  district: string
-  fee: number
-}
-
 export interface SellerSettings {
   bankCode: string | null
   accountNumber: string | null
   accountName: string | null
-  shippingRates: ShippingRate[]
 }
 
 export interface CapacityDay {
@@ -20,15 +13,13 @@ export interface CapacityDay {
   reservedQuantity: number
 }
 
-/** Cấu hình để buyer đặt được hàng: BE3 checkout-settings (phí giao, VietQR), BE2 capacity */
+/** Cấu hình để buyer đặt được hàng: BE3 checkout-settings (tài khoản VietQR), BE2 capacity. Phí giao cố định theo khu vực (BE) */
 export const sellerSettingsService = {
   get: () => unwrap(http.get<ApiResponse<SellerSettings>>('/provider/checkout-settings')),
 
   setBankAccount: (body: { bankCode: string; accountNumber: string; accountName: string }) =>
     unwrap(http.put<ApiResponse<null>>('/provider/checkout-settings/bank-account', body)),
 
-  setShippingRate: (body: ShippingRate) =>
-    unwrap(http.put<ApiResponse<null>>('/provider/checkout-settings/shipping-rate', body)),
 
   capacities: (from: string, to: string) =>
     unwrap(http.get<ApiResponse<CapacityDay[]>>('/provider/capacities', { params: { from, to } })),

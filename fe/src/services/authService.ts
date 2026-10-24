@@ -118,8 +118,8 @@ export const authService = {
     return { accessToken: 'mock', tokenType: 'Bearer', expiresInSeconds: 900, user }
   },
 
-  /** BE tự sinh mật khẩu và gửi qua email */
-  register: async (body: { email: string; fullName: string; phone?: string }): Promise<User> => {
+  /** Khách tự đặt mật khẩu; BE kiểm tra PasswordPolicy, tạo tài khoản CUSTOMER */
+  register: async (body: { email: string; fullName: string; phone?: string; password: string }): Promise<User> => {
     if (!USE_MOCK.auth) {
       return unwrap(http.post<ApiResponse<User>>('/auth/register', { ...body, role: 'CUSTOMER' }))
     }

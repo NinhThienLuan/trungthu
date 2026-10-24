@@ -67,7 +67,7 @@ export function LoginPage() {
       )}
       {params.get('registered') && (
         <div className="mt-4">
-          <Notice tone="success">Đăng ký thành công. Mật khẩu tạm đã gửi tới email, đăng nhập rồi đổi mật khẩu.</Notice>
+          <Notice tone="success">Đăng ký thành công. Đăng nhập bằng email và mật khẩu bạn vừa đặt.</Notice>
         </div>
       )}
 

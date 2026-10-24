@@ -6,6 +6,7 @@ import { useDocumentTitle } from '../../hooks/useDocumentTitle'
 import { fieldErrors, registerSchema } from '../../schemas'
 import { ROUTES } from '../../constants'
 import { TextInput } from '../../components/ui/Field'
+import { PasswordInput } from '../../components/ui/PasswordInput'
 import { Notice } from '../../components/ui/States'
 
 export function RegisterPage() {
@@ -26,7 +27,8 @@ export function RegisterPage() {
     setSubmitError(undefined)
     setSubmitting(true)
     try {
-      await authService.register(parsed.data)
+      const { phone, fullName, email, password } = parsed.data
+      await authService.register({ phone, fullName, email, password })
       navigate(`${ROUTES.login}?registered=1`, { replace: true })
     } catch (err) {
       setSubmitError(errorMessage(err))
@@ -38,11 +40,13 @@ export function RegisterPage() {
   return (
     <>
       <h1 className="text-h2">Tạo tài khoản</h1>
-      <p className="mt-2 text-small text-muted">Mật khẩu tạm sẽ được gửi tới email. Lần đăng nhập đầu bạn cần đổi mật khẩu.</p>
+      <p className="mt-2 text-small text-muted">Đăng ký xong bạn đăng nhập ngay bằng email và mật khẩu vừa đặt.</p>
       <form noValidate onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
         <TextInput label="Số điện thoại" name="phone" type="tel" autoComplete="tel" placeholder="0912345678" error={errors.phone} />
         <TextInput label="Họ tên" name="fullName" autoComplete="name" error={errors.fullName} />
         <TextInput label="Email" name="email" type="email" autoComplete="email" placeholder="name@example.com" error={errors.email} />
+        <PasswordInput label="Mật khẩu" name="password" autoComplete="new-password" showStrength error={errors.password} />
+        <PasswordInput label="Nhập lại mật khẩu" name="confirmPassword" autoComplete="new-password" error={errors.confirmPassword} />
         {submitError && <Notice tone="danger">{submitError}</Notice>}
         <button type="submit" className="btn btn-primary w-full" disabled={submitting}>
           {submitting ? 'Đang tạo...' : 'Đăng ký'}
