@@ -9,9 +9,7 @@ import fpt.sba.trungthu.repository.*;
 import fpt.sba.trungthu.service.InventoryService;
 import fpt.sba.trungthu.service.OrderLifecycleService;
 import fpt.sba.trungthu.service.OrderService;
-import fpt.sba.trungthu.service.PayosCancelRequested;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,7 +31,6 @@ public class OrderLifecycleServiceImpl implements OrderLifecycleService {
     private final PaymentTransactionRepository payments;
     private final OrderService orderService;
     private final InventoryService inventory;
-    private final ApplicationEventPublisher events;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -57,31 +54,6 @@ public class OrderLifecycleServiceImpl implements OrderLifecycleService {
         order.transitionOrderStatus(OrderStatus.DEPOSITED);
         order.setHoldExpiresAt(null);
         return orderService.getOrderDetail(id);
-    }
-
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public HoldResponse extendHold(UUID id, String reason) {
-        Order order = lockedOwned(id, true);
-        if (order.getPaymentMethod() == PaymentMethod.PAYOS) {
-            throw conflict("PayOS payment deadline cannot be extended");
-        }
-        Instant now = Instant.now();
-        requireActiveHold(order, now);
-        if (reason == null || reason.trim().isEmpty() || reason.trim().length() > 500) {
-            throw badRequest("Reason must contain 1 to 500 characters");
-        }
-        if (order.getHoldExtensionCount() != 0) throw conflict("Hold can be extended only once");
-        Instant max = order.getOrderedAt().plusSeconds(30 * 60);
-        Instant extended = order.getHoldExpiresAt().plusSeconds(15 * 60);
-        if (extended.isAfter(max)) extended = max;
-        if (!extended.isAfter(order.getHoldExpiresAt())) throw conflict("Hold cannot be extended further");
-        order.setHoldExpiresAt(extended);
-        order.setHoldExtensionCount(1);
-        order.setHoldExtendedAt(now);
-        order.setHoldExtendedBy(security.getCurrentUser());
-        order.setHoldExtensionReason(reason.trim());
-        return new HoldResponse(extended, 1);
     }
 
     @Override
@@ -151,8 +123,7 @@ public class OrderLifecycleServiceImpl implements OrderLifecycleService {
     }
 
     private void requireActiveHold(Order order, Instant now) {
-        if (order.getOrderStatus() != OrderStatus.PENDING_DEPOSIT
-                || (order.getPaymentMethod() != PaymentMethod.VIETQR && order.getPaymentMethod() != PaymentMethod.PAYOS)
+        if (order.getOrderStatus() != OrderStatus.PENDING_DEPOSIT || order.getPaymentMethod() != PaymentMethod.VIETQR
                 || order.getHoldExpiresAt() == null || !now.isBefore(order.getHoldExpiresAt())) {
             throw conflict("Deposit hold is no longer active");
         }
@@ -175,9 +146,6 @@ public class OrderLifecycleServiceImpl implements OrderLifecycleService {
         for (PaymentTransaction tx : payments.findByOrderIdOrderByCreatedAtAsc(order.getId())) {
             if (tx.getPaymentStatus() == TransactionStatus.PENDING) {
                 tx.transitionPaymentStatus(TransactionStatus.CANCELLED);
-                if (tx.getPaymentMethod() == PaymentMethod.PAYOS && tx.getPayosPaymentLinkId() != null) {
-                    events.publishEvent(new PayosCancelRequested(order.getProvider().getId(), tx.getPayosOrderCode()));
-                }
             }
         }
         order.transitionOrderStatus(OrderStatus.CANCELLED);

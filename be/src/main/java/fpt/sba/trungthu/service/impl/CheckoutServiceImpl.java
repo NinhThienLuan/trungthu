@@ -42,7 +42,6 @@ public class CheckoutServiceImpl implements CheckoutService {
     private final DailyCapacityRepository capacities;
     private final ProviderShippingRateRepository shippingRates;
     private final SubscriptionRepository subscriptions;
-    private final ProviderPayosAccountService payosAccounts;
     private final OrderService orderService;
     private final InventoryService inventory;
 
@@ -101,8 +100,7 @@ public class CheckoutServiceImpl implements CheckoutService {
                     }).toList();
             groups.add(new CreateOrdersCommand.ProviderOrder(plan.provider().getId(), plan.deliveryDate(),
                     capacityId, plan.shippingFee(), plan.deposit(), plan.paymentMethod(),
-                    plan.paymentMethod() == PaymentMethod.PAYOS ? orderedAt.plusSeconds(5 * 60 * 60)
-                            : plan.paymentMethod() == PaymentMethod.VIETQR ? orderedAt.plusSeconds(15 * 60) : null,
+                    plan.paymentMethod() == PaymentMethod.VIETQR ? orderedAt.plusSeconds(5 * 60 * 60) : null,
                     items));
         }
         var command = new CreateOrdersCommand(UUID.randomUUID(), customer.getId(), orderedAt,
@@ -185,18 +183,14 @@ public class CheckoutServiceImpl implements CheckoutService {
                 throw badRequest("Provider does not own all variants in the group");
             }
             validateProvider(provider, today);
-            if (group.paymentMethod() != PaymentMethod.COD && group.paymentMethod() != PaymentMethod.VIETQR
-                    && group.paymentMethod() != PaymentMethod.PAYOS) {
-                throw badRequest("Only COD, VIETQR and PAYOS are supported");
+            if (group.paymentMethod() != PaymentMethod.COD && group.paymentMethod() != PaymentMethod.VIETQR) {
+                throw badRequest("Only COD and VIETQR are supported");
             }
             if (group.paymentMethod() == PaymentMethod.COD && group.payInFull()) {
                 throw badRequest("payInFull only applies to online payment");
             }
             if (lock && group.paymentMethod() == PaymentMethod.VIETQR && !hasBankDetails(provider)) {
                 throw conflict("BANK_ACCOUNT_MISSING provider=" + provider.getId());
-            }
-            if (group.paymentMethod() == PaymentMethod.PAYOS) {
-                payosAccounts.requireReady(provider.getId());
             }
             BigDecimal merchandise = BigDecimal.ZERO;
             BigDecimal personalization = BigDecimal.ZERO;

@@ -15,8 +15,7 @@ import java.time.Instant;
 @Entity
 @Table(name = "PAYMENT_TRANSACTION", indexes = {
         @Index(name = "IX_PAYMENT_TRANSACTION_order_id", columnList = "order_id"),
-        @Index(name = "IX_PAYMENT_TRANSACTION_subscription_id", columnList = "subscription_id"),
-        @Index(name = "IX_PAYMENT_TRANSACTION_payos_code", columnList = "payos_order_code")
+        @Index(name = "IX_PAYMENT_TRANSACTION_subscription_id", columnList = "subscription_id")
 }, uniqueConstraints = @UniqueConstraint(name = "UQ_PAYMENT_TRANSACTION_transaction_code", columnNames = "transaction_code"))
 @Check(name = "CK_PAYMENT_TRANSACTION_amount", constraints = "amount > 0")
 @Check(name = "CK_PAYMENT_TRANSACTION_owner", constraints = "(transaction_type = 'SUBSCRIPTION_FEE' "
@@ -61,21 +60,6 @@ public class PaymentTransaction extends CreatedEntity {
     // Business payment time; createdAt only records when the pending transaction was created.
     @Column(name = "paid_at")
     private Instant paidAt;
-
-    @Column(name = "payos_order_code")
-    private Long payosOrderCode;
-
-    @Column(name = "payos_payment_link_id", length = 100)
-    private String payosPaymentLinkId;
-
-    @Column(name = "payos_checkout_url", length = 2048)
-    private String payosCheckoutUrl;
-
-    @Column(name = "payos_qr_code", length = 2048)
-    private String payosQrCode;
-
-    @Column(name = "payos_external_reference", length = 255)
-    private String payosExternalReference;
 
     public void transitionPaymentStatus(TransactionStatus targetStatus) {
         paymentStatus.validateTransition(targetStatus);

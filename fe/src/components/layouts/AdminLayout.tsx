@@ -14,7 +14,9 @@ const NAV = [
   { to: '/seller/orders', icon: 'local_shipping', label: 'Đơn Hàng & Giao Lạnh' },
   { to: '/seller/profile', icon: 'workspace_premium', label: 'Hồ Sơ & Thẩm Định' },
 ]
-const ADMIN_NAV = [{ to: '/admin/kyc', icon: 'biotech', label: 'Thẩm Định Chất Lượng' }]
+const ADMIN_NAV = [
+  { to: '/admin/kyc', icon: 'biotech', label: 'Thẩm Định Chất Lượng' },
+]
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>
   cn(
@@ -89,7 +91,7 @@ export function AdminLayout() {
             </span>
           </div>
           <nav className="flex flex-col gap-1 px-space-md" aria-label="Quản trị sàn">
-            {ADMIN_NAV.map((item) => (
+            {user?.role === 'PLATFORM_ADMIN' && ADMIN_NAV.map((item) => (
               <NavLink key={item.to} to={item.to} className={linkClass}>
                 <Icon name={item.icon} className="text-[20px] text-secondary-fixed-dim" aria-hidden />
                 <span className="font-body-md text-body-md">{item.label}</span>

@@ -4,8 +4,8 @@
 /** Trạng thái đơn chuẩn (mục 4 hợp đồng) */
 export type OrderStatus = 'PENDING_DEPOSIT' | 'CONFIRMED' | 'DEPOSITED' | 'BAKING_QUEUED' | 'DELIVERING' | 'COMPLETED' | 'CANCELLED'
 
-/** Enum BE; checkout dùng COD hoặc PAYOS. */
-export type PaymentMethod = 'COD' | 'VIETQR' | 'PAYOS' | 'VNPAY' | 'MOMO' | 'DIRECT_BANK'
+/** Enum BE; checkout dùng COD hoặc VIETQR. */
+export type PaymentMethod = 'COD' | 'VIETQR' | 'VNPAY' | 'MOMO' | 'DIRECT_BANK'
 
 export type OrderPaymentStatus = 'UNPAID' | 'DEPOSITED' | 'PAID_FULL'
 
@@ -110,14 +110,15 @@ export interface VietQrPayment {
   transferNote: string
 }
 
-export interface PayosPayment {
-  orderId: string
-  payosOrderCode: number
+/** GET /api/orders/{id}/vietqr */
+export interface VietQrInstruction {
+  imageUrl: string
+  bankCode: string
+  accountNumber: string
+  accountName: string
   amount: number
-  paymentLinkId: string
-  checkoutUrl: string | null
-  qrCode: string | null
-  expiresAt: string
+  transferContent: string
+  holdExpiresAt: string
 }
 
 export interface OrderDetail extends OrderSummary {

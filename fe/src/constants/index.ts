@@ -7,7 +7,7 @@ export const BRAND = 'Nguyệt Viên Đài'
 export const MIN_LEAD_DAYS = 3 // ngày nhận >= hôm nay + 3
 export const RFQ_MIN_QUANTITY = 20 // RFQ sỉ từ 20 hộp
 export const DEPOSIT_RATE = 0.5 // cọc tối thiểu 50%
-export const HOLD_MINUTES = 15 // VietQR cũ; PayOS giới hạn 5 giờ từ backend
+export const HOLD_MINUTES = 300 // VietQR: tối đa 5 giờ từ lúc đặt
 export const COD_MAX_TOTAL = 2_000_000 // COD chỉ cho đơn (sau tách theo xưởng) dưới 2 triệu
 
 export const ROUTES = {
@@ -48,7 +48,6 @@ export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
 export const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
   COD: 'Thanh toán khi nhận (COD)',
   VIETQR: 'Chuyển khoản VietQR',
-  PAYOS: 'PayOS',
   VNPAY: 'VNPay',
   MOMO: 'MoMo',
   DIRECT_BANK: 'Chuyển khoản ngân hàng',

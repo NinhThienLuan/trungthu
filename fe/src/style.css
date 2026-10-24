@@ -1,0 +1,210 @@
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap');
+@import "tailwindcss";
+
+/* Edit these tokens to update the entire storefront. Tailwind utilities use them too. */
+@theme {
+  --font-sans: 'Be Vietnam Pro', system-ui, -apple-system, sans-serif;
+  --font-serif: 'Playfair Display', Georgia, serif;
+  --spacing: 0.25rem;
+
+  --color-canvas: #ffffff;
+  --color-canvas-soft: #fff6f1;
+  --color-surface: #ffffff;
+  --color-surface-raised: #fff9f2;
+  --color-surface-hover: #f9e7dc;
+  --color-surface-selected: #f4d7c4;
+  --color-border: #ead9cd;
+  --color-border-strong: #d9baa7;
+  --color-border-accent: #b98172;
+
+  --color-text: #3b2925;
+  --color-text-soft: #5d443d;
+  --color-text-muted: #755c53;
+  --color-text-faint: #8b7168;
+  --color-gold: #b98534;
+  --color-gold-light: #8b5d19;
+  --color-gold-bright: #744914;
+  --color-gold-dark: #825313;
+  --color-gold-deep: #69480f;
+  --color-gold-on-dark: #f1d387;
+  --color-gold-fill-start: #f2d58d;
+  --color-gold-fill-end: #d5a845;
+  --color-ink-on-gold: #24180c;
+  --color-accent: #852936;
+  --color-accent-dark: #5d1b29;
+  --color-accent-soft: #fbe9e4;
+  --color-accent-ink: #fff4e9;
+  --color-accent-border: #cf9b91;
+
+  --color-danger: #b91c1c;
+  --color-danger-dark: #991b1b;
+  --color-danger-light: #ef4444;
+  --color-success: #22c55e;
+  --color-success-dark: #15803d;
+  --color-success-soft: #1d6b3b;
+  --color-success-bright: #15803d;
+  --color-success-surface: #e5f4e8;
+  --color-info: #3b82f6;
+  --color-info-dark: #1e3a8a;
+  --color-info-soft: #bfdbfe;
+  --color-violet: #a855f7;
+  --color-violet-dark: #581c87;
+  --color-violet-soft: #e9d5ff;
+
+  --color-paper: #ffffff;
+  --color-paper-soft: #fafafa;
+  --color-paper-subtle: #f3f4f6;
+  --color-paper-border: #d1d5db;
+  --color-paper-border-soft: #e5e7eb;
+  --color-paper-ink: #1f2937;
+  --color-paper-heading: #111827;
+  --color-paper-text: #374151;
+  --color-paper-text-soft: #4b5563;
+  --color-paper-muted: #6b7280;
+  --color-paper-faint: #9ca3af;
+  --color-slate: #334155;
+  --color-slate-soft: #475569;
+  --color-mint: #a7f3d0;
+  --color-amber-surface: #fffbeb;
+  --color-amber-border: #fde68a;
+  --color-amber-ink: #78350f;
+  --color-overlay: #000000;
+  --color-flavor-lava: #d97706;
+  --color-flavor-coconut: #0284c7;
+  --color-flavor-matcha: #166534;
+  --color-flavor-truffle: #4c1d95;
+  --color-flavor-dragon: #9d174d;
+}
+
+:root {
+  --content-max: 80rem;
+  --page-gutter: 1rem;
+  --section-space: 3.5rem;
+  --section-space-loose: 4rem;
+}
+
+@media (min-width: 40rem) {
+  :root {
+    --page-gutter: 1.5rem;
+    --section-space: 5rem;
+    --section-space-loose: 6rem;
+  }
+}
+
+@media (min-width: 64rem) {
+  :root { --page-gutter: 2rem; }
+}
+
+@layer base {
+  body {
+    font-family: var(--font-sans);
+    background-color: var(--color-canvas);
+    color: var(--color-text);
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, h4, .font-display { font-family: var(--font-serif); }
+}
+
+.page-container {
+  width: 100%;
+  max-width: var(--content-max);
+  margin-inline: auto;
+  padding-inline: var(--page-gutter);
+}
+
+.navbar-container {
+  width: 100%;
+  max-width: 100rem;
+  margin-inline: auto;
+  padding-inline: var(--page-gutter);
+}
+
+.section-spacing { padding-block: var(--section-space); }
+.section-spacing-loose { padding-block: var(--section-space-loose); }
+
+.hero-backdrop {
+  background:
+    radial-gradient(circle at 84% 18%, color-mix(in srgb, var(--color-accent) 14%, transparent), transparent 40%),
+    radial-gradient(circle at 12% 62%, color-mix(in srgb, var(--color-gold) 12%, transparent), transparent 44%),
+    linear-gradient(135deg, var(--color-canvas) 0%, var(--color-canvas-soft) 68%, var(--color-accent-soft) 100%);
+}
+
+.hero-background-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.hero-video-tint {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(255, 250, 246, 0.96) 0%, rgba(255, 248, 242, 0.86) 47%, rgba(255, 246, 239, 0.52) 100%),
+    linear-gradient(0deg, rgba(255, 246, 239, 0.9), transparent 60%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-background-video { display: none; }
+  .hero-backdrop {
+    background-image: url('/videos/mooncake-cutting-poster.jpg');
+    background-position: center;
+    background-size: cover;
+  }
+}
+
+.announcement-bar {
+  --color-text-soft: #f4e1d3;
+  --color-gold: #e5ba69;
+  --color-gold-light: #ffe0a1;
+  --color-gold-bright: #ffe0a1;
+  --color-gold-deep: #e5ba69;
+}
+
+.site-footer {
+  --color-canvas: #5d1b29;
+  --color-canvas-soft: #6c2330;
+  --color-surface: #74303a;
+  --color-surface-raised: #74303a;
+  --color-surface-hover: #87404a;
+  --color-border: #89515a;
+  --color-border-strong: #a86d72;
+  --color-text: #fff6ed;
+  --color-text-soft: #f0dcd4;
+  --color-text-muted: #e3c6bc;
+  --color-text-faint: #ccaaa2;
+  --color-gold: #e3bb72;
+  --color-gold-light: #f6d895;
+  --color-gold-bright: #ffe4ab;
+  --color-gold-dark: #c89647;
+}
+
+.text-gold-gradient {
+  background: linear-gradient(135deg, var(--color-gold-dark) 0%, var(--color-gold) 50%, var(--color-gold-bright) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.text-silver-gradient {
+  background: linear-gradient(135deg, var(--color-paper) 0%, var(--color-info-soft) 60%, var(--color-text-muted) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.bg-gold-gradient { background: linear-gradient(135deg, var(--color-gold-fill-start) 0%, var(--color-gold-fill-end) 100%); }
+.bg-gold-gradient-subtle {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--color-gold-fill-start) 20%, transparent) 0%, color-mix(in srgb, var(--color-gold-fill-end) 8%, transparent) 100%);
+}
+.border-gold-subtle { border-color: color-mix(in srgb, var(--color-gold) 25%, transparent); }
+.gold-glow { box-shadow: 0 0 25px -5px color-mix(in srgb, var(--color-gold) 25%, transparent); }
+.gold-glow-lg { box-shadow: 0 0 45px -8px color-mix(in srgb, var(--color-gold) 35%, transparent); }
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--color-canvas-soft); }
+::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-gold-dark); }

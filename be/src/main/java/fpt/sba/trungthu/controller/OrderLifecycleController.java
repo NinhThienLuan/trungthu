@@ -20,7 +20,6 @@ public class OrderLifecycleController {
     private final OrderLifecycleService lifecycle;
 
     public record DepositRequest(@NotNull @DecimalMin("0.01") BigDecimal receivedAmount) {}
-    public record HoldRequest(@NotBlank @Size(max = 500) String reason) {}
     public record StatusRequest(@NotNull OrderStatus status, BigDecimal collectedAmount) {}
 
     @PostMapping("/api/provider/orders/{id}/confirm-deposit")
@@ -28,13 +27,6 @@ public class OrderLifecycleController {
     public ResponseEntity<ApiResponseDTO<OrderDetailResponse>> confirmDeposit(@PathVariable UUID id,
             @Valid @RequestBody DepositRequest request) {
         return ResponseEntity.ok(ApiResponseDTO.success(lifecycle.confirmDeposit(id, request.receivedAmount())));
-    }
-
-    @PostMapping("/api/provider/orders/{id}/extend-hold")
-    @PreAuthorize("hasRole('PROVIDER')")
-    public ResponseEntity<ApiResponseDTO<OrderLifecycleService.HoldResponse>> extendHold(@PathVariable UUID id,
-            @Valid @RequestBody HoldRequest request) {
-        return ResponseEntity.ok(ApiResponseDTO.success(lifecycle.extendHold(id, request.reason())));
     }
 
     @PostMapping("/api/orders/{id}/cancel")

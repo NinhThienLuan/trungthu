@@ -15,7 +15,7 @@ const SECTIONS = [
     title: 'Đặt cọc',
     points: [
       `Đặt cọc tối thiểu ${DEPOSIT_RATE * 100}% giá trị đơn, chuyển khoản trực tiếp cho xưởng qua VietQR.`,
-      `Đơn được giữ chỗ ${HOLD_MINUTES} phút. Quá thời gian chưa cọc, đơn tự huỷ.`,
+      `Đơn được giữ chỗ ${HOLD_MINUTES / 60} giờ. Quá thời gian chưa xác nhận cọc, đơn tự huỷ.`,
       'Sàn không thu hộ và không giữ tiền của người mua.',
     ],
   },

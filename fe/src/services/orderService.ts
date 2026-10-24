@@ -9,14 +9,14 @@ import type {
   OrderLine,
   OrderQuery,
   OrderSummary,
-  PayosPayment,
+  VietQrInstruction,
 } from '../types/order'
 import type { CartItem } from '../stores/cartStore'
 
 /**
  * Đơn hàng theo hợp đồng BE (backend-ownership-and-order-contract.md):
  * - BE4 (đã có): GET /api/orders/me, GET /api/orders/{id}
- * - BE3: POST /api/checkout/preview, POST /api/checkout, POST /api/orders/{id}/payos
+ * - BE3: POST /api/checkout/preview, POST /api/checkout, GET /api/orders/{id}/vietqr
  */
 
 const MOCK_KEY = 'mock_orders_v2' // đổi key: đơn mock cũ có cấu trúc khác
@@ -85,7 +85,7 @@ export const orderService = {
     // Kiểm tra giống BE trước khi "lưu" (lỗi bất kỳ -> không tạo đơn nào)
     body.groups.forEach((group, i) => {
       if (group.paymentMethod === 'COD' && !preview.groups[i].codAllowed) {
-        throw new Error('COD chỉ áp dụng cho đơn dưới 2.000.000đ và không có hộp tự phối. Vui lòng chọn PayOS.')
+        throw new Error('COD chỉ áp dụng cho đơn dưới 2.000.000đ và không có hộp tự phối. Vui lòng chọn VietQR.')
       }
     })
 
@@ -123,11 +123,10 @@ export const orderService = {
         subtotalAmount: p.subtotalAmount,
         shippingFee: p.shippingFee,
         depositAmount,
-        holdExpiresAt: isCod ? null : new Date(orderedAt.getTime()
-          + (group.paymentMethod === 'PAYOS' ? 5 * 60 : HOLD_MINUTES) * 60_000).toISOString(),
+        holdExpiresAt: isCod ? null : new Date(orderedAt.getTime() + HOLD_MINUTES * 60_000).toISOString(),
         lines,
         // QR demo chỉ chứa chữ, không phải tài khoản thật
-        payment: isCod || group.paymentMethod === 'PAYOS'
+        payment: isCod
           ? undefined
           : {
               qrImageUrl: `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(`DEMO - KHONG CHUYEN KHOAN - ${code}`)}`,
@@ -141,24 +140,25 @@ export const orderService = {
     return created
   },
 
-  /** Mỗi Order/Provider có một payment link PayOS riêng. Gọi lại vẫn nhận link cũ. */
-  payosLink: async (id: string): Promise<PayosPayment> => {
-    if (!USE_MOCK.checkout) {
-      return unwrap(http.post<ApiResponse<PayosPayment>>(`/orders/${id}/payos`))
+  /** Thông tin chuyển khoản của đúng đơn và đúng tài khoản seller. */
+  vietQr: async (id: string): Promise<VietQrInstruction> => {
+    if (!USE_MOCK.orders) {
+      return unwrap(http.get<ApiResponse<VietQrInstruction>>(`/orders/${id}/vietqr`))
     }
     await delay(200)
     const order = readMockOrders().find((item) => item.id === id)
-    if (!order || order.paymentMethod !== 'PAYOS' || order.status !== 'PENDING_DEPOSIT' || !order.holdExpiresAt) {
-      throw new Error('Đơn không còn trong thời gian thanh toán PayOS')
+    if (!order || order.paymentMethod !== 'VIETQR' || order.status !== 'PENDING_DEPOSIT'
+      || !order.holdExpiresAt || Date.parse(order.holdExpiresAt) <= Date.now() || !order.payment) {
+      throw new Error('Đơn không còn trong thời gian thanh toán VietQR')
     }
     return {
-      orderId: id,
-      payosOrderCode: Number.parseInt(id.replace(/-/g, '').slice(0, 12), 16),
+      imageUrl: order.payment.qrImageUrl ?? '',
+      bankCode: order.payment.bankName,
+      accountNumber: order.payment.bankAccount,
+      accountName: order.payment.accountName ?? '',
       amount: order.depositAmount,
-      paymentLinkId: `demo-${id}`,
-      checkoutUrl: null,
-      qrCode: `DEMO PAYOS ${order.code} - KHONG CHUYEN KHOAN`,
-      expiresAt: order.holdExpiresAt,
+      transferContent: order.payment.transferNote,
+      holdExpiresAt: order.holdExpiresAt,
     }
   },
 

@@ -1,7 +1,5 @@
 package fpt.sba.trungthu;
 
-import tools.jackson.databind.ObjectMapper;
-import tools.jackson.databind.node.ObjectNode;
 import fpt.sba.trungthu.common.security.SecurityContextService;
 import fpt.sba.trungthu.controller.VietQrController;
 import fpt.sba.trungthu.dto.request.CheckoutRequest;
@@ -12,9 +10,6 @@ import fpt.sba.trungthu.repository.*;
 import fpt.sba.trungthu.service.CheckoutService;
 import fpt.sba.trungthu.service.OrderLifecycleService;
 import fpt.sba.trungthu.service.OrderService;
-import fpt.sba.trungthu.service.PayosGateway;
-import fpt.sba.trungthu.service.impl.PayosPaymentService;
-import fpt.sba.trungthu.service.impl.ProviderPayosAccountService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,8 +36,6 @@ import static org.mockito.Mockito.*;
 class CheckoutFlowTests {
     @Autowired private CheckoutService checkout;
     @Autowired private OrderLifecycleService lifecycle;
-    @Autowired private PayosPaymentService payosPayments;
-    @Autowired private ObjectMapper json;
     @Autowired private VietQrController vietQr;
     @Autowired private UserRepository users;
     @Autowired private ProductRepository products;
@@ -54,8 +47,6 @@ class CheckoutFlowTests {
     @Autowired private PaymentTransactionRepository payments;
     @Autowired private PlatformTransactionManager transactionManager;
     @MockitoBean private SecurityContextService security;
-    @MockitoBean private PayosGateway payosGateway;
-    @MockitoBean private ProviderPayosAccountService payosAccounts;
     @MockitoSpyBean private OrderService orderService;
 
     private User customer;
@@ -71,6 +62,8 @@ class CheckoutFlowTests {
         customer = user(UserRole.CUSTOMER, false);
         User cakeProvider = user(UserRole.PROVIDER, true);
         User boxProvider = user(UserRole.PROVIDER, true);
+        cakeProvider.setBankAccountNumber("111222333");
+        users.save(cakeProvider);
         cake = variant(cakeProvider, ProductType.LOOSE_CAKE, "100000", null);
         box = variant(boxProvider, ProductType.BOX_SHELL, "200000", 2);
         cakeCapacity = capacity(cakeProvider);
@@ -96,6 +89,7 @@ class CheckoutFlowTests {
         Order qr = persisted.stream().filter(order -> order.getPaymentMethod() == PaymentMethod.VIETQR).findFirst().orElseThrow();
         assertThat(cod.getOrderStatus()).isEqualTo(OrderStatus.CONFIRMED);
         assertThat(qr.getOrderStatus()).isEqualTo(OrderStatus.PENDING_DEPOSIT);
+        assertThat(qr.getHoldExpiresAt()).isEqualTo(qr.getOrderedAt().plusSeconds(5 * 60 * 60));
         assertThat(qr.getDepositAmount()).isEqualByComparingTo("115000");
         when(security.getCurrentUserId()).thenReturn(customer.getId());
         var instruction = vietQr.getVietQr(qr.getId()).getBody().getData();
@@ -134,15 +128,11 @@ class CheckoutFlowTests {
     }
 
     @Test
-    void sellerExtendsHoldOnceConfirmsDepositAndCollectsBalanceOnDelivery() {
+    void sellerConfirmsDepositAndCollectsBalanceOnDelivery() {
         var created = checkout.checkout(request());
         Order qr = created.stream().map(detail -> orders.findById(detail.getId()).orElseThrow())
                 .filter(order -> order.getPaymentMethod() == PaymentMethod.VIETQR).findFirst().orElseThrow();
         when(security.getCurrentUser()).thenReturn(users.findById(qr.getProvider().getId()).orElseThrow());
-        var hold = lifecycle.extendHold(qr.getId(), "Buyer is completing transfer");
-        assertThat(hold.extensionCount()).isEqualTo(1);
-        assertThatThrownBy(() -> lifecycle.extendHold(qr.getId(), "Again"))
-                .isInstanceOf(ResponseStatusException.class);
         lifecycle.confirmDeposit(qr.getId(), new BigDecimal("115000"));
         assertThat(orders.findById(qr.getId()).orElseThrow().getOrderStatus()).isEqualTo(OrderStatus.DEPOSITED);
         assertThat(orders.findById(qr.getId()).orElseThrow().getHoldExpiresAt()).isNull();
@@ -157,53 +147,39 @@ class CheckoutFlowTests {
     }
 
     @Test
-    void payosCreatesDistinctQrPerSellerAndWebhookConfirmsOnlyMatchingPayment() {
+    @WithMockUser(roles = "CUSTOMER")
+    void vietQrCreatesDistinctInstructionsPerSellerAndOnlyOwnerConfirms() {
         CheckoutRequest request = new CheckoutRequest("Buyer", "0123456789", "Address", null, List.of(
-                new CheckoutRequest.Group(delivery, "HCM", "District 1", PaymentMethod.PAYOS, true,
+                new CheckoutRequest.Group(delivery, "HCM", "District 1", PaymentMethod.VIETQR, true,
                         List.of(new CheckoutRequest.Item(cake.getId(), 2, null))),
-                new CheckoutRequest.Group(delivery, "HCM", "District 1", PaymentMethod.PAYOS, true,
+                new CheckoutRequest.Group(delivery, "HCM", "District 1", PaymentMethod.VIETQR, true,
                         List.of(new CheckoutRequest.Item(box.getId(), 1, "Chuc mung")))));
         when(security.getCurrentUserId()).thenReturn(customer.getId());
-        when(payosAccounts.forProvider(any())).thenAnswer(invocation ->
-                new PayosGateway.Channel(invocation.getArgument(0).toString(), "api", "checksum"));
-        when(payosAccounts.requireReady(any())).thenAnswer(invocation ->
-                new PayosGateway.Channel(invocation.getArgument(0).toString(), "api", "checksum"));
-        when(payosGateway.create(any(), anyLong(), anyLong(), anyString(), any(Instant.class))).thenAnswer(invocation -> {
-            long code = invocation.getArgument(1);
-            long amount = invocation.getArgument(2);
-            return new PayosGateway.Link(code, amount, "link-" + code,
-                    "https://pay.payos.vn/web/link-" + code, "qr-" + code);
-        });
         var created = checkout.checkout(request);
         assertThat(created).hasSize(2);
-        var first = payosPayments.getOrCreate(created.get(0).getId());
-        var second = payosPayments.getOrCreate(created.get(1).getId());
-        assertThat(first.payosOrderCode()).isNotEqualTo(second.payosOrderCode());
-        assertThat(first.qrCode()).isNotEqualTo(second.qrCode());
-        assertThat(first.expiresAt()).isAfter(Instant.now().plusSeconds(4 * 3600 + 59 * 60));
-        assertThat(first.expiresAt()).isBeforeOrEqualTo(
-                orders.findById(first.orderId()).orElseThrow().getOrderedAt().plusSeconds(5 * 3600));
-        assertThat(payosPayments.getOrCreate(first.orderId()).qrCode()).isEqualTo(first.qrCode());
-        var channels = org.mockito.ArgumentCaptor.forClass(PayosGateway.Channel.class);
-        verify(payosGateway, times(2)).create(channels.capture(), anyLong(), anyLong(), anyString(), any(Instant.class));
-        assertThat(channels.getAllValues()).extracting(PayosGateway.Channel::clientId)
-                .containsExactlyInAnyOrder(
-                        orders.findById(first.orderId()).orElseThrow().getProvider().getId().toString(),
-                        orders.findById(second.orderId()).orElseThrow().getProvider().getId().toString());
+        var firstOrder = orders.findById(created.get(0).getId()).orElseThrow();
+        var secondOrder = orders.findById(created.get(1).getId()).orElseThrow();
+        var firstProvider = users.findById(firstOrder.getProvider().getId()).orElseThrow();
+        var secondProvider = users.findById(secondOrder.getProvider().getId()).orElseThrow();
+        var first = vietQr.getVietQr(firstOrder.getId()).getBody().getData();
+        var second = vietQr.getVietQr(secondOrder.getId()).getBody().getData();
+        assertThat(first.accountNumber()).isEqualTo(firstProvider.getBankAccountNumber());
+        assertThat(second.accountNumber()).isEqualTo(secondProvider.getBankAccountNumber());
+        assertThat(first.accountNumber()).isNotEqualTo(second.accountNumber());
+        assertThat(first.transferContent()).isNotEqualTo(second.transferContent());
+        assertThat(first.holdExpiresAt()).isEqualTo(firstOrder.getOrderedAt().plusSeconds(5 * 60 * 60));
+        assertThat(second.holdExpiresAt()).isEqualTo(secondOrder.getOrderedAt().plusSeconds(5 * 60 * 60));
 
-        when(payosGateway.verifyWebhook(any(), any(), anyString())).thenReturn(true);
-        ObjectNode payload = json.createObjectNode();
-        payload.put("code", "00").put("success", true).put("signature", "valid");
-        payload.putObject("data").put("code", "00").put("orderCode", first.payosOrderCode())
-                .put("amount", first.amount().longValueExact()).put("currency", "VND")
-                .put("paymentLinkId", first.paymentLinkId()).put("reference", "BANK-123");
-        payosPayments.receiveWebhook(payload);
-        payosPayments.receiveWebhook(payload);
-        assertThat(orders.findById(first.orderId()).orElseThrow().getOrderStatus())
+        when(security.getCurrentUser()).thenReturn(firstProvider);
+        when(security.getCurrentUserId()).thenReturn(firstProvider.getId());
+        assertThatThrownBy(() -> lifecycle.confirmDeposit(secondOrder.getId(), second.amount()))
+                .isInstanceOf(ResponseStatusException.class);
+        lifecycle.confirmDeposit(firstOrder.getId(), first.amount());
+        assertThat(orders.findById(firstOrder.getId()).orElseThrow().getOrderStatus())
                 .isEqualTo(OrderStatus.DEPOSITED);
-        assertThat(orders.findById(second.orderId()).orElseThrow().getOrderStatus())
+        assertThat(orders.findById(secondOrder.getId()).orElseThrow().getOrderStatus())
                 .isEqualTo(OrderStatus.PENDING_DEPOSIT);
-        assertThat(payments.sumSuccessfulAmountByOrderId(first.orderId())).isEqualByComparingTo(first.amount());
+        assertThat(payments.sumSuccessfulAmountByOrderId(firstOrder.getId())).isEqualByComparingTo(first.amount());
     }
 
     private CheckoutRequest request() {

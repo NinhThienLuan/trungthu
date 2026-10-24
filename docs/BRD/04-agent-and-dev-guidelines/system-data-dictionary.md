@@ -25,11 +25,10 @@ Toàn bộ các thực thể trong cơ sở dữ liệu được giữ nguyên v
 8. **`Order` (`ORDER`)**: Đơn hàng mua sắm. **Quy tắc Hướng A**: Giỏ hàng cho phép nhặt đa Provider, nhưng lúc Checkout hệ thống **tự động tách thành các Order con độc lập theo từng `provider_id`**. Lưu tiền cọc, phương thức, phí ship, thông tin VAT và deadline/audit hold.
 9. **`OrderBatch` (`ORDER_BATCH`)**: Đợt giao hàng kết nối ngày nhận bánh tươi (`delivery_date`).
 10. **`OrderItem` (`ORDER_ITEM`)**: Chi tiết các biến thể bánh lẻ / set hộp tiêu chuẩn trong đơn hàng.
-11. **`PaymentTransaction` (`PAYMENT_TRANSACTION`)**: Giao dịch thanh toán cọc đơn hàng qua VietQR/PayOS và nộp phí thuê SaaS (`SUBSCRIPTION_FEE`). PayOS lưu mã đơn số, link, QR và tham chiếu ngân hàng riêng từng Order/Provider.
+11. **`PaymentTransaction` (`PAYMENT_TRANSACTION`)**: Giao dịch thanh toán cọc đơn hàng qua VietQR và nộp phí thuê SaaS (`SUBSCRIPTION_FEE`). Mỗi Order/Provider có giao dịch cọc riêng; Provider xác nhận sau khi đối soát tài khoản ngân hàng.
 12. **`BulkRequest` (`BULK_REQUEST` / `b2b_rfqs`)**: Tiếp nhận yêu cầu mua số lượng lớn ($\ge 20$ hộp) và hiển thị trên Dashboard Provider.
 13. **`SystemConfig` (`SYSTEM_CONFIG`)**: Cặp key-value lưu cấu hình hệ thống chung (hotline, thông báo sàn).
 13a. **`ProviderShippingRate` (`PROVIDER_SHIPPING_RATE`)**: Bảng cước theo Provider/tỉnh/quận-huyện; checkout không nhận phí ship từ client.
-13b. **`ProviderPayosAccount` (`PROVIDER_PAYOS_ACCOUNT`)**: Kênh PayOS riêng từng Provider; API Key và Checksum Key mã hóa AES-GCM bằng master key của server.
 
 ---
 

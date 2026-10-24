@@ -15,7 +15,7 @@ import { PageHeader } from '../../components/ui/PageHeader'
 import { Notice, Spinner } from '../../components/ui/States'
 import type { CheckoutGroup, CheckoutPreviewGroup, CheckoutRequest } from '../../types/order'
 
-/** Lựa chọn thanh toán của một xưởng: COD hoặc PayOS (cọc 50% / trả đủ) */
+/** Lựa chọn thanh toán của một xưởng: COD hoặc VietQR (cọc 50% / trả đủ) */
 type PayChoice = 'COD' | 'MIN_DEPOSIT' | 'FULL'
 type ShippingZone = { province: string; district: string }
 
@@ -28,7 +28,7 @@ const toGroups = (groups: CartGroup[], dates: Record<string, string>, choices: R
       deliveryDate: dates[g.providerId],
       province: zones[g.providerId]?.province,
       district: zones[g.providerId]?.district,
-      paymentMethod: choice === 'COD' ? 'COD' : 'PAYOS',
+      paymentMethod: choice === 'COD' ? 'COD' : 'VIETQR',
       depositOption: choice === 'COD' ? undefined : choice,
       items: g.items.filter((i) => i.kind === 'single').map((i) => ({ variantId: i.variantId, quantity: i.quantity })),
       boxes: g.items
@@ -65,7 +65,7 @@ export function CheckoutPage() {
   if (!ready) return <Navigate to={ROUTES.cart} replace />
 
   const previewOf = (providerId: string) => preview?.groups.find((p) => p.providerId === providerId)
-  // Mặc định: COD nếu được phép, không thì PayOS cọc 50%.
+  // Mặc định: COD nếu được phép, không thì VietQR cọc 50%.
   const choiceOf = (p?: CheckoutPreviewGroup): PayChoice => {
     if (!p) return 'MIN_DEPOSIT'
     const picked = choices[p.providerId] ?? (p.codAllowed ? 'COD' : 'MIN_DEPOSIT')
@@ -179,8 +179,8 @@ export function CheckoutPage() {
                       note: p.codAllowed ? 'Không cần cọc trước' : `Không áp dụng: đơn từ ${formatVnd(COD_MAX_TOTAL)} hoặc có hộp tự phối`,
                       disabled: !p.codAllowed,
                     },
-                    { value: 'MIN_DEPOSIT', title: `PayOS — cọc ${DEPOSIT_RATE * 100}%`, note: `Thanh toán ${formatVnd(p.minDepositAmount)} trong 5 giờ` },
-                    { value: 'FULL', title: 'PayOS — trả đủ', note: `Thanh toán ${formatVnd(p.totalAmount)} trong 5 giờ` },
+                    { value: 'MIN_DEPOSIT', title: `VietQR — cọc ${DEPOSIT_RATE * 100}%`, note: `Chuyển ${formatVnd(p.minDepositAmount)} trong 5 giờ; xưởng xác nhận khi nhận tiền` },
+                    { value: 'FULL', title: 'VietQR — trả đủ', note: `Chuyển ${formatVnd(p.totalAmount)} trong 5 giờ; xưởng xác nhận khi nhận tiền` },
                   ]
                   return (
                     <fieldset key={g.providerId} className="rounded-sm border border-line p-4">
@@ -246,7 +246,7 @@ export function CheckoutPage() {
               <dd className="font-serif text-h3 text-navy">{formatVnd(grandTotal)}</dd>
             </div>
             <div className="flex justify-between text-muted">
-              <dt>Thanh toán ngay (PayOS)</dt>
+              <dt>Chuyển khoản VietQR</dt>
               <dd className="font-semibold text-navy">{formatVnd(payNow)}</dd>
             </div>
             <div className="flex justify-between text-muted">

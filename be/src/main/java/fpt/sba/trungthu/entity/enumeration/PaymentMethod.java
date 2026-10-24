@@ -4,11 +4,8 @@ package fpt.sba.trungthu.entity.enumeration;
  * Phương thức thanh toán được hỗ trợ trên nền tảng.
  */
 public enum PaymentMethod {
-    // Chuyển khoản quét mã VietQR tự động
+    // Chuyển khoản quét mã VietQR; provider đối soát và xác nhận thủ công
     VIETQR,
-
-    // Cổng thanh toán trực tuyến PayOS
-    PAYOS,
 
     // Cổng thanh toán VNPay
     VNPAY,
