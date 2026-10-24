@@ -8,4 +8,6 @@ import java.util.UUID;
 
 public interface ProviderShippingRateRepository extends JpaRepository<ProviderShippingRate, UUID> {
     Optional<ProviderShippingRate> findByProviderIdAndProvinceAndDistrict(UUID providerId, String province, String district);
+
+    java.util.List<ProviderShippingRate> findByProviderIdOrderByProvinceAscDistrictAsc(UUID providerId);
 }

@@ -25,6 +25,7 @@ import { B2bPortalView } from '../pages/user/B2bPortalView'
 import { RfqFormCatcher } from '../components/RfqFormCatcher'
 import { B2bCheckoutPage } from '../pages/user/B2bCheckoutPage'
 import { ProfilePage } from '../pages/admin/ProfilePage'
+import { SettingsPage } from '../pages/admin/SettingsPage'
 import { BakeBatchPage } from '../pages/admin/BakeBatchPage'
 import { OrdersPage } from '../pages/admin/OrdersPage'
 import { B2bDispatchPage } from '../pages/admin/B2bDispatchPage'
@@ -74,6 +75,7 @@ export const router = createBrowserRouter([
           { path: '/seller/b2b', element: stitch('Điều phối B2B', <B2bDispatchPage />) },
           { path: '/seller/orders', element: stitch('Đơn hàng & giao lạnh', <OrdersPage />) },
           { path: '/seller/profile', element: stitch('Hồ sơ & thẩm định', <ProfilePage />) },
+          { path: '/seller/settings', element: <SettingsPage /> },
         ],
       },
       {

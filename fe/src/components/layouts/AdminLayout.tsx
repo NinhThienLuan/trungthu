@@ -13,6 +13,7 @@ const NAV = [
   { to: '/seller/b2b', icon: 'request_quote', label: 'Báo Giá Sỉ B2B' },
   { to: '/seller/orders', icon: 'local_shipping', label: 'Đơn Hàng & Giao Lạnh' },
   { to: '/seller/profile', icon: 'workspace_premium', label: 'Hồ Sơ & Thẩm Định' },
+  { to: '/seller/settings', icon: 'tune', label: 'Cài Đặt Bán Hàng' },
 ]
 const ADMIN_NAV = [
   { to: '/admin/kyc', icon: 'biotech', label: 'Thẩm Định Chất Lượng' },
