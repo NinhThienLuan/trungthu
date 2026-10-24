@@ -56,7 +56,9 @@ export function ProductDetailPage() {
   const discountPct = oldPrice > price ? Math.round((1 - price / oldPrice) * 100) : 0
   const maxQty = Math.max(1, variant?.stockQuantity ?? 1)
   const inStock = !!variant && variant.stockQuantity > 0
-  const gallery = [product.imageUrl ?? DETAIL_GALLERY[0], ...DETAIL_GALLERY.slice(2, 5)]
+  const gallery = product.gallery?.length
+    ? product.gallery
+    : [product.imageUrl ?? DETAIL_GALLERY[0], ...DETAIL_GALLERY.slice(2, 5)]
   const configs =
     product.display?.configs ??
     product.variants.map((v) => ({ variantId: v.id, label: 'Quy Cách', title: v.variantName, sub: '' }))

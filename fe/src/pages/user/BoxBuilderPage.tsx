@@ -6,6 +6,7 @@ import { BOX_CAKES, BOX_MATERIALS, BOX_PROVIDER, BOX_SIZES, type BoxCake } from 
 import { useCartStore, type BoxSlot } from '../../stores/cartStore'
 import { useDocumentTitle } from '../../hooks/useDocumentTitle'
 import { ROUTES } from '../../constants'
+import { USE_MOCK } from '../../apis/mock'
 import { cn } from '../../lib/format'
 
 const LOGO_FEE = 50000
@@ -109,6 +110,11 @@ export function BoxBuilderPage() {
   }
 
   const handleAdd = () => {
+    // Quy cách / chất liệu / logo / trà chỉ có ở dữ liệu mẫu, BE chưa có -> chưa đặt thật được
+    if (!USE_MOCK.checkout) {
+      showToast('Hộp tự phối chưa mở bán', 'Vui lòng gửi Yêu cầu báo giá doanh nghiệp để xưởng phối hộp riêng.', 'warning')
+      return
+    }
     if (!isFull) {
       showToast('Khay chưa đủ bánh', `Vui lòng chọn thêm ${size.slots - filled.length} vị bánh nữa để hoàn tất hộp quà.`, 'warning')
       return

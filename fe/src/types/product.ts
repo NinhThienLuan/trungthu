@@ -21,9 +21,11 @@ export interface Product {
   productType: ProductType
   status: ProductStatus
   createdAt: string
-  /** Ảnh đại diện — BE chưa trả, hiện chỉ có ở dữ liệu mock */
+  /** Ảnh đại diện (BE: primaryImageUrl) */
   imageUrl?: string | null
   imageAlt?: string
+  /** Toàn bộ ảnh theo thứ tự hiển thị (BE: images) */
+  gallery?: string[]
   variants: ProductVariant[]
   /** Thông tin trình bày theo bản Stitch (BE chưa có các trường này) */
   display?: ProductDisplay

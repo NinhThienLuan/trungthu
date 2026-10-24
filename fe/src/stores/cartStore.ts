@@ -103,15 +103,9 @@ export const useCartStore = create<CartState>()(
     }),
     {
       name: 'cart',
-      version: 1,
-      // Giỏ lưu từ bản cũ (chưa có lineId/kind) -> coi là bánh lẻ
-      migrate: (persisted) => {
-        const state = persisted as { items?: CartItem[]; deliveryDates?: Record<string, string> }
-        return {
-          ...state,
-          items: (state.items ?? []).map((i) => ({ ...i, lineId: i.lineId ?? i.variantId, kind: i.kind ?? 'single' })),
-        } as CartState
-      },
+      version: 2,
+      // Giỏ trước v2 chứa id sản phẩm mock -> BE thật trả 400 khi checkout, nên bỏ
+      migrate: () => ({ items: [], deliveryDates: {} }) as unknown as CartState,
     },
   ),
 )

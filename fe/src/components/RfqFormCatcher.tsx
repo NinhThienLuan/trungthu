@@ -1,8 +1,9 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Icon } from './Icon'
 import { rfqService } from '../services/rfqService'
 import { errorMessage } from '../apis/http'
-import { MIN_LEAD_DAYS, RFQ_MIN_QUANTITY } from '../constants'
+import { MIN_LEAD_DAYS, ROUTES, RFQ_MIN_QUANTITY } from '../constants'
 import { addDays, cn, toIsoDate } from '../lib/format'
 
 const RFQ_FORM_IDS = ['rfq-form', 'rfqForm']
@@ -13,6 +14,7 @@ const RFQ_FORM_IDS = ['rfq-form', 'rfqForm']
  * Form Stitch không đặt name cho ô nhập -> đọc theo loại ô: text (công ty, người liên hệ), tel, email, date.
  */
 export function RfqFormCatcher({ children }: { children: ReactNode }) {
+  const navigate = useNavigate()
   const [toast, setToast] = useState<{ ok: boolean; text: string } | null>(null)
 
   const handleSubmit = async (e: FormEvent<HTMLDivElement>) => {
@@ -27,15 +29,29 @@ export function RfqFormCatcher({ children }: { children: ReactNode }) {
     const qtySelect = form.querySelector('select')?.value.match(/\d+/)?.[0]
     const quantity = Math.max(RFQ_MIN_QUANTITY, Number(qtyInput?.value || qtySelect) || RFQ_MIN_QUANTITY)
     const message = form.querySelector('textarea')?.value.trim()
+    // Form B2B: công ty, mã số thuế, người phụ trách, chức vụ. Form trang chủ chỉ có công ty, người liên hệ
+    // mà BE bắt buộc mã số thuế + chức vụ -> chuyển sang form B2B đầy đủ
+    if (form.id !== 'rfq-form') {
+      navigate(ROUTES.rfq)
+      return
+    }
+    const [companyName = '', taxCode = '', contactName = '', contactPosition = ''] = texts
+    if (!taxCode || !contactPosition) {
+      setToast({ ok: false, text: 'Vui lòng nhập Mã số thuế và Chức vụ / Phòng ban.' })
+      window.setTimeout(() => setToast(null), 4000)
+      return
+    }
     try {
       await rfqService.submit({
-        companyName: texts[0] ?? '',
-        contactName: texts[form.id === 'rfq-form' ? 2 : 1] ?? '',
-        phone: byType('tel'),
-        email: byType('email'),
-        quantity,
-        expectedDate: byType('date') || toIsoDate(addDays(new Date(), MIN_LEAD_DAYS)),
-        message: message || undefined,
+        companyName,
+        taxCode,
+        contactName,
+        contactPosition,
+        contactPhone: byType('tel'),
+        contactEmail: byType('email'),
+        requestedQuantity: quantity,
+        expectedDeliveryDate: byType('date') || toIsoDate(addDays(new Date(), MIN_LEAD_DAYS)),
+        description: message || undefined,
       })
       form.reset()
       setToast({ ok: true, text: 'Đã gửi yêu cầu báo giá. Các xưởng phù hợp sẽ liên hệ bạn trong 24h.' })

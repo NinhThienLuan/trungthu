@@ -143,13 +143,15 @@ export interface OrderQuery {
 
 // ---------- RFQ ----------
 
+/** BE3: CreateRfqRequest (POST /api/rfqs) */
 export interface RfqRequest {
   companyName: string
+  taxCode: string
   contactName: string
-  phone: string
-  email: string
-  quantity: number
-  expectedDate: string
-  budgetNote?: string
-  message?: string
+  contactPosition: string
+  contactPhone: string
+  contactEmail: string
+  requestedQuantity: number
+  expectedDeliveryDate: string
+  description?: string
 }

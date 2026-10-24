@@ -4,11 +4,11 @@
  */
 export const USE_MOCK = {
   auth: false, // Nối API thật /api/auth của Spring Boot backend
-  products: true, // danh mục mẫu 14 sản phẩm có ảnh (đổi false để dùng BE thật)
-  capacity: true, // BE2 Đạt: ngày khả dụng theo hạn ngạch
-  checkout: true, // Demo PayOS; tắt khi cart dùng UUID sản phẩm thật và seller đã cấu hình kênh
-  orders: true, // Tắt cùng checkout để đọc trạng thái thanh toán từ backend
-  rfq: true, // BE3 Phát: gửi yêu cầu báo giá sỉ
+  products: false, // BE2 Đạt: /api/products (sản phẩm demo do DemoProductSeeder tạo)
+  capacity: true, // BE2 Đạt: CHƯA có API ngày khả dụng -> vẫn giả lập
+  checkout: false, // BE3 Phát: /api/checkout, /api/orders/{id}/payos
+  orders: false, // BE4 Luân: /api/orders/me, /api/orders/{id}
+  rfq: false, // BE3 Phát: /api/rfqs
 }
 
 export const delay = (ms = 400) => new Promise((resolve) => setTimeout(resolve, ms))
