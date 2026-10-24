@@ -9,6 +9,7 @@ import type {
   OrderLine,
   OrderQuery,
   OrderSummary,
+  ShippingZoneRate,
   VietQrInstruction,
 } from '../types/order'
 import type { CartItem } from '../stores/cartStore'
@@ -61,6 +62,20 @@ const toSummary = ({
 })
 
 export const orderService = {
+  /** Khu vực + phí giao của xưởng (công khai). Mock: 3 khu vực demo như DemoCheckoutSeeder */
+  shippingZones: async (providerId: string): Promise<ShippingZoneRate[]> => {
+    if (!USE_MOCK.checkout) {
+      return unwrap(http.get<ApiResponse<ShippingZoneRate[]>>(`/providers/${providerId}/shipping-zones`))
+    }
+    await delay(150)
+    return [
+      { province: 'hà nội', district: 'hoàn kiếm', fee: 30000 },
+      { province: 'hà nội', district: 'cầu giấy', fee: 35000 },
+      { province: 'hồ chí minh', district: 'quận 1', fee: 30000 },
+    ]
+  },
+
+
   /** BE3: POST /api/checkout/preview — chỉ đọc, không giữ stock/slot */
   preview: async (body: CheckoutRequest, cart: CartItem[]): Promise<CheckoutPreview> => {
     if (!USE_MOCK.checkout) {

@@ -74,6 +74,7 @@ public class WebSecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/public/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/providers/*/available-dates").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/providers/*/shipping-zones").permitAll()
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(authenticationEntryPoint))

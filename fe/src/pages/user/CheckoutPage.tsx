@@ -11,13 +11,13 @@ import { COD_MAX_TOTAL, DEPOSIT_RATE, ROUTES } from '../../constants'
 import { cn, formatVnd } from '../../lib/format'
 import { TextInput } from '../../components/ui/Field'
 import { OrderItemsSummary } from '../../components/OrderItemsSummary'
+import { ShippingZoneSelect, type ShippingZone } from '../../components/ShippingZoneSelect'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { Notice, Spinner } from '../../components/ui/States'
 import type { CheckoutGroup, CheckoutPreviewGroup, CheckoutRequest } from '../../types/order'
 
 /** Lựa chọn thanh toán của một xưởng: COD hoặc VietQR (cọc 50% / trả đủ) */
 type PayChoice = 'COD' | 'MIN_DEPOSIT' | 'FULL'
-type ShippingZone = { province: string; district: string }
 
 const toGroups = (groups: CartGroup[], dates: Record<string, string>, choices: Record<string, PayChoice>,
   zones: Record<string, ShippingZone>): CheckoutGroup[] =>
@@ -144,25 +144,15 @@ export function CheckoutPage() {
             </p>
             <div className="mt-5 grid gap-4">
               {groups.map((g) => (
-                <div key={g.providerId} className="grid gap-3 rounded-sm border border-line p-4 sm:grid-cols-2">
-                  <p className="font-semibold text-navy sm:col-span-2">Khu vực giao của {g.storeName}</p>
-                  <TextInput label="Tỉnh/thành phố" name={`province-${g.providerId}`} required
-                    defaultValue={zones[g.providerId]?.province ?? ''}
-                    onBlur={(event) => setZones((current) => ({ ...current, [g.providerId]: {
-                      province: event.target.value.trim(), district: current[g.providerId]?.district ?? '',
-                    } }))} />
-                  <TextInput label="Quận/huyện" name={`district-${g.providerId}`} required
-                    defaultValue={zones[g.providerId]?.district ?? ''}
-                    onBlur={(event) => setZones((current) => ({ ...current, [g.providerId]: {
-                      province: current[g.providerId]?.province ?? '', district: event.target.value.trim(),
-                    } }))} />
-                </div>
+                <ShippingZoneSelect key={g.providerId} providerId={g.providerId} storeName={g.storeName}
+                  value={zones[g.providerId]}
+                  onChange={(zone) => setZones((current) => ({ ...current, [g.providerId]: zone }))} />
               ))}
             </div>
             {previewLoading ? (
               <Spinner label="Đang tính tiền..." />
             ) : !zonesReady ? (
-              <div className="mt-4"><Notice>Nhập khu vực giao hàng để xem giá và phương thức thanh toán.</Notice></div>
+              <div className="mt-4"><Notice>Chọn khu vực giao hàng để xem giá và phương thức thanh toán.</Notice></div>
             ) : previewError ? (
               <div className="mt-4">
                 <Notice tone="danger">{previewError}</Notice>
