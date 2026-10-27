@@ -36,7 +36,7 @@ export const ROUTES = {
 export const HOME_BY_ROLE: Record<UserRole, string> = {
   CUSTOMER: '/',
   PROVIDER: '/seller',
-  PLATFORM_ADMIN: '/admin/kyc',
+  PLATFORM_ADMIN: '/admin',
 }
 
 /** OTP quên mật khẩu: 6 số, hiệu lực 10 phút, gửi lại sau 60 giây (khớp AuthServiceImpl) */

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, type FormEvent } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { Menu, X } from 'lucide-react'
 import { Icon } from '../Icon'
-import { ROUTES } from '../../constants'
+import { HOME_BY_ROLE, ROUTES } from '../../constants'
 import { cartCount, useCartStore } from '../../stores/cartStore'
 import { useAuthStore } from '../../stores/authStore'
 import { cn } from '../../lib/format'
@@ -76,15 +76,15 @@ export function Header() {
         </form>
 
         <nav className="hidden xl:flex items-center gap-5" aria-label="Điều hướng chính">
-          {BASE_NAV.map((item) => (
+          {BASE_NAV.filter(item => user?.role !== 'PLATFORM_ADMIN' || !item.to.startsWith('/seller')).map((item) => (
             <NavLink key={item.to} to={item.to} end={item.end} className={navClass}>
               {item.label}
             </NavLink>
           ))}
           {/* Link quản trị chỉ hiển thị khi có vai trò phù hợp */}
-          {user && (user.role === 'PROVIDER' || user.role === 'PLATFORM_ADMIN') && (
-            <NavLink to="/seller" className={navClass}>
-              Hoàng Đài Quản Trị
+          {user && user.role !== 'CUSTOMER' && (
+            <NavLink to={HOME_BY_ROLE[user.role]} className={navClass}>
+              {user.role === 'PLATFORM_ADMIN' ? 'Quản trị sàn' : 'Quản lý gian hàng'}
             </NavLink>
           )}
         </nav>
@@ -213,7 +213,7 @@ export function Header() {
                         <span className="font-medium text-navy text-[13px]">Đổi mật khẩu</span>
                       </Link>
 
-                      {(user.role === 'PROVIDER' || user.role === 'PLATFORM_ADMIN') && (
+                      {user.role === 'PROVIDER' && (
                         <Link
                           to="/seller"
                           onClick={() => setProfilePopupOpen(false)}
@@ -320,14 +320,14 @@ export function Header() {
       {/* Menu di động */}
       {mobileMenuOpen && (
         <nav className="xl:hidden flex flex-col gap-space-md px-margin-mobile pb-space-lg pt-space-sm border-t border-white/10" aria-label="Menu di động">
-          {BASE_NAV.map((item) => (
+          {BASE_NAV.filter(item => user?.role !== 'PLATFORM_ADMIN' || !item.to.startsWith('/seller')).map((item) => (
             <NavLink key={item.to} to={item.to} end={item.end} className={navClass} onClick={() => setMobileMenuOpen(false)}>
               {item.label}
             </NavLink>
           ))}
-          {user && (user.role === 'PROVIDER' || user.role === 'PLATFORM_ADMIN') && (
-            <NavLink to="/seller" className={navClass} onClick={() => setMobileMenuOpen(false)}>
-              Hoàng Đài Quản Trị
+          {user && user.role !== 'CUSTOMER' && (
+            <NavLink to={HOME_BY_ROLE[user.role]} className={navClass} onClick={() => setMobileMenuOpen(false)}>
+              {user.role === 'PLATFORM_ADMIN' ? 'Quản trị sàn' : 'Quản lý gian hàng'}
             </NavLink>
           )}
 

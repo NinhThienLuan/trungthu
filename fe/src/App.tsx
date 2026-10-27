@@ -7,7 +7,7 @@ export default function App() {
   const init = useAuthStore((s) => s.init)
   // Kiểm tra phiên đăng nhập (cookie) một lần khi mở app
   useEffect(() => {
-    init()
+    void init()
   }, [init])
 
   return <RouterProvider router={router} />

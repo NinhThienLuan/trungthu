@@ -25,3 +25,6 @@ dist-ssr
 
 # Vite cache
 .vite
+
+# Local design inspection screenshots and browser QA output
+.taste-skill/

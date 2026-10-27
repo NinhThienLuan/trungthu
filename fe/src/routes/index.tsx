@@ -4,6 +4,7 @@ import { UserLayout } from '../components/layouts/UserLayout'
 import { ROUTES } from '../constants'
 import { AuthLayout } from '../components/layouts/AuthLayout'
 import { AdminLayout } from '../components/layouts/AdminLayout'
+import { SellerLayout } from '../components/layouts/SellerLayout'
 import { ProtectedRoute } from './ProtectedRoute'
 import { CartPage } from '../pages/user/CartPage'
 import { CheckoutPage } from '../pages/user/CheckoutPage'
@@ -27,15 +28,35 @@ import { BoxBuilderPage } from '../pages/user/BoxBuilderPage'
 import { B2bPortalView } from '../pages/user/B2bPortalView'
 import { RfqFormCatcher } from '../components/RfqFormCatcher'
 import { B2bCheckoutPage } from '../pages/user/B2bCheckoutPage'
-import { ProfilePage } from '../pages/admin/ProfilePage'
-import { SettingsPage } from '../pages/admin/SettingsPage'
-import { BakeBatchPage } from '../pages/admin/BakeBatchPage'
-import { OrdersPage } from '../pages/admin/OrdersPage'
-import { B2bDispatchPage } from '../pages/admin/B2bDispatchPage'
-import { QualityReviewPage } from '../pages/admin/QualityReviewPage'
-import { DashboardPage } from '../pages/admin/DashboardPage'
+import { SellerDashboardPage } from '../pages/seller/DashboardPage'
+import { SellerProductsPage } from '../pages/seller/ProductsPage'
+import { SellerOrdersPage } from '../pages/seller/OrdersPage'
+import { SellerCapacityPage } from '../pages/seller/CapacityPage'
+import { SellerRfqPage } from '../pages/seller/RfqPage'
+import { SellerProfilePage } from '../pages/seller/ProfilePage'
+import { SellerSubscriptionPage } from '../pages/seller/SubscriptionPage'
+import { SellerSettingsPage } from '../pages/seller/SettingsPage'
+import { AdminOverviewPage } from '../pages/admin/OverviewPage'
+import { AdminCompliancePage } from '../pages/admin/CompliancePage'
+import { AdminSubscriptionsPage } from '../pages/admin/SubscriptionsPage'
 
 const stitch = (title: string | undefined, page: ReactNode) => <StitchPage title={title}>{page}</StitchPage>
+
+const sellerPages = () => [
+  { path: `/seller`, element: <SellerDashboardPage /> },
+  { path: `/seller/products`, element: <SellerProductsPage /> },
+  { path: `/seller/orders`, element: <SellerOrdersPage /> },
+  { path: `/seller/capacity`, element: <SellerCapacityPage /> },
+  { path: `/seller/b2b`, element: <SellerRfqPage /> },
+  { path: `/seller/profile`, element: <SellerProfilePage /> },
+  { path: `/seller/subscription`, element: <SellerSubscriptionPage /> },
+  { path: `/seller/settings`, element: <SellerSettingsPage /> },
+]
+const adminPages = () => [
+  { path: `/admin`, element: <AdminOverviewPage /> },
+  { path: `/admin/kyc`, element: <AdminCompliancePage /> },
+  { path: `/admin/subscriptions`, element: <AdminSubscriptionsPage /> },
+]
 
 export const router = createBrowserRouter([
   {
@@ -66,29 +87,12 @@ export const router = createBrowserRouter([
     ],
   },
   {
-    // Khu vực nghệ nhân / quản trị (FE2) — Có Route Guard phân quyền
-    element: <AdminLayout />,
-    children: [
-      {
-        // Khu vực Seller (Provider & Admin)
-        element: <ProtectedRoute allowedRoles={['PROVIDER', 'PLATFORM_ADMIN']} />,
-        children: [
-          { path: '/seller', element: stitch('Bảng điều khiển', <DashboardPage />) },
-          { path: '/seller/products', element: stitch('Menu & mẻ ra lò', <BakeBatchPage />) },
-          { path: '/seller/b2b', element: stitch('Điều phối B2B', <B2bDispatchPage />) },
-          { path: '/seller/orders', element: stitch('Đơn hàng & giao lạnh', <OrdersPage />) },
-          { path: '/seller/profile', element: stitch('Hồ sơ & thẩm định', <ProfilePage />) },
-          { path: '/seller/settings', element: <SettingsPage /> },
-        ],
-      },
-      {
-        // Khu vực Admin sàn duy nhất
-        element: <ProtectedRoute allowedRoles={['PLATFORM_ADMIN']} />,
-        children: [
-          { path: '/admin/kyc', element: stitch('Thẩm định chất lượng', <QualityReviewPage />) },
-        ],
-      },
-    ],
+    element: <ProtectedRoute allowedRoles={['PROVIDER']} />,
+    children: [{ element: <SellerLayout />, children: sellerPages() }],
+  },
+  {
+    element: <ProtectedRoute allowedRoles={['PLATFORM_ADMIN']} />,
+    children: [{ element: <AdminLayout />, children: adminPages() }],
   },
   {
     element: <AuthLayout />,
