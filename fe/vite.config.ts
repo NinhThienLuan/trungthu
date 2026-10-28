@@ -12,6 +12,7 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       proxy: {
         '/api': env.API_TARGET || 'http://localhost:8080',
+        '/uploads': env.API_TARGET || 'http://localhost:8080',
       },
     },
   }

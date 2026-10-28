@@ -1,6 +1,9 @@
 // Trang bộ sưu tập: markup chuyển nguyên từ Stitch, lưới sản phẩm + phân trang chạy theo dữ liệu.
+import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Icon } from '../../components/Icon'
+import { PRODUCT_TYPE_LABEL } from '../../constants'
+import type { ProductType } from '../../types/product'
 import { CatalogCard } from '../../components/CatalogCard'
 import { StitchPagination } from '../../components/StitchPagination'
 import { ErrorState, Spinner } from '../../components/ui/States'
@@ -8,15 +11,40 @@ import { productService } from '../../services/productService'
 import { useApi } from '../../hooks/useApi'
 
 const PAGE_SIZE = 6
+const TYPES: ProductType[] = ['LOOSE_CAKE', 'BOX_SHELL', 'GIFT_SET', 'GREETING_CARD', 'ADDON_SERVICE']
+// BE sắp xếp theo trường của Product; giá nằm ở từng phân loại nên chưa sắp theo giá được
+const SORTS = {
+  newest: { label: 'Mới nhất', sortBy: 'createdAt', direction: 'desc' },
+  oldest: { label: 'Cũ nhất', sortBy: 'createdAt', direction: 'asc' },
+  'name-asc': { label: 'Tên: A → Z', sortBy: 'name', direction: 'asc' },
+  'name-desc': { label: 'Tên: Z → A', sortBy: 'name', direction: 'desc' },
+} as const
+type SortKey = keyof typeof SORTS
 
 export function CatalogPage() {
   const [params, setParams] = useSearchParams()
   const page = Number(params.get('page') ?? 0)
-  const { data, loading, error, reload } = useApi(() => productService.list({ page, size: PAGE_SIZE }), [page])
+  const type = (params.get('type') as ProductType | null) ?? undefined
+  const sortKey: SortKey = (params.get('sort') as SortKey | null) ?? 'newest'
+  const sort = SORTS[sortKey] ?? SORTS.newest
+  const [view, setView] = useState<'grid' | 'list'>('grid')
+  const { data, loading, error, reload } = useApi(
+    () => productService.list({ page, size: PAGE_SIZE, type, sortBy: sort.sortBy, direction: sort.direction }), [page, type, sortKey])
+  /** Đổi bộ lọc trên URL; đổi lọc/sắp xếp thì về trang đầu */
+  const update = (next: { page?: number; type?: ProductType | null; sort?: SortKey }) => {
+    const p = new URLSearchParams(params)
+    const set = (k: string, v?: string | null) => (v ? p.set(k, v) : p.delete(k))
+    if ('type' in next) set('type', next.type)
+    if (next.sort) set('sort', next.sort === 'newest' ? null : next.sort)
+    set('page', next.page ? String(next.page) : null)
+    setParams(p)
+  }
   const setPage = (p: number) => {
-    setParams(p ? { page: String(p) } : {})
+    update({ page: p })
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
+  const filterButton = (active: boolean) =>
+    `w-full text-left p-2 rounded-[0.125rem] flex items-center justify-between transition-colors ${active ? 'bg-primary-container text-champagne-light shadow-sm' : 'bg-surface-container-low hover:bg-champagne-light/40 text-on-surface'}`
   const from = data && data.totalElements ? page * PAGE_SIZE + 1 : 0
   const to = data ? Math.min((page + 1) * PAGE_SIZE, data.totalElements) : 0
   const rangeLabel = `${from} - ${to}`
@@ -115,32 +143,31 @@ export function CatalogPage() {
                 <select
                   className="bg-surface-container-lowest text-primary font-body-sm text-body-sm px-3 py-1.5 rounded-[0.125rem] shadow-sm focus:outline-none focus:ring-1 focus:ring-secondary"
                   id="sort-select"
+                  value={sortKey}
+                  onChange={(e) => update({ sort: e.target.value as SortKey })}
                 >
-                  {' '}
-                  <option value="curated">Tuyển chọn nghệ nhân đề xuất</option>{' '}
-                  <option value="price-asc">Giá: Thấp đến Cao</option>{' '}
-                  <option value="price-desc">Giá: Cao đến Thấp</option>{' '}
-                  <option value="rating">Đánh giá cao nhất (5.0★)</option>{' '}
-                  <option value="b2b-tier">Chiết khấu B2B tối ưu</option>{' '}
+                  {(Object.keys(SORTS) as SortKey[]).map((k) => <option key={k} value={k}>{SORTS[k].label}</option>)}
                 </select>{' '}
               </div>{' '}
               <div className="flex items-center bg-surface-container-high p-0.5 rounded-[0.125rem]">
                 {' '}
                 <button
-                  className="p-1 rounded-[0.125rem] text-primary hover:bg-surface-container-lowest transition-colors"
-                  id="view-grid-4"
-                  title="Lưới 4 cột"
+                  type="button"
+                  className={`p-1 rounded-[0.125rem] transition-colors ${view === 'grid' ? 'text-primary bg-surface-container-lowest' : 'text-outline hover:text-primary hover:bg-surface-container-lowest'}`}
+                  title="Dạng lưới"
+                  aria-pressed={view === 'grid'}
+                  onClick={() => setView('grid')}
                 >
-                  {' '}
-                  <Icon name="grid_view" className="text-[20px]" aria-hidden />{' '}
-                </button>{' '}
+                  <Icon name="grid_view" className="text-[20px]" aria-hidden />
+                </button>
                 <button
-                  className="p-1 rounded-[0.125rem] text-outline hover:text-primary hover:bg-surface-container-lowest transition-colors"
-                  id="view-grid-3"
-                  title="Lưới 3 cột"
+                  type="button"
+                  className={`p-1 rounded-[0.125rem] transition-colors ${view === 'list' ? 'text-primary bg-surface-container-lowest' : 'text-outline hover:text-primary hover:bg-surface-container-lowest'}`}
+                  title="Dạng danh sách"
+                  aria-pressed={view === 'list'}
+                  onClick={() => setView('list')}
                 >
-                  {' '}
-                  <Icon name="view_agenda" className="text-[20px]" aria-hidden />{' '}
+                  <Icon name="view_agenda" className="text-[20px]" aria-hidden />
                 </button>{' '}
               </div>{' '}
             </div>{' '}
@@ -151,274 +178,62 @@ export function CatalogPage() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-xl items-start">
             {' '}
             <aside className="lg:col-span-3 space-y-space-lg bg-surface-container-lowest p-space-lg rounded-[0.125rem] shadow-sm">
-              {' '}
               <div className="flex items-center justify-between pb-space-sm bg-surface-container-low px-3 py-2 rounded-[0.125rem]">
-                {' '}
                 <div className="flex items-center gap-2 text-primary">
-                  {' '}
-                  <Icon name="tune" className="text-[20px]" aria-hidden />{' '}
-                  <span className="font-label-lg text-label-lg uppercase tracking-wider">Bộ Lọc Tinh Hoa</span>{' '}
-                </div>{' '}
+                  <Icon name="tune" className="text-[20px]" aria-hidden />
+                  <span className="font-label-lg text-label-lg uppercase tracking-wider">Bộ Lọc</span>
+                </div>
                 <button
-                  className="text-secondary font-label-sm text-label-sm hover:underline tracking-wider uppercase"
-                  id="reset-filters"
+                  type="button"
+                  className="text-secondary font-label-sm text-label-sm hover:underline tracking-wider uppercase disabled:opacity-40 disabled:no-underline"
+                  disabled={!type && sortKey === 'newest'}
+                  onClick={() => setParams({})}
                 >
                   Đặt lại
-                </button>{' '}
-              </div>{' '}
+                </button>
+              </div>
               <div className="space-y-space-xs">
-                {' '}
                 <h4 className="font-label-md text-label-md uppercase tracking-wider text-on-surface-variant flex items-center gap-2">
-                  {' '}
-                  <Icon name="local_fire_department" className="text-[16px] text-secondary" aria-hidden />
-                  {' Độ Tươi & Tiêu Chuẩn '}
-                </h4>{' '}
-                <div className="space-y-2 pt-1">
-                  {' '}
-                  <label className="flex items-center justify-between p-2 rounded-[0.125rem] bg-surface-container-low hover:bg-champagne-light/30 cursor-pointer transition-colors">
-                    {' '}
-                    <div className="flex items-center gap-2">
-                      {' '}
-                      <input
-                        defaultChecked
-                        className="accent-secondary h-4 w-4 rounded-[0.125rem]"
-                        type="checkbox"
-                      />{' '}
-                      <span className="font-body-sm text-body-sm text-on-surface">Bánh nướng mới trong ngày</span>{' '}
-                    </div>{' '}
-                    <span className="font-label-sm text-[10px] px-1.5 py-0.5 rounded-[0.125rem] bg-secondary-container text-on-secondary-container">
-                      HOT
-                    </span>{' '}
-                  </label>{' '}
-                  <label className="flex items-center justify-between p-2 rounded-[0.125rem] bg-surface-container-low hover:bg-champagne-light/30 cursor-pointer transition-colors">
-                    {' '}
-                    <div className="flex items-center gap-2">
-                      {' '}
-                      <input
-                        defaultChecked
-                        className="accent-secondary h-4 w-4 rounded-[0.125rem]"
-                        type="checkbox"
-                      />{' '}
-                      <span className="font-body-sm text-body-sm text-on-surface">Kiểm định VSATTP Cấp 1</span>{' '}
-                    </div>{' '}
-                    <Icon name="verified" className="text-secondary text-[16px]" aria-hidden />{' '}
-                  </label>{' '}
-                  <label className="flex items-center justify-between p-2 rounded-[0.125rem] bg-surface-container-low hover:bg-champagne-light/30 cursor-pointer transition-colors">
-                    {' '}
-                    <div className="flex items-center gap-2">
-                      {' '}
-                      <input className="accent-secondary h-4 w-4 rounded-[0.125rem]" type="checkbox" />{' '}
-                      <span className="font-body-sm text-body-sm text-on-surface">Chuỗi nhiệt độ lạnh 18°C</span>{' '}
-                    </div>{' '}
-                    <Icon name="device_thermostat" className="text-outline text-[16px]" aria-hidden />{' '}
-                  </label>{' '}
-                </div>{' '}
-              </div>{' '}
-              <div className="space-y-space-xs">
-                {' '}
-                <h4 className="font-label-md text-label-md uppercase tracking-wider text-on-surface-variant flex items-center gap-2">
-                  {' '}
-                  <Icon name="history_edu" className="text-[16px] text-secondary" aria-hidden />
-                  {' Thương Hiệu Nghệ Nhân '}
-                </h4>{' '}
-                <div className="space-y-1.5 pt-1">
-                  {' '}
-                  <label className="flex items-center justify-between cursor-pointer py-1 px-1.5 rounded-[0.125rem] hover:bg-surface-container">
-                    {' '}
-                    <div className="flex items-center gap-2">
-                      {' '}
-                      <input
-                        defaultChecked
-                        className="accent-secondary h-4 w-4 rounded-[0.125rem]"
-                        name="artisan"
-                        type="checkbox"
-                        value="dong-phuong"
-                        readOnly
-                      />{' '}
-                      <span className="font-body-sm text-body-sm text-primary font-medium">Đông Phương Cầu Đất</span>{' '}
-                    </div>{' '}
-                    <span className="font-label-sm text-label-sm text-outline">Hải Phòng</span>{' '}
-                  </label>{' '}
-                  <label className="flex items-center justify-between cursor-pointer py-1 px-1.5 rounded-[0.125rem] hover:bg-surface-container">
-                    {' '}
-                    <div className="flex items-center gap-2">
-                      {' '}
-                      <input
-                        defaultChecked
-                        className="accent-secondary h-4 w-4 rounded-[0.125rem]"
-                        name="artisan"
-                        type="checkbox"
-                        value="bao-phuong"
-                        readOnly
-                      />{' '}
-                      <span className="font-body-sm text-body-sm text-primary font-medium">Bảo Phương Thụy Khuê</span>{' '}
-                    </div>{' '}
-                    <span className="font-label-sm text-label-sm text-outline">Hà Nội</span>{' '}
-                  </label>{' '}
-                  <label className="flex items-center justify-between cursor-pointer py-1 px-1.5 rounded-[0.125rem] hover:bg-surface-container">
-                    {' '}
-                    <div className="flex items-center gap-2">
-                      {' '}
-                      <input
-                        className="accent-secondary h-4 w-4 rounded-[0.125rem]"
-                        name="artisan"
-                        type="checkbox"
-                        value="nhu-lan"
-                        readOnly
-                      />{' '}
-                      <span className="font-body-sm text-body-sm text-primary font-medium">Như Lan Sài Gòn</span>{' '}
-                    </div>{' '}
-                    <span className="font-label-sm text-label-sm text-outline">Gia Định</span>{' '}
-                  </label>{' '}
-                  <label className="flex items-center justify-between cursor-pointer py-1 px-1.5 rounded-[0.125rem] hover:bg-surface-container">
-                    {' '}
-                    <div className="flex items-center gap-2">
-                      {' '}
-                      <input
-                        className="accent-secondary h-4 w-4 rounded-[0.125rem]"
-                        name="artisan"
-                        type="checkbox"
-                        value="ba-dan"
-                        readOnly
-                      />{' '}
-                      <span className="font-body-sm text-body-sm text-primary font-medium">Bà Dần Phố Cổ</span>{' '}
-                    </div>{' '}
-                    <span className="font-label-sm text-label-sm text-outline">Hà Nội</span>{' '}
-                  </label>{' '}
-                  <label className="flex items-center justify-between cursor-pointer py-1 px-1.5 rounded-[0.125rem] hover:bg-surface-container">
-                    {' '}
-                    <div className="flex items-center gap-2">
-                      {' '}
-                      <input
-                        className="accent-secondary h-4 w-4 rounded-[0.125rem]"
-                        name="artisan"
-                        type="checkbox"
-                        value="vinh-hung"
-                        readOnly
-                      />{' '}
-                      <span className="font-body-sm text-body-sm text-primary font-medium">Vĩnh Hưng Hội An</span>{' '}
-                    </div>{' '}
-                    <span className="font-label-sm text-label-sm text-outline">Quảng Nam</span>{' '}
-                  </label>{' '}
-                </div>{' '}
-              </div>{' '}
-              <div className="space-y-space-xs">
-                {' '}
-                <h4 className="font-label-md text-label-md uppercase tracking-wider text-on-surface-variant flex items-center gap-2">
-                  {' '}
-                  <Icon name="ramen_dining" className="text-[16px] text-secondary" aria-hidden />
-                  {' Dòng Nhân Thượng Hạng '}
-                </h4>{' '}
-                <div className="space-y-1.5 pt-1">
-                  {' '}
-                  <label className="flex items-center gap-2 cursor-pointer py-1 px-1.5 rounded-[0.125rem] hover:bg-surface-container">
-                    {' '}
-                    <input
-                      defaultChecked
-                      className="accent-secondary h-4 w-4 rounded-[0.125rem]"
-                      type="checkbox"
-                    />{' '}
-                    <span className="font-body-sm text-body-sm text-on-surface">Trứng muối Lava Hoàng Kim</span>{' '}
-                  </label>{' '}
-                  <label className="flex items-center gap-2 cursor-pointer py-1 px-1.5 rounded-[0.125rem] hover:bg-surface-container">
-                    {' '}
-                    <input
-                      defaultChecked
-                      className="accent-secondary h-4 w-4 rounded-[0.125rem]"
-                      type="checkbox"
-                    />{' '}
-                    <span className="font-body-sm text-body-sm text-on-surface">Thập cẩm Bát Bửu Cổ truyền</span>{' '}
-                  </label>{' '}
-                  <label className="flex items-center gap-2 cursor-pointer py-1 px-1.5 rounded-[0.125rem] hover:bg-surface-container">
-                    {' '}
-                    <input className="accent-secondary h-4 w-4 rounded-[0.125rem]" type="checkbox" />{' '}
-                    <span className="font-body-sm text-body-sm text-on-surface">Bào Ngư Vi Cá Sốt XO</span>{' '}
-                  </label>{' '}
-                  <label className="flex items-center gap-2 cursor-pointer py-1 px-1.5 rounded-[0.125rem] hover:bg-surface-container">
-                    {' '}
-                    <input className="accent-secondary h-4 w-4 rounded-[0.125rem]" type="checkbox" />{' '}
-                    <span className="font-body-sm text-body-sm text-on-surface">Sen Trắng Bách Hoa Uji Matcha</span>{' '}
-                  </label>{' '}
-                  <label className="flex items-center gap-2 cursor-pointer py-1 px-1.5 rounded-[0.125rem] hover:bg-surface-container">
-                    {' '}
-                    <input className="accent-secondary h-4 w-4 rounded-[0.125rem]" type="checkbox" />{' '}
-                    <span className="font-body-sm text-body-sm text-on-surface">Tổ Yến Hạt Sen Ngự Dược</span>{' '}
-                  </label>{' '}
-                </div>{' '}
-              </div>{' '}
-              <div className="space-y-space-xs">
-                {' '}
-                <h4 className="font-label-md text-label-md uppercase tracking-wider text-on-surface-variant flex items-center gap-2">
-                  {' '}
                   <Icon name="inventory_2" className="text-[16px] text-secondary" aria-hidden />
-                  {' Quy Cách Hộp Quà '}
-                </h4>{' '}
+                  Loại Sản Phẩm
+                </h4>
                 <div className="grid grid-cols-1 gap-2 pt-1">
-                  {' '}
-                  <button className="w-full text-left p-2 rounded-[0.125rem] bg-surface-container-low hover:bg-champagne-light/40 transition-colors flex items-center justify-between">
-                    {' '}
-                    <span className="font-body-sm text-body-sm text-on-surface">Bánh Lẻ Thưởng Trà (1 bánh)</span>{' '}
-                    <span className="font-label-sm text-label-sm text-secondary font-bold">180g-250g</span>{' '}
-                  </button>{' '}
-                  <button className="w-full text-left p-2 rounded-[0.125rem] bg-primary-container text-champagne-light flex items-center justify-between shadow-sm">
-                    {' '}
-                    <span className="font-body-sm text-body-sm font-medium">Hộp Quà Hoàng Kim (4 bánh)</span>{' '}
-                    <span className="font-label-sm text-label-sm text-secondary-fixed">Phổ Biến</span>{' '}
-                  </button>{' '}
-                  <button className="w-full text-left p-2 rounded-[0.125rem] bg-surface-container-low hover:bg-champagne-light/40 transition-colors flex items-center justify-between">
-                    {' '}
-                    <span className="font-body-sm text-body-sm text-on-surface">Hộp Ngọc Thạch (6 bánh)</span>{' '}
-                    <span className="font-label-sm text-label-sm text-outline">Cao Cấp</span>{' '}
-                  </button>{' '}
-                  <button className="w-full text-left p-2 rounded-[0.125rem] bg-surface-container-low hover:bg-champagne-light/40 transition-colors flex items-center justify-between">
-                    {' '}
-                    <span className="font-body-sm text-body-sm text-on-surface">
-                      Rương Sơn Mài (8 bánh + Trà Cổ Thụ)
-                    </span>{' '}
-                    <span className="font-label-sm text-label-sm text-secondary-fixed-variant">VIP</span>{' '}
-                  </button>{' '}
-                </div>{' '}
-              </div>{' '}
+                  <button type="button" className={filterButton(!type)} aria-pressed={!type} onClick={() => update({ type: null })}>
+                    <span className="font-body-sm text-body-sm">Tất cả</span>
+                  </button>
+                  {TYPES.map((t) => (
+                    <button key={t} type="button" className={filterButton(type === t)} aria-pressed={type === t} onClick={() => update({ type: t })}>
+                      <span className="font-body-sm text-body-sm">{PRODUCT_TYPE_LABEL[t]}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
             </aside>{' '}
             <section className="lg:col-span-9 space-y-space-lg">
               {' '}
-              <div className="flex flex-wrap items-center gap-2 pb-2">
-                {' '}
-                <span className="font-label-sm text-label-sm uppercase tracking-wider text-outline">
-                  Đang áp dụng:
-                </span>{' '}
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-[0.125rem] bg-champagne-light text-primary font-body-sm text-body-sm">
-                  {' Đông Phương Cầu Đất '}
-                  <button className="hover:text-error">
-                    <Icon name="close" className="text-[14px]" aria-hidden />
-                  </button>{' '}
-                </span>{' '}
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-[0.125rem] bg-champagne-light text-primary font-body-sm text-body-sm">
-                  {' Bảo Phương Thụy Khuê '}
-                  <button className="hover:text-error">
-                    <Icon name="close" className="text-[14px]" aria-hidden />
-                  </button>{' '}
-                </span>{' '}
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-[0.125rem] bg-secondary-container/50 text-on-secondary-container font-body-sm text-body-sm font-medium">
-                  {' '}
-                  <Icon name="search_off" className="text-[14px]" aria-hidden />
-                  {' Ra lò hôm nay '}
-                  <button className="hover:text-error">
-                    <Icon name="close" className="text-[14px]" aria-hidden />
-                  </button>{' '}
-                </span>{' '}
-                <button className="text-secondary hover:text-secondary-fixed-variant font-label-sm text-label-sm underline ml-2">
-                  Xóa tất cả
-                </button>{' '}
-              </div>{' '}
+              {type && (
+                <div className="flex flex-wrap items-center gap-2 pb-2">
+                  <span className="font-label-sm text-label-sm uppercase tracking-wider text-outline">Đang áp dụng:</span>
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-[0.125rem] bg-champagne-light text-primary font-body-sm text-body-sm">
+                    {PRODUCT_TYPE_LABEL[type]}
+                    <button type="button" className="hover:text-error" aria-label={`Bỏ lọc ${PRODUCT_TYPE_LABEL[type]}`} onClick={() => update({ type: null })}>
+                      <Icon name="close" className="text-[14px]" aria-hidden />
+                    </button>
+                  </span>
+                  <button type="button" className="text-secondary hover:text-secondary-fixed-variant font-label-sm text-label-sm underline ml-2" onClick={() => setParams({})}>
+                    Xóa tất cả
+                  </button>
+                </div>
+              )}{' '}
               <div
-                className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-space-lg transition-all duration-300"
+                className={`grid grid-cols-1 gap-space-lg transition-all duration-300 ${view === 'grid' ? 'sm:grid-cols-2 xl:grid-cols-3' : ''}`}
                 id="product-grid"
               >
                 {' '}
                 {data?.content.map((p) => (
                   <CatalogCard key={p.id} product={p} />
-                ))}{' '}
+                ))}
+                {data?.content.length === 0 && <p className="font-body-md text-on-surface-variant">Chưa có sản phẩm thuộc loại này.</p>}
               </div>{' '}
               <div className="pt-space-lg flex flex-col sm:flex-row items-center justify-between gap-space-md">
                 {' '}

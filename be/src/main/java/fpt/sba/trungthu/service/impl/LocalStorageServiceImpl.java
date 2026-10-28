@@ -29,7 +29,7 @@ public class LocalStorageServiceImpl implements StorageService {
     @Value("${app.storage.base-path:uploads}")
     private String basePath;
     
-    @Value("${app.storage.base-url:http://localhost:8080/uploads}")
+    @Value("${app.storage.base-url:/uploads}")
     private String baseUrl;
     
     @Override

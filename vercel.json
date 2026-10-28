@@ -6,6 +6,10 @@
       "destination": "https://be-trungthu-08d5dbfd847a.herokuapp.com/api/:path*"
     },
     {
+      "source": "/uploads/:path*",
+      "destination": "https://be-trungthu-08d5dbfd847a.herokuapp.com/uploads/:path*"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
