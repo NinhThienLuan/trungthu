@@ -73,10 +73,10 @@ export const router = createBrowserRouter([
         // Khu vực Seller (Provider & Admin)
         element: <ProtectedRoute allowedRoles={['PROVIDER', 'PLATFORM_ADMIN']} />,
         children: [
-          { path: '/seller', element: stitch('Bảng điều khiển', <DashboardPage />) },
-          { path: '/seller/products', element: stitch('Menu & mẻ ra lò', <BakeBatchPage />) },
-          { path: '/seller/orders', element: stitch('Đơn hàng & giao lạnh', <OrdersPage />) },
-          { path: '/seller/profile', element: stitch('Hồ sơ & thẩm định', <ProfilePage />) },
+          { path: '/seller', element: <DashboardPage /> },
+          { path: '/seller/products', element: <BakeBatchPage /> },
+          { path: '/seller/orders', element: <OrdersPage /> },
+          { path: '/seller/profile', element: <ProfilePage /> },
           { path: '/seller/settings', element: <SettingsPage /> },
         ],
       },
