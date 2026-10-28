@@ -34,7 +34,9 @@ Profile `heroku` tắt toàn bộ demo seed (bao gồm tài khoản admin với 
 
 Upload hiện lưu trên filesystem của dyno. File sẽ mất sau khi dyno restart/redeploy và hiện chưa có endpoint phục vụ `/uploads/**`. Bản demo có thể kiểm thử thao tác upload, nhưng không dựa vào liên kết file trả về để xem lâu dài.
 
-FE có thể đặt `VITE_API_BASE_URL=https://TEN_APP.herokuapp.com/api` lúc build nếu chạy khác origin. Cách ổn định hơn cho cookie là proxy `/api` từ cùng domain FE sang BE. Khi dùng khác origin, đặt đúng CORS origin và kiểm tra chính sách cookie của trình duyệt. Cấu hình domain FE trong Google OAuth Authorized JavaScript origins.
+FE trên `https://trungthu-psi.vercel.app` dùng Vercel rewrite để proxy `/api/*` tới `https://be-trungthu-08d5dbfd847a.herokuapp.com/api/*`. Nếu Vercel Project Settings > Root Directory là `fe`, Vercel đọc `fe/vercel.json`; nếu là gốc repo, Vercel đọc `vercel.json` ở gốc. Để `VITE_API_BASE_URL` trống hoặc đặt `/api`, rồi redeploy FE. Kiểm tra `https://trungthu-psi.vercel.app/api/products` trả JSON. Rewrite giữ API cùng origin với FE để cookie đăng nhập được gửi qua proxy. Không đặt `APP_COOKIE_DOMAIN` thành domain Heroku; để trống. Nếu dùng Google Login, đặt `VITE_GOOGLE_CLIENT_ID` trên Vercel và thêm `https://trungthu-psi.vercel.app` vào Google Authorized JavaScript origins.
+
+Để dùng PostgreSQL trên Heroku, kiểm tra add-on Heroku Postgres đã gắn với BE và `DATABASE_URL` tồn tại trong Config Vars. Đặt `SPRING_PROFILES_ACTIVE=postgres,heroku` trong Config Vars trước khi redeploy BE. Java buildpack tự cung cấp `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD` từ add-on. Không dùng `DATABASE_URL` (dạng `postgres://`) trực tiếp làm `spring.datasource.url` vì JDBC cần dạng `jdbc:postgresql://`. Có thể kiểm tra tại Heroku Dashboard > Resources/Settings và logs khởi động: datasource phải là PostgreSQL, không phải H2. Nếu chưa có add-on, tạo `heroku-postgresql:essential-0` (có phí). Nếu cần dữ liệu mẫu trên app demo khép kín, đặt `APP_DEMO_SEED=true` rồi redeploy; không dùng cho app công khai do mật khẩu demo cố định.
 
 ## Deploy qua Heroku GitHub Integration
 
