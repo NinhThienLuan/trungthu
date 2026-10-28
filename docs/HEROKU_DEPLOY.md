@@ -1,6 +1,6 @@
 # Deploy backend lên Heroku
 
-Backend nằm trong `be/`, nên Heroku Git phải nhận riêng nội dung thư mục này.
+Backend nằm trong `be/`. Repo có Maven aggregator `pom.xml`, `Procfile` và `system.properties` ở root để Heroku nhận diện Java khi deploy trực tiếp từ GitHub. Aggregator chỉ build module `be/`.
 
 ## Chạy BE và PostgreSQL local
 
@@ -36,7 +36,11 @@ Upload hiện lưu trên filesystem của dyno. File sẽ mất sau khi dyno res
 
 FE có thể đặt `VITE_API_BASE_URL=https://TEN_APP.herokuapp.com/api` lúc build nếu chạy khác origin. Cách ổn định hơn cho cookie là proxy `/api` từ cùng domain FE sang BE. Khi dùng khác origin, đặt đúng CORS origin và kiểm tra chính sách cookie của trình duyệt. Cấu hình domain FE trong Google OAuth Authorized JavaScript origins.
 
-## Deploy
+## Deploy qua Heroku GitHub Integration
+
+Trong Heroku Dashboard > Deploy, chọn GitHub, kết nối repo này và chọn nhánh `master`. Sau khi commit và push thay đổi lên GitHub, chọn **Deploy Branch** hoặc bật Automatic Deploys. Heroku sẽ thấy `pom.xml` ở root, build JAR trong `be/target/` và chạy lệnh trong root `Procfile`.
+
+## Deploy qua Heroku Git (cách khác)
 
 Sau khi commit các thay đổi cần deploy, từ gốc repo:
 
@@ -50,4 +54,4 @@ git subtree push --prefix be heroku main
 heroku logs --tail -a TEN_APP
 ```
 
-Heroku tự chọn Java 21 từ `be/system.properties` và chạy Spring Boot trên cổng `$PORT`. Lệnh `git subtree push` chỉ lấy dữ liệu đã commit. Không đặt profile `h2` trên Heroku. Hiện schema được Hibernate cập nhật bằng `ddl-auto=update`; trước khi phục vụ dữ liệu thật, nên thay bằng migration có phiên bản và kiểm tra luồng chuyển dữ liệu SQL Server sang PostgreSQL.
+Với GitHub Integration, Heroku đọc `system.properties` và `Procfile` ở root. Với `git subtree push`, Heroku đọc các file tương ứng trong `be/`. Lệnh `git subtree push` chỉ lấy dữ liệu đã commit. Không đặt profile `h2` trên Heroku. Hiện schema được Hibernate cập nhật bằng `ddl-auto=update`; trước khi phục vụ dữ liệu thật, nên thay bằng migration có phiên bản và kiểm tra luồng chuyển dữ liệu SQL Server sang PostgreSQL.
