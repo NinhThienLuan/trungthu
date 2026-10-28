@@ -11,7 +11,6 @@ import java.util.List;
 import java.util.UUID;
 
 public interface OrderService {
-    /** Internal write operation: the caller must own an active, writable transaction. */
     List<Order> createOrders(CreateOrdersCommand command);
 
     PageResponse<OrderSummaryResponse> getMyOrders(OrderQueryRequest query);

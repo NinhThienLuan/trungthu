@@ -12,7 +12,9 @@ import { cn, formatVnd } from '../../lib/format'
 import { TextInput } from '../../components/ui/Field'
 import { OrderItemsSummary } from '../../components/OrderItemsSummary'
 import { Field } from '../../components/ui/Field'
-import { HCM, HCM_INNER_DISTRICTS, HCM_OUTER_DISTRICTS, OTHER_PROVINCE, SHIPPING_FEE, isInnerHcm } from '../../constants/shipping'
+import { SearchableSelect, type SelectGroup } from '../../components/ui/SearchableSelect'
+import { HCM_PROVINCE_CODE, SHIPPING_FEE, isInnerHcmWard } from '../../constants/shipping'
+import administrativeUnits from '../../data/vietnamAdministrativeUnits.json'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { Notice, Spinner } from '../../components/ui/States'
 import type { CheckoutGroup, CheckoutPreviewGroup, CheckoutRequest } from '../../types/order'
@@ -20,8 +22,39 @@ import type { CheckoutGroup, CheckoutPreviewGroup, CheckoutRequest } from '../..
 /** Lựa chọn thanh toán của một xưởng: COD hoặc VietQR (cọc 50% / trả đủ) */
 type PayChoice = 'COD' | 'MIN_DEPOSIT' | 'FULL'
 
-/** Địa chỉ giao chung cho cả giỏ: tỉnh/thành + quận/huyện quyết định phí giao (BE tính) */
-type Address = { province: string; district: string }
+/** Địa chỉ hành chính hiện hành: tỉnh/thành + xã/phường/đặc khu. */
+type Address = { provinceCode: string; wardCode: string }
+
+const provinceOf = (code: string) => administrativeUnits.find((province) => province.code === code)
+const wardOf = (provinceCode: string, wardCode: string) =>
+  provinceOf(provinceCode)?.wards.find((ward) => ward.code === wardCode)
+
+const collator = new Intl.Collator('vi', { sensitivity: 'base' })
+const shortName = (name: string) => name.replace(/^(Thành phố|Tỉnh|Phường|Xã|Đặc khu)\s+/u, '')
+const sortByName = <T extends { name: string }>(items: T[]) =>
+  [...items].sort((a, b) => collator.compare(shortName(a.name), shortName(b.name)))
+const wardTypeRank = (name: string) => name.startsWith('Phường ') ? 0 : name.startsWith('Xã ') ? 1 : 2
+
+const provinceGroups: SelectGroup[] = [
+  { label: 'Thành phố', options: sortByName(administrativeUnits.filter((p) => p.name.startsWith('Thành phố ')))
+    .map((p) => ({ value: p.code, label: p.name })) },
+  { label: 'Tỉnh', options: sortByName(administrativeUnits.filter((p) => p.name.startsWith('Tỉnh ')))
+    .map((p) => ({ value: p.code, label: p.name })) },
+]
+
+const wardGroups = (provinceCode: string): SelectGroup[] => {
+  const wards = sortByName(provinceOf(provinceCode)?.wards ?? [])
+  const options = wards.map((ward) => ({ value: ward.code, label: ward.name }))
+  if (provinceCode !== HCM_PROVINCE_CODE) return [{ options }]
+  return [
+    { label: `Nội thành · ${formatVnd(SHIPPING_FEE.inner)}`,
+      options: options.filter((ward) => isInnerHcmWard(provinceCode, ward.value)) },
+    { label: `Ngoại thành và khu vực khác · ${formatVnd(SHIPPING_FEE.outer)}`,
+      options: options.filter((ward) => !isInnerHcmWard(provinceCode, ward.value))
+        .sort((a, b) => wardTypeRank(a.label) - wardTypeRank(b.label)
+          || collator.compare(shortName(a.label), shortName(b.label))) },
+  ]
+}
 
 const toGroups = (groups: CartGroup[], dates: Record<string, string>, choices: Record<string, PayChoice>,
   address: Address): CheckoutGroup[] =>
@@ -30,8 +63,8 @@ const toGroups = (groups: CartGroup[], dates: Record<string, string>, choices: R
     return {
       providerId: g.providerId,
       deliveryDate: dates[g.providerId],
-      province: address.province,
-      district: address.district,
+      province: provinceOf(address.provinceCode)?.name,
+      wardCode: address.wardCode,
       paymentMethod: choice === 'COD' ? 'COD' : 'VIETQR',
       depositOption: choice === 'COD' ? undefined : choice,
       items: g.items.filter((i) => i.kind === 'single').map((i) =>
@@ -49,7 +82,7 @@ export function CheckoutPage() {
   const navigate = useNavigate()
   const [wantVat, setWantVat] = useState(false)
   const [choices, setChoices] = useState<Record<string, PayChoice>>({})
-  const [address, setAddress] = useState<Address>({ province: HCM, district: '' })
+  const [address, setAddress] = useState<Address>({ provinceCode: '', wardCode: '' })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitError, setSubmitError] = useState<string>()
   const [submitting, setSubmitting] = useState(false)
@@ -57,7 +90,7 @@ export function CheckoutPage() {
 
   const groups = groupByProvider(items)
   const ready = groups.length > 0 && groups.every((g) => deliveryDates[g.providerId])
-  const addressReady = address.province === OTHER_PROVINCE || !!address.district
+  const addressReady = !!provinceOf(address.provinceCode) && !!wardOf(address.provinceCode, address.wardCode)
 
   // Preview (BE3) chỉ đọc: tổng tiền, phí ship, cọc tối thiểu, có được COD không
   const { data: preview, loading: previewLoading, error: previewError } = useApi(
@@ -104,7 +137,7 @@ export function CheckoutPage() {
     setErrors({})
     setSubmitError(undefined)
     if (!addressReady) {
-      setSubmitError('Vui lòng chọn quận/huyện giao hàng.')
+      setSubmitError('Vui lòng chọn tỉnh/thành và xã/phường giao hàng.')
       return
     }
     setSubmitting(true)
@@ -112,10 +145,7 @@ export function CheckoutPage() {
     const body: CheckoutRequest = {
       receiverName: parsed.data.receiverName,
       receiverPhone: parsed.data.receiverPhone,
-      // Địa chỉ đầy đủ cho xưởng: số nhà/đường + quận/huyện + tỉnh/thành
-      shippingAddress: address.province === HCM
-        ? `${parsed.data.shippingAddress}, ${address.district}, ${HCM}`
-        : parsed.data.shippingAddress,
+      shippingAddress: `${parsed.data.shippingAddress}, ${wardOf(address.provinceCode, address.wardCode)!.name}, ${provinceOf(address.provinceCode)!.name}`,
       vat: parsed.data.vat,
       groups: toGroups(groups, deliveryDates, effectiveChoices, address),
     }
@@ -144,34 +174,22 @@ export function CheckoutPage() {
               <TextInput label="Họ tên" name="receiverName" defaultValue={user?.fullName} autoComplete="name" error={errors.receiverName} />
               <TextInput label="Số điện thoại" name="receiverPhone" type="tel" defaultValue={user?.phone ?? ''} autoComplete="tel" error={errors.receiverPhone} />
               <Field label="Tỉnh/thành phố" name="province">
-                <select id="province" className="input" value={address.province}
-                  onChange={(e) => setAddress({ province: e.target.value, district: '' })}>
-                  <option value={HCM}>{HCM}</option>
-                  <option value={OTHER_PROVINCE}>{OTHER_PROVINCE}</option>
-                </select>
+                <SearchableSelect id="province" value={address.provinceCode} groups={provinceGroups}
+                  placeholder="Tìm tỉnh/thành phố" onChange={(provinceCode) => setAddress({ provinceCode, wardCode: '' })} />
               </Field>
-              {address.province === HCM ? (
-                <Field label="Quận/huyện" name="district"
-                  hint={address.district
-                    ? `Phí giao ${formatVnd(isInnerHcm(address.province, address.district) ? SHIPPING_FEE.inner : SHIPPING_FEE.outer)}`
-                    : `Nội thành ${formatVnd(SHIPPING_FEE.inner)} · ngoại thành ${formatVnd(SHIPPING_FEE.outer)}`}>
-                  <select id="district" className="input" value={address.district}
-                    onChange={(e) => setAddress((a) => ({ ...a, district: e.target.value }))}>
-                    <option value="" disabled>Chọn quận/huyện</option>
-                    <optgroup label={`Nội thành · ${formatVnd(SHIPPING_FEE.inner)}`}>
-                      {HCM_INNER_DISTRICTS.map((d) => <option key={d} value={d}>{d}</option>)}
-                    </optgroup>
-                    <optgroup label={`Ngoại thành · ${formatVnd(SHIPPING_FEE.outer)}`}>
-                      {HCM_OUTER_DISTRICTS.map((d) => <option key={d} value={d}>{d}</option>)}
-                    </optgroup>
-                  </select>
-                </Field>
-              ) : (
-                <p className="self-end text-small text-muted">Phí giao ngoài TP.HCM: {formatVnd(SHIPPING_FEE.outer)}</p>
-              )}
+              <Field label="Xã/phường/đặc khu" name="ward"
+                hint={address.wardCode
+                  ? `Phí giao ${formatVnd(isInnerHcmWard(address.provinceCode, address.wardCode) ? SHIPPING_FEE.inner : SHIPPING_FEE.outer)}`
+                  : address.provinceCode === HCM_PROVINCE_CODE
+                    ? `Nội thành ${formatVnd(SHIPPING_FEE.inner)} · khu vực khác ${formatVnd(SHIPPING_FEE.outer)}`
+                    : undefined}>
+                <SearchableSelect id="ward" value={address.wardCode} groups={wardGroups(address.provinceCode)}
+                  placeholder="Tìm xã/phường/đặc khu" disabled={!address.provinceCode}
+                  onChange={(wardCode) => setAddress((a) => ({ ...a, wardCode }))} />
+              </Field>
               <TextInput
-                label={address.province === HCM ? 'Số nhà, tên đường, phường' : 'Địa chỉ đầy đủ (số nhà, đường, phường, quận/huyện, tỉnh/thành)'}
-                name="shippingAddress" defaultValue={user?.address ?? ''} autoComplete="street-address"
+                label="Số nhà, tên đường"
+                name="shippingAddress" autoComplete="street-address"
                 error={errors.shippingAddress} className="md:col-span-2" />
             </div>
           </section>
@@ -181,7 +199,7 @@ export function CheckoutPage() {
             {previewLoading ? (
               <Spinner label="Đang tính tiền..." />
             ) : !addressReady ? (
-              <div className="mt-4"><Notice>Chọn quận/huyện giao hàng để xem phí giao và tổng tiền.</Notice></div>
+              <div className="mt-4"><Notice>Chọn tỉnh/thành và xã/phường giao hàng để xem phí giao và tổng tiền.</Notice></div>
             ) : previewError ? (
               <div className="mt-4">
                 <Notice tone="danger">{previewError}</Notice>
@@ -242,7 +260,7 @@ export function CheckoutPage() {
           <section className="card p-5 md:p-6">
             <label className="flex cursor-pointer items-center gap-3">
               <input type="checkbox" className="size-4 accent-navy" checked={wantVat} onChange={(e) => setWantVat(e.target.checked)} />
-              <span className="font-semibold text-navy">Xuất hoá đơn VAT cho doanh nghiệp</span>
+              <span className="font-semibold text-navy">Yêu cầu xuất hoá đơn VAT cho doanh nghiệp</span>
             </label>
             {wantVat && (
               <div className="mt-5 grid gap-4 md:grid-cols-2">

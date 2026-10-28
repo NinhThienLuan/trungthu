@@ -12,7 +12,8 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "PROVIDER_QUOTATION", indexes = {
+@Table(name = "PROVIDER_QUOTATION", uniqueConstraints = {
+        @UniqueConstraint(name = "UQ_PROVIDER_QUOTATION_request_provider", columnNames = { "request_id", "provider_id" }) }, indexes = {
         @Index(name = "IX_PROVIDER_QUOTATION_request_id", columnList = "request_id"),
         @Index(name = "IX_PROVIDER_QUOTATION_provider_id", columnList = "provider_id") })
 @Checks({ @Check(name = "CK_PROVIDER_QUOTATION_quoted_price", constraints = "quoted_price >= 0"),
@@ -40,6 +41,9 @@ public class ProviderQuotation extends BaseEntity {
 
     @Column(name = "estimated_delivery_date")
     private LocalDate estimatedDeliveryDate;
+
+    @Column(name = "valid_until")
+    private LocalDate validUntil;
 
     @Column(name = "note", length = 100000)
     private String note;

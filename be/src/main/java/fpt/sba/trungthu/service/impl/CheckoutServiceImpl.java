@@ -17,6 +17,7 @@ import fpt.sba.trungthu.repository.*;
 import fpt.sba.trungthu.service.CheckoutService;
 import fpt.sba.trungthu.service.InventoryService;
 import fpt.sba.trungthu.service.OrderService;
+import fpt.sba.trungthu.service.ShippingFeePolicyService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -47,6 +48,7 @@ public class CheckoutServiceImpl implements CheckoutService {
     private final SubscriptionRepository subscriptions;
     private final OrderService orderService;
     private final InventoryService inventory;
+    private final ShippingFeePolicyService shippingFeePolicy;
 
     @Override
     @Transactional(readOnly = true)
@@ -238,9 +240,10 @@ public class CheckoutServiceImpl implements CheckoutService {
                         line.personalizationText(), fee, line.amount(), line.listAmount()));
             }
             UUID providerId = provider.getId();
-            // Nội thành TP.HCM 35k, còn lại 70k (mỗi đơn/xưởng); quận/huyện có thể trống khi giao tỉnh khác
-            BigDecimal shipping = ShippingFeePolicy.fee(requireZone(group.province(), true),
-                    requireZone(group.district(), false));
+            // Nội thành TP.HCM 35k, còn lại 70k (mỗi đơn/xưởng).
+            // wardCode là địa chỉ 2 cấp hiện hành; district dành cho client cũ.
+            BigDecimal shipping = shippingFeePolicy.fee(requireZone(group.province(), true),
+                    requireZone(group.district(), false), group.wardCode());
             BigDecimal total = merchandise.add(personalization).add(shipping);
             if (lock && group.paymentMethod() == PaymentMethod.COD && personalizedBoxes > 0) {
                 throw badRequest("Personalized orders require online payment");
@@ -373,7 +376,7 @@ public class CheckoutServiceImpl implements CheckoutService {
 
     private String requireZone(String zone, boolean required) {
         if ((required && (zone == null || zone.isBlank())) || (zone != null && zone.trim().length() > 100)) {
-            throw badRequest("Vui lòng chọn tỉnh/thành và quận/huyện giao hàng");
+            throw badRequest("Vui lòng chọn tỉnh/thành và xã/phường giao hàng");
         }
         return zone;
     }

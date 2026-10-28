@@ -720,7 +720,7 @@ export function B2bPortalView() {
                 {' '}
                 <h3 className="font-headline-md text-headline-md text-primary">Thông Tin Đề Nghị Báo Giá (RFQ)</h3>{' '}
                 <p className="font-body-sm text-body-sm text-on-surface-variant">
-                  Vui lòng điền thông tin doanh nghiệp để nhận báo giá chi tiết và hóa đơn dự thảo.
+                  Vui lòng điền thông tin doanh nghiệp để các xưởng gửi báo giá chi tiết.
                 </p>{' '}
               </div>{' '}
               <form className="space-y-space-md" id="rfq-form">
@@ -734,6 +734,7 @@ export function B2bPortalView() {
                     </label>{' '}
                     <input
                       className="w-full px-space-md py-2.5 bg-surface-container-low text-primary rounded-[0.125rem] font-body-md text-body-md focus:outline-none focus:ring-1 focus:ring-secondary"
+                      name="companyName"
                       required
                       type="text"
                     />{' '}
@@ -745,6 +746,7 @@ export function B2bPortalView() {
                     </label>{' '}
                     <input
                       className="w-full px-space-md py-2.5 bg-surface-container-low text-primary rounded-[0.125rem] font-body-md text-body-md focus:outline-none focus:ring-1 focus:ring-secondary"
+                      name="taxCode"
                       required
                       type="text"
                     />{' '}
@@ -759,6 +761,7 @@ export function B2bPortalView() {
                     </label>{' '}
                     <input
                       className="w-full px-space-md py-2.5 bg-surface-container-low text-primary rounded-[0.125rem] font-body-md text-body-md focus:outline-none focus:ring-1 focus:ring-secondary"
+                      name="contactName"
                       required
                       type="text"
                     />{' '}
@@ -770,6 +773,8 @@ export function B2bPortalView() {
                     </label>{' '}
                     <input
                       className="w-full px-space-md py-2.5 bg-surface-container-low text-primary rounded-[0.125rem] font-body-md text-body-md focus:outline-none focus:ring-1 focus:ring-secondary"
+                      name="contactPosition"
+                      required
                       type="text"
                     />{' '}
                   </div>{' '}
@@ -783,6 +788,7 @@ export function B2bPortalView() {
                     </label>{' '}
                     <input
                       className="w-full px-space-md py-2.5 bg-surface-container-low text-primary rounded-[0.125rem] font-body-md text-body-md focus:outline-none focus:ring-1 focus:ring-secondary"
+                      name="contactPhone"
                       required
                       type="tel"
                     />{' '}
@@ -794,6 +800,7 @@ export function B2bPortalView() {
                     </label>{' '}
                     <input
                       className="w-full px-space-md py-2.5 bg-surface-container-low text-primary rounded-[0.125rem] font-body-md text-body-md focus:outline-none focus:ring-1 focus:ring-secondary"
+                      name="contactEmail"
                       required
                       type="email"
                     />{' '}
@@ -804,65 +811,39 @@ export function B2bPortalView() {
                   <div className="space-y-1">
                     {' '}
                     <label className="font-label-md text-label-md text-primary uppercase block">
-                      Dự Kiến Ngày Nhận Hàng
+                      Dự Kiến Ngày Nhận Hàng *
                     </label>{' '}
                     <input
                       className="w-full px-space-md py-2.5 bg-surface-container-low text-primary rounded-[0.125rem] font-body-md text-body-md focus:outline-none focus:ring-1 focus:ring-secondary"
+                      name="expectedDeliveryDate"
+                      required
                       type="date"
                     />{' '}
                   </div>{' '}
                   <div className="space-y-1">
                     {' '}
                     <label className="font-label-md text-label-md text-primary uppercase block">
-                      Định Dạng Lịch Ưu Tiên
+                      Số lượng hộp cần báo giá *
                     </label>{' '}
-                    <select className="w-full px-space-md py-2.5 bg-surface-container-low text-primary rounded-[0.125rem] font-body-md text-body-md focus:outline-none focus:ring-1 focus:ring-secondary">
-                      {' '}
-                      <option>Trước Rằm Tháng Tám (1 - 10 Âm Lịch)</option>{' '}
-                      <option>Đúng Tuần Lễ Trung Thu (10 - 15 Âm Lịch)</option>{' '}
-                      <option>Giao Theo Lịch Dương Lịch Định Kỳ</option>{' '}
-                    </select>{' '}
+                    <input className="w-full px-space-md py-2.5 bg-surface-container-low text-primary rounded-[0.125rem] font-body-md text-body-md focus:outline-none focus:ring-1 focus:ring-secondary"
+                      name="requestedQuantity" type="number" min="20" defaultValue="20" required />{' '}
                   </div>{' '}
                 </div>{' '}
                 <div className="space-y-space-sm pt-space-xs">
                   {' '}
-                  <label className="font-label-md text-label-md text-primary uppercase block">
-                    Đính Kèm Danh Sách Chi Nhánh / File Logo Vector (.AI, .PDF, .XLSX)
+                  <label className="font-label-md text-label-md text-primary uppercase block" htmlFor="rfq-budget">
+                    Ngân sách dự kiến (không bắt buộc)
                   </label>{' '}
-                  <div className="border border-dashed border-outline-variant p-space-md rounded-[0.125rem] text-center space-y-2 bg-surface hover:bg-surface-container transition-colors cursor-pointer">
-                    {' '}
-                    <Icon name="cloud_upload" className="text-secondary text-[32px]" aria-hidden />{' '}
-                    <p className="font-body-sm text-body-sm text-primary">
-                      {'Kéo thả tệp tin hoặc '}
-                      <span className="text-secondary font-semibold underline">Duyệt tệp tin</span>
-                      {' từ thiết bị'}
-                    </p>{' '}
-                    <p className="font-body-sm text-[11px] text-on-surface-variant">
-                      Dung lượng tối đa 25MB (File logo AI/EPS để mô phỏng khắc thử miễn phí)
-                    </p>{' '}
-                  </div>{' '}
+                  <input id="rfq-budget" name="expectedBudget" type="number" min="0"
+                    className="w-full px-space-md py-2.5 bg-surface-container-low text-primary rounded-[0.125rem] font-body-md text-body-md focus:outline-none focus:ring-1 focus:ring-secondary" />{' '}
                 </div>{' '}
                 <div className="space-y-space-xs pt-space-xs">
-                  {' '}
-                  <label className="flex items-start gap-space-xs cursor-pointer">
-                    {' '}
-                    <input
-                      defaultChecked
-                      className="rounded-[0.125rem] accent-secondary w-4 h-4 mt-1"
-                      type="checkbox"
-                    />{' '}
-                    <span className="font-body-sm text-body-sm text-primary font-medium">
-                      {' Yêu cầu gửi Hộp Mẫu Thử tận văn phòng công ty (Miễn phí 100% không phát sinh chi phí). '}
-                    </span>{' '}
-                  </label>{' '}
-                  <label className="flex items-start gap-space-xs cursor-pointer">
-                    {' '}
-                    <input className="rounded-[0.125rem] accent-secondary w-4 h-4 mt-1" type="checkbox" />{' '}
-                    <span className="font-body-sm text-body-sm text-on-surface-variant">
-                      {' Yêu cầu tư vấn điều khoản hợp đồng nguyên tắc & chính sách công nợ 30-70 ngày. '}
-                    </span>{' '}
-                  </label>{' '}
-                </div>{' '}
+                  <label className="font-label-md text-label-md text-primary uppercase block" htmlFor="rfq-description">
+                    Yêu cầu về mẫu hộp, in logo hoặc lịch giao
+                  </label>
+                  <textarea id="rfq-description" name="description" rows={3}
+                    className="w-full px-space-md py-2.5 bg-surface-container-low text-primary rounded-[0.125rem] font-body-md text-body-md focus:outline-none focus:ring-1 focus:ring-secondary" />
+                </div>
                 <div className="pt-space-md">
                   {' '}
                   <button
@@ -871,7 +852,7 @@ export function B2bPortalView() {
                   >
                     {' '}
                     <Icon name="verified" className="text-[20px]" aria-hidden />{' '}
-                    <span>Gửi Yêu Cầu Báo Giá & Nhận Hộp Mẫu Thử Miễn Phí</span>{' '}
+                    <span>Gửi yêu cầu báo giá</span>{' '}
                   </button>{' '}
                   <p className="font-body-sm text-[11px] text-center text-on-surface-variant mt-2">
                     {' Thông tin của Quý Khách được bảo mật theo tiêu chuẩn ngoại giao của Nguyệt Viên Đài. '}

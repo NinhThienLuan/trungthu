@@ -44,7 +44,9 @@ Cron mỗi phút khóa lại từng Order quá hạn và hủy/nhả stock/slot 
 
 ## RFQ
 
-`POST /api/rfqs` dành cho Customer với `companyName`, `taxCode`, `contactName`, `contactPosition`, `contactPhone`, `contactEmail`, `requestedQuantity >= 20`, `expectedDeliveryDate >= hôm nay + 3`, và tùy chọn `expectedBudget`, `description`, `logoUrl`. `GET /api/rfqs/me` trả tối đa 100 yêu cầu của Buyer. `GET /api/provider/rfqs` chỉ trả yêu cầu DISTRIBUTED cho Provider đủ điều kiện. `logoUrl` là đường dẫn do tầng upload/storage cung cấp; BE3 không nhận file trực tiếp. Báo giá trực tuyến là Phase 2.
+`POST /api/rfqs` dành cho Customer với `companyName`, `taxCode`, `contactName`, `contactPosition`, `contactPhone`, `contactEmail`, `requestedQuantity >= 20`, `expectedDeliveryDate >= hôm nay + 3`, và tùy chọn `expectedBudget`, `description`, `logoUrl`. `GET /api/rfqs/me` trả tối đa 100 yêu cầu của Buyer. `GET /api/provider/rfqs` trả RFQ đang mở cho Provider đủ điều kiện, ẩn thông tin liên hệ cho đến khi báo giá được chấp nhận. `logoUrl` là đường dẫn do tầng upload/storage cung cấp; form hiện tại chưa có upload logo.
+
+Luồng báo giá trực tuyến: Provider dùng `GET /api/provider/rfqs/quotes/me` và `POST /api/provider/rfqs/{requestId}/quotes`; Buyer dùng `GET /api/rfqs/{requestId}/quotes` để so sánh và `POST /api/rfqs/{requestId}/quotes/{quoteId}/accept` để chọn một báo giá. Mỗi Provider gửi tối đa một báo giá cho một RFQ. Chọn báo giá chuyển RFQ sang `WON`, báo giá được chọn sang `ACCEPTED`, các báo giá khác sang `REJECTED`. Chưa tự tạo đơn hàng B2B, hợp đồng, thanh toán hoặc hóa đơn VAT từ RFQ được chọn.
 
 ## Ghép FE
 

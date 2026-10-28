@@ -79,7 +79,7 @@ export function AdminLayout() {
             </span>
           </div>
           <nav className="flex flex-col gap-1 px-space-md" aria-label="Khu vực nghệ nhân">
-            {NAV.map((item) => (
+            {NAV.filter((item) => item.to !== '/seller/b2b' || user?.role === 'PROVIDER').map((item) => (
               <NavLink key={item.to} to={item.to} end={item.end} className={linkClass}>
                 <Icon name={item.icon} className="text-[20px] text-secondary-fixed-dim" aria-hidden />
                 <span className="font-body-md text-body-md">{item.label}</span>

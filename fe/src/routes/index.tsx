@@ -24,14 +24,14 @@ import { HomeClassicPage } from '../pages/user/HomeClassicPage'
 import { CatalogPage } from '../pages/user/CatalogPage'
 import { ProductDetailPage } from '../pages/user/ProductDetailPage'
 import { BoxBuilderPage } from '../pages/user/BoxBuilderPage'
-import { B2bPortalView } from '../pages/user/B2bPortalView'
+import { RfqPortalPage } from '../pages/user/RfqPortalPage'
 import { RfqFormCatcher } from '../components/RfqFormCatcher'
 import { B2bCheckoutPage } from '../pages/user/B2bCheckoutPage'
 import { ProfilePage } from '../pages/admin/ProfilePage'
 import { SettingsPage } from '../pages/admin/SettingsPage'
 import { BakeBatchPage } from '../pages/admin/BakeBatchPage'
 import { OrdersPage } from '../pages/admin/OrdersPage'
-import { B2bDispatchPage } from '../pages/admin/B2bDispatchPage'
+import { SellerRfqPage } from '../pages/admin/SellerRfqPage'
 import { QualityReviewPage } from '../pages/admin/QualityReviewPage'
 import { DashboardPage } from '../pages/admin/DashboardPage'
 
@@ -47,7 +47,7 @@ export const router = createBrowserRouter([
       { path: '/products', element: stitch('Bộ sưu tập', <CatalogPage />) },
       { path: '/products/:id', element: stitch(undefined, <ProductDetailPage />) },
       { path: '/box-builder', element: stitch('Tự phối hộp quà', <BoxBuilderPage />) },
-      { path: '/rfq', element: stitch('Báo giá doanh nghiệp', <RfqFormCatcher><B2bPortalView /></RfqFormCatcher>) },
+      { path: '/rfq', element: stitch('Báo giá doanh nghiệp', <RfqPortalPage />) },
       { path: '/b2b/checkout', element: stitch('Đặt hàng doanh nghiệp', <B2bCheckoutPage />) },
       // Luồng đặt hàng chạy được
       { path: '/cart', element: <CartPage /> },
@@ -75,11 +75,14 @@ export const router = createBrowserRouter([
         children: [
           { path: '/seller', element: stitch('Bảng điều khiển', <DashboardPage />) },
           { path: '/seller/products', element: stitch('Menu & mẻ ra lò', <BakeBatchPage />) },
-          { path: '/seller/b2b', element: stitch('Điều phối B2B', <B2bDispatchPage />) },
           { path: '/seller/orders', element: stitch('Đơn hàng & giao lạnh', <OrdersPage />) },
           { path: '/seller/profile', element: stitch('Hồ sơ & thẩm định', <ProfilePage />) },
           { path: '/seller/settings', element: <SettingsPage /> },
         ],
+      },
+      {
+        element: <ProtectedRoute allowedRoles={['PROVIDER']} />,
+        children: [{ path: '/seller/b2b', element: <SellerRfqPage /> }],
       },
       {
         // Khu vực Admin sàn duy nhất

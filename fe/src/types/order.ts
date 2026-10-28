@@ -35,6 +35,7 @@ export interface CheckoutGroup {
   deliveryDate: string // yyyy-MM-dd
   province?: string
   district?: string
+  wardCode?: string
   paymentMethod: PaymentMethod
   /** Chỉ dùng khi thanh toán online */
   depositOption?: DepositOption
@@ -157,4 +158,48 @@ export interface RfqRequest {
   requestedQuantity: number
   expectedDeliveryDate: string
   description?: string
+  expectedBudget?: number
+  logoUrl?: string
+}
+
+export type RfqStatus = 'NEW' | 'DISTRIBUTED' | 'QUOTES_RECEIVED' | 'WON' | 'LOST'
+export type QuoteStatus = 'SUBMITTED' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED'
+
+export interface RfqResponse {
+  id: string
+  code: string
+  companyName: string
+  taxCode: string | null
+  contactName: string | null
+  contactPosition: string | null
+  contactPhone: string | null
+  contactEmail: string | null
+  requestedQuantity: number
+  expectedDeliveryDate: string
+  status: RfqStatus
+  expectedBudget: number | null
+  description: string | null
+  logoUrl: string | null
+}
+
+export interface SubmitQuoteRequest {
+  unitPrice: number
+  offeredQuantity: number
+  estimatedDeliveryDate: string
+  validUntil: string
+  note?: string
+}
+
+export interface QuoteResponse {
+  id: string
+  requestId: string
+  providerId: string
+  providerName: string
+  unitPrice: number
+  offeredQuantity: number
+  estimatedDeliveryDate: string
+  validUntil: string | null
+  status: QuoteStatus
+  note: string | null
+  createdAt: string
 }

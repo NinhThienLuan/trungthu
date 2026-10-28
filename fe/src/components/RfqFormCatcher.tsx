@@ -1,62 +1,77 @@
-import { useState, type FormEvent, type ReactNode } from 'react'
+import { useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Icon } from './Icon'
 import { rfqService } from '../services/rfqService'
 import { errorMessage } from '../apis/http'
 import { MIN_LEAD_DAYS, ROUTES, RFQ_MIN_QUANTITY } from '../constants'
 import { addDays, cn, toIsoDate } from '../lib/format'
+import { useAuthStore } from '../stores/authStore'
+import type { RfqResponse } from '../types/order'
 
 const RFQ_FORM_IDS = ['rfq-form', 'rfqForm']
 
 /**
  * Bọc trang Stitch có form yêu cầu báo giá (trang chủ #rfqForm, cổng B2B #rfq-form):
  * chặn submit (tránh tải lại trang), gửi qua rfqService rồi hiện thông báo.
- * Form Stitch không đặt name cho ô nhập -> đọc theo loại ô: text (công ty, người liên hệ), tel, email, date.
+ * Form B2B dùng các trường có name để gửi đúng dữ liệu RFQ lên API.
  */
-export function RfqFormCatcher({ children }: { children: ReactNode }) {
+export function RfqFormCatcher({ children, onSubmitted }: { children: ReactNode; onSubmitted?: (rfq: RfqResponse) => void }) {
   const navigate = useNavigate()
+  const user = useAuthStore((state) => state.user)
   const [toast, setToast] = useState<{ ok: boolean; text: string } | null>(null)
+  const submitting = useRef(false)
 
   const handleSubmit = async (e: FormEvent<HTMLDivElement>) => {
     const form = e.target as HTMLFormElement
     if (!RFQ_FORM_IDS.includes(form.id)) return
     e.preventDefault()
-    const inputs = Array.from(form.querySelectorAll<HTMLInputElement>('input'))
-    const texts = inputs.filter((i) => i.type === 'text').map((i) => i.value.trim())
-    const byType = (type: string) => inputs.find((i) => i.type === type)?.value.trim() ?? ''
-    // Số lượng: ô number trong trang (bộ tính ngân sách) hoặc số đầu tiên trong ô chọn "20 - 50 hộp"
-    const qtyInput = (e.currentTarget as HTMLDivElement).querySelector<HTMLInputElement>('input[type=number]')
-    const qtySelect = form.querySelector('select')?.value.match(/\d+/)?.[0]
-    const quantity = Math.max(RFQ_MIN_QUANTITY, Number(qtyInput?.value || qtySelect) || RFQ_MIN_QUANTITY)
-    const message = form.querySelector('textarea')?.value.trim()
-    // Form B2B: công ty, mã số thuế, người phụ trách, chức vụ. Form trang chủ chỉ có công ty, người liên hệ
-    // mà BE bắt buộc mã số thuế + chức vụ -> chuyển sang form B2B đầy đủ
     if (form.id !== 'rfq-form') {
       navigate(ROUTES.rfq)
       return
     }
-    const [companyName = '', taxCode = '', contactName = '', contactPosition = ''] = texts
-    if (!taxCode || !contactPosition) {
-      setToast({ ok: false, text: 'Vui lòng nhập Mã số thuế và Chức vụ / Phòng ban.' })
-      window.setTimeout(() => setToast(null), 4000)
+    if (!user) {
+      navigate(`${ROUTES.login}?next=${encodeURIComponent(ROUTES.rfq)}`)
       return
     }
+    if (user.role !== 'CUSTOMER') {
+      setToast({ ok: false, text: 'Yêu cầu báo giá cần tài khoản khách hàng.' })
+      return
+    }
+    if (submitting.current) return
+    const data = new FormData(form)
+    const get = (key: string) => String(data.get(key) ?? '').trim()
+    const quantity = Number(get('requestedQuantity'))
+    const deliveryDate = get('expectedDeliveryDate')
+    if (!Number.isInteger(quantity) || quantity < RFQ_MIN_QUANTITY
+      || !deliveryDate || deliveryDate < toIsoDate(addDays(new Date(), MIN_LEAD_DAYS))) {
+      setToast({ ok: false, text: `Cần ít nhất ${RFQ_MIN_QUANTITY} hộp và ngày nhận cách tối thiểu ${MIN_LEAD_DAYS} ngày.` })
+      return
+    }
+    submitting.current = true
+    const button = form.querySelector<HTMLButtonElement>('button[type=submit]')
+    if (button) button.disabled = true
     try {
-      await rfqService.submit({
-        companyName,
-        taxCode,
-        contactName,
-        contactPosition,
-        contactPhone: byType('tel'),
-        contactEmail: byType('email'),
+      const created = await rfqService.submit({
+        companyName: get('companyName'),
+        taxCode: get('taxCode'),
+        contactName: get('contactName'),
+        contactPosition: get('contactPosition'),
+        contactPhone: get('contactPhone'),
+        contactEmail: get('contactEmail'),
         requestedQuantity: quantity,
-        expectedDeliveryDate: byType('date') || toIsoDate(addDays(new Date(), MIN_LEAD_DAYS)),
-        description: message || undefined,
+        expectedDeliveryDate: deliveryDate,
+        expectedBudget: get('expectedBudget') ? Number(get('expectedBudget')) : undefined,
+        description: get('description') || undefined,
       })
       form.reset()
-      setToast({ ok: true, text: 'Đã gửi yêu cầu báo giá. Các xưởng phù hợp sẽ liên hệ bạn trong 24h.' })
+      onSubmitted?.(created)
+      document.getElementById('my-rfqs')?.scrollIntoView({ behavior: 'smooth' })
+      setToast({ ok: true, text: `Đã tạo yêu cầu ${created.code}. Xem báo giá ở mục Yêu cầu của tôi.` })
     } catch (err) {
       setToast({ ok: false, text: errorMessage(err) })
+    } finally {
+      submitting.current = false
+      if (button) button.disabled = false
     }
     window.setTimeout(() => setToast(null), 4000)
   }
