@@ -8,6 +8,9 @@ export interface ProductQuery {
   type?: ProductType
   page?: number
   size?: number
+  /** Trường của Product ở BE: createdAt | name */
+  sortBy?: 'createdAt' | 'name'
+  direction?: 'asc' | 'desc'
 }
 
 /** ProductResponse của BE2 (chỉ các trường FE dùng) */
@@ -79,9 +82,9 @@ const toProduct = (p: BeProduct): Product => {
 }
 
 export const productService = {
-  list: async ({ type, page = 0, size = 12 }: ProductQuery = {}): Promise<Page<Product>> => {
+  list: async ({ type, page = 0, size = 12, sortBy, direction }: ProductQuery = {}): Promise<Page<Product>> => {
     if (!USE_MOCK.products) {
-      const res = await unwrap(http.get<ApiResponse<Page<BeProduct>>>('/products', { params: { type, page, size } }))
+      const res = await unwrap(http.get<ApiResponse<Page<BeProduct>>>('/products', { params: { type, page, size, sortBy, direction } }))
       return { ...res, content: res.content.map(toProduct) }
     }
     await delay(300)

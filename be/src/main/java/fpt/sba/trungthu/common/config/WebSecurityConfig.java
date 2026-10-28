@@ -77,6 +77,8 @@ public class WebSecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/public/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/providers/*/available-dates").permitAll()
+                        // Giấy tờ KYC/ATTP: chỉ seller và admin; tên file là UUID ngẫu nhiên
+                        .requestMatchers(HttpMethod.GET, "/uploads/compliance/**").hasAnyRole("PROVIDER", "PLATFORM_ADMIN")
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(authenticationEntryPoint))

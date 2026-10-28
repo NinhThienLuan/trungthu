@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, type FormEvent } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { Menu, X } from 'lucide-react'
 import { Icon } from '../Icon'
-import { ROUTES } from '../../constants'
+import { HOME_BY_ROLE, ROUTES } from '../../constants'
 import { cartCount, useCartStore } from '../../stores/cartStore'
 import { useAuthStore } from '../../stores/authStore'
 import { cn } from '../../lib/format'
@@ -83,7 +83,7 @@ export function Header() {
           ))}
           {/* Link quản trị chỉ hiển thị khi có vai trò phù hợp */}
           {user && (user.role === 'PROVIDER' || user.role === 'PLATFORM_ADMIN') && (
-            <NavLink to="/seller" className={navClass}>
+            <NavLink to={HOME_BY_ROLE[user.role]} className={navClass}>
               Hoàng Đài Quản Trị
             </NavLink>
           )}
@@ -213,7 +213,7 @@ export function Header() {
                         <span className="font-medium text-navy text-[13px]">Đổi mật khẩu</span>
                       </Link>
 
-                      {(user.role === 'PROVIDER' || user.role === 'PLATFORM_ADMIN') && (
+                      {user.role === 'PROVIDER' && (
                         <Link
                           to="/seller"
                           onClick={() => setProfilePopupOpen(false)}
@@ -326,7 +326,7 @@ export function Header() {
             </NavLink>
           ))}
           {user && (user.role === 'PROVIDER' || user.role === 'PLATFORM_ADMIN') && (
-            <NavLink to="/seller" className={navClass} onClick={() => setMobileMenuOpen(false)}>
+            <NavLink to={HOME_BY_ROLE[user.role]} className={navClass} onClick={() => setMobileMenuOpen(false)}>
               Hoàng Đài Quản Trị
             </NavLink>
           )}

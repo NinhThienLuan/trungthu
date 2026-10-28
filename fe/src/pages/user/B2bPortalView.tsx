@@ -687,11 +687,12 @@ export function B2bPortalView() {
                 </p>{' '}
                 <a
                   className="inline-flex items-center gap-space-xs px-space-md py-2.5 bg-surface-container text-primary rounded-[0.125rem] font-label-md text-label-md hover:bg-champagne-light transition-colors"
-                  href="#"
+                  href="/mau-phan-bo-chi-nhanh.csv"
+                  download
                 >
                   {' '}
                   <Icon name="table_view" className="text-secondary text-[20px]" aria-hidden />{' '}
-                  <span>Tải Bảng Excel Mẫu Phân Bổ Chi Nhánh (.xlsx)</span>{' '}
+                  <span>Tải Bảng Mẫu Phân Bổ Chi Nhánh (Excel .csv)</span>{' '}
                 </a>{' '}
                 <div className="pt-space-xs flex items-center gap-space-sm font-label-sm text-label-sm text-on-surface-variant">
                   {' '}

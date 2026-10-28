@@ -1,4 +1,5 @@
-import { NavLink, Outlet, ScrollRestoration, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { NavLink, Outlet, ScrollRestoration, useLocation, useNavigate } from 'react-router-dom'
 import { Icon } from '../Icon'
 import { handleStitchLinkClick } from '../../routes/stitchPaths'
 import { FlashToast } from '../ui/FlashToast'
@@ -30,7 +31,12 @@ const linkClass = ({ isActive }: { isActive: boolean }) =>
 
 export function AdminLayout() {
   const navigate = useNavigate()
+  const { pathname } = useLocation()
   const { user, logout } = useAuthStore()
+  const isAdmin = user?.role === 'PLATFORM_ADMIN'
+  // Dưới lg: sidebar là ngăn kéo, đóng lại mỗi khi chuyển trang
+  const [menuOpen, setMenuOpen] = useState(false)
+  useEffect(() => setMenuOpen(false), [pathname])
 
   const handleLogout = async () => {
     await logout()
@@ -44,7 +50,8 @@ export function AdminLayout() {
 
   return (
     <div className="min-h-dvh bg-surface font-body-md text-body-md text-on-surface antialiased">
-      <aside className="fixed left-0 top-0 h-full w-72 bg-primary-container z-50 flex flex-col justify-between shadow-[4px_0_24px_rgba(5,19,34,0.18)] no-print print:hidden">
+      {menuOpen && <div className="fixed inset-0 z-40 bg-ink-dark/50 lg:hidden" onClick={() => setMenuOpen(false)} aria-hidden />}
+      <aside className={cn('fixed left-0 top-0 h-full w-72 overflow-y-auto bg-primary-container z-50 flex flex-col justify-between shadow-[4px_0_24px_rgba(5,19,34,0.18)] no-print print:hidden transition-transform lg:translate-x-0', menuOpen ? 'translate-x-0' : '-translate-x-full')}>
         <div className="flex flex-col">
           <NavLink to="/" className="h-20 px-space-lg flex items-center justify-between bg-ink-dark/40" title="Về trang chủ sàn">
             <div className="flex items-center gap-space-sm">
@@ -73,13 +80,14 @@ export function AdminLayout() {
             </div>
           </div>
 
-          <div className="px-space-md mt-space-xs">
+          {/* API /api/provider/** chỉ nhận seller -> admin không thấy menu gian hàng */}
+          {!isAdmin && <div className="px-space-md mt-space-xs">
             <span className="font-label-sm text-label-sm text-outline-variant/60 uppercase tracking-[0.16em] px-space-sm mb-space-xs block">
               Hệ Thống Gian Hàng
             </span>
-          </div>
+          </div>}
           <nav className="flex flex-col gap-1 px-space-md" aria-label="Khu vực nghệ nhân">
-            {NAV.filter((item) => item.to !== '/seller/b2b' || user?.role === 'PROVIDER').map((item) => (
+            {!isAdmin && NAV.map((item) => (
               <NavLink key={item.to} to={item.to} end={item.end} className={linkClass}>
                 <Icon name={item.icon} className="text-[20px] text-secondary-fixed-dim" aria-hidden />
                 <span className="font-body-md text-body-md">{item.label}</span>
@@ -87,13 +95,13 @@ export function AdminLayout() {
             ))}
           </nav>
 
-          <div className="px-space-md mt-space-md">
+          {isAdmin && <div className="px-space-md mt-space-md">
             <span className="font-label-sm text-label-sm text-outline-variant/60 uppercase tracking-[0.16em] px-space-sm mb-space-xs block">
               Quản Trị Sàn
             </span>
-          </div>
+          </div>}
           <nav className="flex flex-col gap-1 px-space-md" aria-label="Quản trị sàn">
-            {user?.role === 'PLATFORM_ADMIN' && ADMIN_NAV.map((item) => (
+            {isAdmin && ADMIN_NAV.map((item) => (
               <NavLink key={item.to} to={item.to} className={linkClass}>
                 <Icon name={item.icon} className="text-[20px] text-secondary-fixed-dim" aria-hidden />
                 <span className="font-body-md text-body-md">{item.label}</span>
@@ -126,11 +134,14 @@ export function AdminLayout() {
         </div>
       </aside>
 
-      <div className="pl-72 print:pl-0">
-        <header className="fixed top-0 left-72 right-0 h-20 bg-primary-container z-40 shadow-[0_4px_20px_rgba(5,19,34,0.12)] no-print print:hidden">
-          <div className="h-20 w-full px-space-lg flex items-center justify-between">
-            <div className="flex items-center gap-space-lg">
-              <div className="flex items-center gap-space-sm px-space-md py-space-xs rounded-[0.25rem] bg-ink-dark/50 cursor-pointer">
+      <div className="lg:pl-72 print:pl-0">
+        <header className="fixed top-0 left-0 lg:left-72 right-0 h-20 bg-primary-container z-40 shadow-[0_4px_20px_rgba(5,19,34,0.12)] no-print print:hidden">
+          <div className="h-20 w-full px-4 lg:px-space-lg flex items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-space-sm lg:gap-space-lg">
+              <button type="button" className="lg:hidden p-2 rounded-[0.25rem] text-champagne-light hover:bg-ink-dark/50" onClick={() => setMenuOpen(true)} aria-label="Mở menu" aria-expanded={menuOpen}>
+                <Icon name="menu" className="text-[22px]" aria-hidden />
+              </button>
+              <div className="hidden sm:flex items-center gap-space-sm px-space-md py-space-xs rounded-[0.25rem] bg-ink-dark/50 min-w-0">
                 <Icon name="storefront" className="text-secondary-fixed text-[20px]" aria-hidden />
                 <div className="flex flex-col text-left">
                   <span className="font-headline-sm text-[15px] leading-tight text-champagne-light font-medium truncate max-w-[260px]">
@@ -147,7 +158,7 @@ export function AdminLayout() {
               </div>
             </div>
 
-            <div className="flex items-center gap-space-md">
+            <div className="flex shrink-0 items-center gap-space-sm lg:gap-space-md">
               <NavLink
                 to="/"
                 className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[0.25rem] bg-ink-dark/40 text-champagne-light hover:bg-ink-dark hover:text-white transition-colors text-body-sm font-medium"

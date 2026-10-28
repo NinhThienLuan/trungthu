@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { createBrowserRouter } from 'react-router-dom'
+import { Navigate, createBrowserRouter } from 'react-router-dom'
 import { UserLayout } from '../components/layouts/UserLayout'
 import { ROUTES } from '../constants'
 import { AuthLayout } from '../components/layouts/AuthLayout'
@@ -20,13 +20,11 @@ import { ChangePasswordPage } from '../pages/user/ChangePasswordPage'
 import { NotFoundPage } from '../pages/NotFoundPage'
 import { StitchPage } from '../components/layouts/StitchPage'
 import { HomePage } from '../pages/user/HomePage'
-import { HomeClassicPage } from '../pages/user/HomeClassicPage'
 import { CatalogPage } from '../pages/user/CatalogPage'
 import { ProductDetailPage } from '../pages/user/ProductDetailPage'
 import { BoxBuilderPage } from '../pages/user/BoxBuilderPage'
 import { RfqPortalPage } from '../pages/user/RfqPortalPage'
 import { RfqFormCatcher } from '../components/RfqFormCatcher'
-import { B2bCheckoutPage } from '../pages/user/B2bCheckoutPage'
 import { ProfilePage } from '../pages/admin/ProfilePage'
 import { SettingsPage } from '../pages/admin/SettingsPage'
 import { BakeBatchPage } from '../pages/admin/BakeBatchPage'
@@ -43,12 +41,12 @@ export const router = createBrowserRouter([
     children: [
       // Trang buyer chuyển nguyên từ Stitch
       { path: '/', element: stitch('', <RfqFormCatcher><HomePage /></RfqFormCatcher>) },
-      { path: '/trang-chu-co-dien', element: stitch('Trang chủ', <HomeClassicPage />) },
       { path: '/products', element: stitch('Bộ sưu tập', <CatalogPage />) },
       { path: '/products/:id', element: stitch(undefined, <ProductDetailPage />) },
       { path: '/box-builder', element: stitch('Tự phối hộp quà', <BoxBuilderPage />) },
       { path: '/rfq', element: stitch('Báo giá doanh nghiệp', <RfqPortalPage />) },
-      { path: '/b2b/checkout', element: stitch('Đặt hàng doanh nghiệp', <B2bCheckoutPage />) },
+      // Đặt sỉ đi qua RFQ (báo giá -> chấp nhận); link cũ chuyển về đó
+      { path: '/b2b/checkout', element: <Navigate to={ROUTES.rfq} replace /> },
       // Luồng đặt hàng chạy được
       { path: '/cart', element: <CartPage /> },
       { path: '/policy', element: <PolicyPage /> },
@@ -70,25 +68,22 @@ export const router = createBrowserRouter([
     element: <AdminLayout />,
     children: [
       {
-        // Khu vực Seller (Provider & Admin)
-        element: <ProtectedRoute allowedRoles={['PROVIDER', 'PLATFORM_ADMIN']} />,
+        // Khu vực Seller: API /api/provider/** chỉ nhận PROVIDER
+        element: <ProtectedRoute allowedRoles={['PROVIDER']} />,
         children: [
           { path: '/seller', element: <DashboardPage /> },
           { path: '/seller/products', element: <BakeBatchPage /> },
           { path: '/seller/orders', element: <OrdersPage /> },
           { path: '/seller/profile', element: <ProfilePage /> },
           { path: '/seller/settings', element: <SettingsPage /> },
+          { path: '/seller/b2b', element: <SellerRfqPage /> },
         ],
-      },
-      {
-        element: <ProtectedRoute allowedRoles={['PROVIDER']} />,
-        children: [{ path: '/seller/b2b', element: <SellerRfqPage /> }],
       },
       {
         // Khu vực Admin sàn duy nhất
         element: <ProtectedRoute allowedRoles={['PLATFORM_ADMIN']} />,
         children: [
-          { path: '/admin/kyc', element: stitch('Thẩm định chất lượng', <QualityReviewPage />) },
+          { path: '/admin/kyc', element: <QualityReviewPage /> },
         ],
       },
     ],

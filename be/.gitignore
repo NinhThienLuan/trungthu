@@ -5,3 +5,6 @@ target
 MEMORY.md
 src/main/resources/secrets.properties
 .env
+
+# File người dùng tải lên (giấy tờ KYC, ảnh) - không đưa lên git
+uploads/
