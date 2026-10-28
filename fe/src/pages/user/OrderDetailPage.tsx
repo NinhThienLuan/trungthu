@@ -97,8 +97,12 @@ export function OrderDetailPage() {
             <dl className="mt-4 grid grid-cols-[1fr_auto] gap-y-1.5 text-small">
               <dt className="text-muted">Tiền hàng</dt>
               <dd>{formatVnd(order.subtotalAmount)}</dd>
-              <dt className="text-muted">Phí giao hàng</dt>
-              <dd>{formatVnd(order.shippingFee)}</dd>
+              {!!order.discountAmount && <>
+                <dt className="text-success">Đã giảm (khuyến mãi)</dt>
+                <dd className="text-success">{formatVnd(order.discountAmount)}</dd>
+              </>}
+              <dt className="text-muted">Giao hàng</dt>
+              <dd>Miễn phí</dd>
               <dt className="font-semibold">Tổng</dt>
               <dd className="font-semibold text-navy">{formatVnd(order.totalAmount)}</dd>
               <dt className="text-muted">Đã thanh toán</dt>

@@ -8,6 +8,7 @@ import { CatalogCard } from '../../components/CatalogCard'
 import { StitchPagination } from '../../components/StitchPagination'
 import { ErrorState, Spinner } from '../../components/ui/States'
 import { productService } from '../../services/productService'
+import { promotionService } from '../../services/sellerService'
 import { useApi } from '../../hooks/useApi'
 
 const PAGE_SIZE = 6
@@ -28,6 +29,9 @@ export function CatalogPage() {
   const sortKey: SortKey = (params.get('sort') as SortKey | null) ?? 'newest'
   const sort = SORTS[sortKey] ?? SORTS.newest
   const [view, setView] = useState<'grid' | 'list'>('grid')
+  const { data: promotions } = useApi(() => promotionService.running(), [])
+  const promotionOf = (providerId: string, productId: string) =>
+    promotions?.find((p) => p.providerId === providerId && (!p.productId || p.productId === productId))?.label
   const { data, loading, error, reload } = useApi(
     () => productService.list({ page, size: PAGE_SIZE, type, sortBy: sort.sortBy, direction: sort.direction }), [page, type, sortKey])
   /** Đổi bộ lọc trên URL; đổi lọc/sắp xếp thì về trang đầu */
@@ -231,7 +235,7 @@ export function CatalogPage() {
               >
                 {' '}
                 {data?.content.map((p) => (
-                  <CatalogCard key={p.id} product={p} />
+                  <CatalogCard key={p.id} product={p} promotion={p.productType === 'GIFT_SET' ? undefined : promotionOf(p.providerId, p.id)} />
                 ))}
                 {data?.content.length === 0 && <p className="font-body-md text-on-surface-variant">Chưa có sản phẩm thuộc loại này.</p>}
               </div>{' '}

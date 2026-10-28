@@ -28,7 +28,7 @@ public class ProviderCheckoutSettingsController {
             @NotBlank @Pattern(regexp = "[0-9]{4,19}") String accountNumber,
             @NotBlank @Size(max = 150) String accountName) {}
 
-    /** Phí giao không còn do seller khai báo: cố định theo ShippingFeePolicy (nội thành HCM 35k, còn lại 70k) */
+    /** Sàn không thu phí giao hàng; seller chỉ khai báo tài khoản nhận tiền VietQR */
     public record SettingsView(String bankCode, String accountNumber, String accountName) {}
 
     @GetMapping

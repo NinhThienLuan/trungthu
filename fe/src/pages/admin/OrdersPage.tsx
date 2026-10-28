@@ -143,7 +143,7 @@ function OrderPanel({ id, onChanged }: { id: string; onChanged: () => void }) {
             <span>{formatVnd(l.subtotal)}</span>
           </li>
         ))}
-        <li className="flex justify-between border-t border-line pt-2"><span>Phí giao hàng</span><span>{formatVnd(order.shippingFee)}</span></li>
+        {!!order.discountAmount && <li className="flex justify-between border-t border-line pt-2 text-success"><span>Khuyến mãi đã giảm</span><span>{formatVnd(order.discountAmount)}</span></li>}
         <li className="flex justify-between font-medium"><span>Tổng cộng</span><span>{formatVnd(order.totalAmount)}</span></li>
         <li className="flex justify-between text-muted"><span>{PAYMENT_METHOD_LABEL[order.paymentMethod]} · đã thu</span><span>{formatVnd(order.paidAmount)}</span></li>
         <li className="flex justify-between text-muted"><span>Còn lại</span><span>{formatVnd(order.remainingAmount)}</span></li>

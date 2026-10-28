@@ -12,6 +12,7 @@ import { useAuthStore } from '../../stores/authStore'
 const NAV = [
   { to: '/seller', icon: 'dashboard', label: 'Bảng Điều Khiển', end: true },
   { to: '/seller/products', icon: 'bakery_dining', label: 'Menu & Mẻ Ra Lò' },
+  { to: '/seller/promotions', icon: 'sell', label: 'Khuyến Mãi' },
   { to: '/seller/b2b', icon: 'request_quote', label: 'Báo Giá Sỉ B2B' },
   { to: '/seller/orders', icon: 'local_shipping', label: 'Đơn Hàng & Giao Lạnh' },
   { to: '/seller/profile', icon: 'workspace_premium', label: 'Hồ Sơ & Thẩm Định' },

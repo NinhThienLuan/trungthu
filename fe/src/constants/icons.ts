@@ -20,7 +20,7 @@ export const ICON_NAMES = [
   'precision_manufacturing', 'print', 'print_connect', 'progress_activity', 'qr_code_2', 'radio_button_unchecked',
   'ramen_dining', 'receipt', 'receipt_long', 'remove', 'report_problem', 'request_quote', 'restart_alt', 'rule',
   'save', 'schedule', 'schedule_send', 'search', 'search_off', 'security', 'send', 'send_time_extension', 'sensors',
-  'severe_cold', 'shield', 'shopping_bag', 'shopping_cart', 'soup_kitchen', 'star', 'star_border', 'star_half',
+  'sell', 'severe_cold', 'shield', 'shopping_bag', 'shopping_cart', 'soup_kitchen', 'star', 'star_border', 'star_half',
   'stars', 'store', 'storefront', 'support_agent', 'sync', 'table_view', 'task_alt', 'thermostat', 'timer_10',
   'token', 'trending_down', 'trending_up', 'tune', 'two_wheeler', 'unfold_more', 'upload_file', 'verified',
   'verified_user', 'view_agenda', 'visibility',

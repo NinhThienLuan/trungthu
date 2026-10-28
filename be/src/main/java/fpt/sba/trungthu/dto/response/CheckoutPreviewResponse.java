@@ -12,8 +12,9 @@ public record CheckoutPreviewResponse(List<ProviderPrice> groups, BigDecimal gra
             PaymentMethod paymentMethod, List<Line> lines, BigDecimal merchandiseAmount,
             BigDecimal personalizationFee, BigDecimal shippingFee, BigDecimal totalAmount,
             BigDecimal depositAmount, BigDecimal subtotalAmount, BigDecimal minDepositAmount,
-            boolean codAllowed) {}
+            boolean codAllowed, BigDecimal discountAmount) {}
 
     public record Line(UUID variantId, String productName, String variantName, int quantity,
-            BigDecimal unitPrice, BigDecimal personalizationFee, BigDecimal subtotal) {}
+            BigDecimal unitPrice, BigDecimal personalizationFee, BigDecimal subtotal,
+            BigDecimal listAmount, String promotion) {}
 }

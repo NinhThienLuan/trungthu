@@ -39,6 +39,8 @@ function previewFromCart(body: CheckoutRequest, cart: CartItem[]): CheckoutPrevi
       totalAmount,
       minDepositAmount: minDeposit(totalAmount),
       codAllowed: totalAmount < COD_MAX_TOTAL && !hasCustomBox,
+      discountAmount: 0,
+      lines: [],
     }
   })
   return { groups, grandTotal: groups.reduce((sum, g) => sum + g.totalAmount, 0) }

@@ -65,7 +65,7 @@ export function SettingsPage() {
   return (
     <div className="page section flex flex-col gap-6">
       <PageHeader eyebrow="Gian hàng" title="Cài đặt bán hàng"
-        description="Thiếu năng lực nướng thì khách không đặt được hàng. Phí giao do sàn áp dụng: nội thành TP.HCM 35.000₫, nơi khác 70.000₫." />
+        description="Thiếu năng lực nướng thì khách không đặt được hàng. Sàn miễn phí giao hàng cho mọi đơn." />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Section

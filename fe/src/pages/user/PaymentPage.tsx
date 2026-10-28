@@ -59,7 +59,7 @@ export function PaymentPage() {
   )
 }
 
-/** Món trong đơn + tạm tính, phí giao, tổng (số liệu của BE) */
+/** Món trong đơn + tạm tính, khuyến mãi, tổng (số liệu của BE) */
 function OrderSummary({ order }: { order: OrderDetail }) {
   return (
     <div className="rounded-sm border border-line p-4 text-small">
@@ -76,7 +76,8 @@ function OrderSummary({ order }: { order: OrderDetail }) {
       </ul>
       <dl className="mt-3 flex flex-col gap-1 border-t border-line pt-3">
         <div className="flex justify-between text-muted"><dt>Tạm tính</dt><dd>{formatVnd(order.subtotalAmount)}</dd></div>
-        <div className="flex justify-between text-muted"><dt>Phí giao hàng</dt><dd>{formatVnd(order.shippingFee)}</dd></div>
+        {!!order.discountAmount && <div className="flex justify-between text-success"><dt>Đã giảm (khuyến mãi)</dt><dd>{formatVnd(order.discountAmount)}</dd></div>}
+        <div className="flex justify-between text-muted"><dt>Giao hàng</dt><dd>Miễn phí</dd></div>
         <div className="flex justify-between font-semibold text-navy"><dt>Tổng cộng</dt><dd>{formatVnd(order.totalAmount)}</dd></div>
       </dl>
       <p className="mt-3 text-muted">Giao tới: {order.receiverName} · {order.receiverPhone}<br />{order.shippingAddress}</p>

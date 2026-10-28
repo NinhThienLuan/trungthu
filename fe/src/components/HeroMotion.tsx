@@ -7,9 +7,6 @@ import { DETAIL_GALLERY, MOCK_PRODUCTS } from '../apis/mockData'
  */
 const HERO_VIDEO = 'https://videos.pexels.com/video-files/39057909/16620591_1920_1080_30fps.mp4'
 
-const HERO_STITCH =
-  'https://lh3.googleusercontent.com/aida/AEtjO1WA3bE4RLcHOKQ7kyM6600CviTSESGNC0hvHTzZFhzJGy2pAmBIk0ZsMdgI43BzJejUMlNiQZ75VmxiiGc-zq3b09d_tqEv6Bdr58W41_fMUGHBRe4UFXdsawCRsbR3PZUTNdz_Ac0XYRK_Lyb6p3PxiL-ZxRlQKs0ALWNaU0efJsaN-z5LZ7ncsf9OHnwpZAS33H'
-
 /** Video nặng ~13MB: chỉ tải trên màn hình >= 768px, không bật giảm chuyển động / tiết kiệm dữ liệu */
 function shouldLoadVideo() {
   if (typeof window === 'undefined') return false
@@ -21,7 +18,8 @@ function shouldLoadVideo() {
  * Nền hero: video lặp, tắt tiếng. Trong lúc video chưa chạy (hoặc trên mobile) hiển thị
  * slideshow ảnh chuyển cảnh + zoom chậm bằng CSS làm phương án dự phòng.
  */
-export function HeroMotion({ firstSrc = HERO_STITCH }: { firstSrc?: string }) {
+// Ảnh Stitch cũ (lh3 .../aida/...) đã hết hạn (400/403): slide đầu dùng ảnh hộp quà trong bộ ảnh chi tiết
+export function HeroMotion({ firstSrc = DETAIL_GALLERY[3] }: { firstSrc?: string }) {
   const [useVideo, setUseVideo] = useState(false)
   const [playing, setPlaying] = useState(false)
   useEffect(() => setUseVideo(shouldLoadVideo()), [])

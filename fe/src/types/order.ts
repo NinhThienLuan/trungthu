@@ -69,6 +69,22 @@ export interface CheckoutPreviewGroup {
   minDepositAmount: number
   /** COD chỉ cho đơn tiêu chuẩn < 2.000.000đ, không in riêng */
   codAllowed: boolean
+  /** Tổng tiền được giảm nhờ khuyến mãi của xưởng */
+  discountAmount: number
+  lines: CheckoutPreviewLine[]
+}
+
+/** Dòng hàng sau khi BE áp khuyến mãi (unitPrice là giá sau giảm) */
+export interface CheckoutPreviewLine {
+  variantId: string
+  productName: string
+  variantName: string
+  quantity: number
+  unitPrice: number
+  subtotal: number
+  listAmount: number
+  /** Nhãn khuyến mãi đã áp, vd "Mua 3 tặng 1" */
+  promotion: string | null
 }
 
 export interface CheckoutPreview {
@@ -130,6 +146,8 @@ export interface OrderDetail extends OrderSummary {
   shippingAddress: string
   subtotalAmount: number
   shippingFee: number
+  /** Số tiền khuyến mãi của xưởng đã trừ (BE: discountAmount) */
+  discountAmount?: number
   depositAmount: number
   holdExpiresAt: string | null
   lines: OrderLine[]

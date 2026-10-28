@@ -101,3 +101,50 @@ export const sellerService = {
     return unwrap(http.post<ApiResponse<ComplianceDoc>>('/provider/compliance/upload', form, { headers: { 'Content-Type': 'multipart/form-data' } }))
   },
 }
+
+export type PromotionType = 'PERCENT_OFF' | 'BUY_X_GET_Y'
+
+/** PromotionController.PromotionResponse */
+export interface Promotion {
+  id: string
+  providerId: string
+  storeName: string
+  productId: string | null
+  productName: string | null
+  name: string
+  type: PromotionType
+  minQuantity: number | null
+  percentOff: number | null
+  buyQuantity: number | null
+  freeQuantity: number | null
+  startDate: string
+  endDate: string
+  active: boolean
+  /** Đang chạy hôm nay */
+  running: boolean
+  /** Nhãn cho khách, vd "Mua 3 tặng 1" */
+  label: string
+}
+
+export interface PromotionInput {
+  name: string
+  type: PromotionType
+  productId?: string
+  minQuantity?: number
+  percentOff?: number
+  buyQuantity?: number
+  freeQuantity?: number
+  startDate: string
+  endDate: string
+  active?: boolean
+}
+
+/** Sự kiện khuyến mãi: seller quản lý, khách xem nhãn đang chạy */
+export const promotionService = {
+  mine: () => unwrap(http.get<ApiResponse<Promotion[]>>('/provider/promotions')),
+  create: (body: PromotionInput) => unwrap(http.post<ApiResponse<Promotion>>('/provider/promotions', body)),
+  update: (id: string, body: PromotionInput) => unwrap(http.put<ApiResponse<Promotion>>(`/provider/promotions/${id}`, body)),
+  remove: (id: string) => unwrap(http.delete<ApiResponse<null>>(`/provider/promotions/${id}`)),
+  /** Công khai: khuyến mãi đang chạy hôm nay */
+  running: (providerId?: string) => unwrap(http.get<ApiResponse<Promotion[]>>('/public/promotions', { params: { providerId } })),
+}

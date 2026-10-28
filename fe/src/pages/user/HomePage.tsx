@@ -49,7 +49,7 @@ export function HomePage() {
           {' '}
           <div className="absolute inset-0 w-full h-full z-0 pointer-events-none">
             {' '}
-            <HeroMotion firstSrc="https://lh3.googleusercontent.com/aida/AEtjO1WA3bE4RLcHOKQ7kyM6600CviTSESGNC0hvHTzZFhzJGy2pAmBIk0ZsMdgI43BzJejUMlNiQZ75VmxiiGc-zq3b09d_tqEv6Bdr58W41_fMUGHBRe4UFXdsawCRsbR3PZUTNdz_Ac0XYRK_Lyb6p3PxiL-ZxRlQKs0ALWNaU0efJsaN-z5LZ7ncsf9OHnwpZAS33Hn2rTmsttDxFmkUvtH2d07sy5lQ_uN-f7kbfzMxjvd2Z3XOb2Wxyq0" />{' '}
+            <HeroMotion />{' '}
             <div className="absolute inset-0 bg-gradient-to-r from-primary via-primary/80 to-primary/30"></div>{' '}
             <div className="absolute inset-0 bg-gradient-to-t from-primary via-transparent to-primary/60"></div>{' '}
             <div className="absolute -top-32 right-1/4 w-96 h-96 rounded-[0.75rem] bg-secondary-container/15 blur-3xl"></div>{' '}

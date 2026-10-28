@@ -8,7 +8,8 @@ import type { Product } from '../types/product'
 const vnd = (n: number) => `${n.toLocaleString('vi-VN')} đ`
 
 /** Thẻ sản phẩm theo đúng markup bản Stitch (bộ sưu tập), dữ liệu lấy từ Product */
-export function CatalogCard({ product }: { product: Product }) {
+/** promotion: nhãn khuyến mãi đang chạy của xưởng cho sản phẩm này (vd "Mua 3 tặng 1") */
+export function CatalogCard({ product, promotion }: { product: Product; promotion?: string }) {
   const add = useCartStore((s) => s.add)
   const [added, setAdded] = useState(false)
   const variant = product.variants[0]
@@ -51,6 +52,12 @@ export function CatalogCard({ product }: { product: Product }) {
           <span className="px-2 py-0.5 rounded-[0.125rem] bg-primary/90 text-champagne-light font-label-sm text-label-sm uppercase tracking-wider backdrop-blur-sm">
             {product.storeName}
           </span>
+          {promotion && (
+            <span className="px-2 py-0.5 rounded-[0.125rem] bg-error text-on-error font-label-sm text-label-sm uppercase tracking-wider flex items-center gap-1">
+              <Icon name="sell" className="text-[12px]" aria-hidden />
+              {promotion}
+            </span>
+          )}
           {d && (
             <span className="px-2 py-0.5 rounded-[0.125rem] bg-secondary text-on-secondary font-label-sm text-label-sm uppercase tracking-wider flex items-center gap-1">
               <Icon name={d.badgeIcon} className="text-[12px]" aria-hidden />

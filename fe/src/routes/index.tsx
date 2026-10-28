@@ -30,6 +30,7 @@ import { SettingsPage } from '../pages/admin/SettingsPage'
 import { BakeBatchPage } from '../pages/admin/BakeBatchPage'
 import { OrdersPage } from '../pages/admin/OrdersPage'
 import { SellerRfqPage } from '../pages/admin/SellerRfqPage'
+import { PromotionsPage } from '../pages/admin/PromotionsPage'
 import { QualityReviewPage } from '../pages/admin/QualityReviewPage'
 import { DashboardPage } from '../pages/admin/DashboardPage'
 
@@ -77,6 +78,7 @@ export const router = createBrowserRouter([
           { path: '/seller/profile', element: <ProfilePage /> },
           { path: '/seller/settings', element: <SettingsPage /> },
           { path: '/seller/b2b', element: <SellerRfqPage /> },
+          { path: '/seller/promotions', element: <PromotionsPage /> },
         ],
       },
       {

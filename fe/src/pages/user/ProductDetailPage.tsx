@@ -5,6 +5,7 @@ import { Icon } from '../../components/Icon'
 import { ProductReviews, RatingSummary } from '../../components/ProductReviews'
 import { ErrorState, Spinner } from '../../components/ui/States'
 import { productService } from '../../services/productService'
+import { promotionService, type Promotion } from '../../services/sellerService'
 import { DETAIL_GALLERY } from '../../apis/mockData'
 import { useApi } from '../../hooks/useApi'
 import { useDocumentTitle } from '../../hooks/useDocumentTitle'
@@ -25,6 +26,8 @@ export function ProductDetailPage() {
   const navigate = useNavigate()
   const add = useCartStore((st) => st.add)
   const { data: product, loading, error, reload } = useApi(() => productService.detail(id), [id])
+  const providerId = product?.providerId
+  const { data: running } = useApi(() => (providerId ? promotionService.running(providerId) : Promise.resolve([])), [providerId])
   const [variantId, setVariantId] = useState<string>()
   const [activeImage, setActiveImage] = useState(0)
   const [quantity, setQuantity] = useState(1)
@@ -49,6 +52,7 @@ export function ProductDetailPage() {
   }
 
   const variant = product.variants.find((v) => v.id === variantId) ?? product.variants[0]
+  const promotions = (running ?? []).filter((p) => !p.productId || p.productId === product.id)
   const price = variant?.price ?? 0
   // Giá gốc giữ cùng tỉ lệ giảm như quy cách chuẩn trong danh mục
   const ratio = product.display ? product.display.oldPrice / product.variants[0].price : 1
@@ -247,10 +251,14 @@ export function ProductDetailPage() {
                   <div className="flex items-baseline gap-space-xs">
                     {' '}
                     <span className="font-headline-lg text-headline-lg text-secondary font-bold">{vnd(price)}</span>{' '}
-                    <span className="font-body-sm text-body-sm text-outline line-through">{vnd(oldPrice)}</span>{' '}
-                    <span className="font-label-sm text-label-sm text-on-secondary-container bg-secondary-container px-1.5 py-0.5 rounded-[0.125rem] font-semibold">
-                      -{discountPct}%
-                    </span>{' '}
+                    {discountPct > 0 && (
+                      <>
+                        <span className="font-body-sm text-body-sm text-outline line-through">{vnd(oldPrice)}</span>
+                        <span className="font-label-sm text-label-sm text-on-secondary-container bg-secondary-container px-1.5 py-0.5 rounded-[0.125rem] font-semibold">
+                          -{discountPct}%
+                        </span>
+                      </>
+                    )}
                   </div>{' '}
                   <span className="font-label-sm text-label-sm text-secondary-fixed-dim uppercase tracking-wider text-right">
                     {' Giá Bán Lẻ Đã Gồm VAT '}
@@ -260,49 +268,7 @@ export function ProductDetailPage() {
                   {' Đã bao gồm hộp sơn mài mạ vàng kim nhũ, dao cắt ngọc giả sứ và thiệp chúc mừng dập nổi thủ công. '}
                 </p>{' '}
               </div>{' '}
-              <div className="bg-primary-container text-champagne-light p-space-md rounded-[0.25rem] shadow-md space-y-space-sm">
-                {' '}
-                <div className="flex items-center justify-between">
-                  {' '}
-                  <div className="flex items-center gap-space-xs">
-                    {' '}
-                    <Icon name="corporate_fare" className="text-secondary-fixed text-[20px]" aria-hidden />{' '}
-                    <span className="font-label-lg text-label-lg text-secondary-fixed uppercase tracking-wider">
-                      Thang Chiết Khấu Doanh Nghiệp (B2B)
-                    </span>{' '}
-                  </div>{' '}
-                  <span className="font-label-sm text-[10px] text-on-primary-container uppercase tracking-wider">
-                    Mùa Trăng 2024
-                  </span>{' '}
-                </div>{' '}
-                <div className="grid grid-cols-3 gap-space-xs text-center pt-space-xs">
-                  {' '}
-                  <div className="p-space-xs rounded-[0.125rem] bg-primary/60 flex flex-col items-center">
-                    {' '}
-                    <span className="font-label-sm text-label-sm text-champagne-light/70 uppercase">
-                      Từ 50 Hộp
-                    </span>{' '}
-                    <span className="font-headline-sm text-headline-sm text-secondary-fixed font-bold">-15%</span>{' '}
-                    <span className="font-label-sm text-[10px] text-on-primary-container">{vnd(Math.round(price * 0.85))} / hộp</span>{' '}
-                  </div>{' '}
-                  <div className="p-space-xs rounded-[0.125rem] bg-primary/60 flex flex-col items-center">
-                    {' '}
-                    <span className="font-label-sm text-label-sm text-champagne-light/70 uppercase">
-                      Từ 200 Hộp
-                    </span>{' '}
-                    <span className="font-headline-sm text-headline-sm text-secondary-fixed font-bold">-25%</span>{' '}
-                    <span className="font-label-sm text-[10px] text-on-primary-container">{vnd(Math.round(price * 0.75))} / hộp</span>{' '}
-                  </div>{' '}
-                  <div className="p-space-xs rounded-[0.125rem] bg-secondary/30 flex flex-col items-center">
-                    {' '}
-                    <span className="font-label-sm text-label-sm text-secondary-fixed uppercase font-bold">
-                      Từ 1.000 Hộp
-                    </span>{' '}
-                    <span className="font-headline-sm text-headline-sm text-champagne-light font-bold">-35%</span>{' '}
-                    <span className="font-label-sm text-[10px] text-secondary-fixed font-bold">Miễn Phí Khắc Kim</span>{' '}
-                  </div>{' '}
-                </div>{' '}
-              </div>{' '}
+              <PromotionBox promotions={promotions} />
               <div className="space-y-space-xs">
                 {' '}
                 <div className="flex items-center justify-between">
@@ -630,5 +596,35 @@ export function ProductDetailPage() {
         </section>{' '}
       </div>
     </>
+  )
+}
+
+/** Khuyến mãi đang chạy của xưởng cho sản phẩm này; BE tự trừ khi đặt hàng */
+function PromotionBox({ promotions }: { promotions: Promotion[] }) {
+  if (promotions.length === 0) {
+    return (
+      <Link to={ROUTES.rfq} className="block p-space-md rounded-[0.25rem] bg-surface-container-lowest shadow-sm font-body-sm text-body-sm text-on-surface-variant hover:bg-champagne-light/40">
+        Mua số lượng lớn? <span className="font-semibold text-primary underline">Gửi yêu cầu báo giá sỉ</span> để các xưởng báo giá riêng.
+      </Link>
+    )
+  }
+  return (
+    <div className="bg-primary-container text-champagne-light p-space-md rounded-[0.25rem] shadow-md space-y-space-sm">
+      <div className="flex items-center gap-space-xs">
+        <Icon name="sell" className="text-secondary-fixed text-[20px]" aria-hidden />
+        <span className="font-label-lg text-label-lg text-secondary-fixed uppercase tracking-wider">Khuyến mãi của xưởng</span>
+      </div>
+      <ul className="space-y-1.5">
+        {promotions.map((p) => (
+          <li key={p.id} className="flex flex-wrap items-baseline justify-between gap-2">
+            <span className="font-headline-sm text-headline-sm text-secondary-fixed font-bold">{p.label}</span>
+            <span className="font-label-sm text-[11px] text-on-primary-container">
+              {p.name} · đến {new Date(p.endDate).toLocaleDateString('vi-VN')}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <p className="font-label-sm text-[11px] text-on-primary-container">Tự động trừ vào giá khi đặt hàng, áp cho số lượng trong cùng một đơn.</p>
+    </div>
   )
 }

@@ -13,7 +13,7 @@ export interface CapacityDay {
   reservedQuantity: number
 }
 
-/** Cấu hình để buyer đặt được hàng: BE3 checkout-settings (tài khoản VietQR), BE2 capacity. Phí giao cố định theo khu vực (BE) */
+/** Cấu hình để buyer đặt được hàng: BE3 checkout-settings (tài khoản VietQR), BE2 capacity. Sàn miễn phí giao hàng */
 export const sellerSettingsService = {
   get: () => unwrap(http.get<ApiResponse<SellerSettings>>('/provider/checkout-settings')),
 

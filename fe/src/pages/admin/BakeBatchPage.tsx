@@ -52,7 +52,7 @@ export function BakeBatchPage() {
   const products = (data ?? []).filter((p) => p.status !== 'ARCHIVED')
 
   return (
-    <div className="page section flex flex-col gap-6">
+    <div className="page section flex flex-col gap-6 font-sans [&_h1]:font-sans [&_h2]:font-sans [&_h3]:font-sans">
       <PageHeader eyebrow="Gian hàng" title="Menu & kho"
         description="Sản phẩm mới ở trạng thái nháp: thêm ảnh và ít nhất một phân loại (kèm tồn ban đầu) rồi bấm Mở bán."
         action={<button type="button" className="btn btn-primary" onClick={() => setCreating(!creating)}>{creating ? 'Đóng' : 'Thêm sản phẩm'}</button>} />
