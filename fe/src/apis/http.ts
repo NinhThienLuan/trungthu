@@ -6,7 +6,9 @@ import type { ApiResponse } from '../types/api'
  * (access_token / refresh_token) nên FE không tự lưu token.
  */
 export const http = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
+  // Vite proxies /api locally; Vercel rewrites /api to Heroku in production.
+  // Keeping this same-origin avoids cross-site auth cookie and CORS failures.
+  baseURL: '/api',
   withCredentials: true,
   headers: { 'Content-Type': 'application/json' },
 })
