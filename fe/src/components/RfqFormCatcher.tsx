@@ -3,8 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import { Icon } from './Icon'
 import { rfqService } from '../services/rfqService'
 import { errorMessage } from '../apis/http'
-import { MIN_LEAD_DAYS, ROUTES, RFQ_MIN_QUANTITY } from '../constants'
-import { addDays, cn, toIsoDate } from '../lib/format'
+import { ROUTES } from '../constants'
+import { cn } from '../lib/format'
+import { rfqSchema } from '../schemas'
 import { useAuthStore } from '../stores/authStore'
 import type { RfqResponse } from '../types/order'
 
@@ -20,6 +21,13 @@ export function RfqFormCatcher({ children, onSubmitted }: { children: ReactNode;
   const user = useAuthStore((state) => state.user)
   const [toast, setToast] = useState<{ ok: boolean; text: string } | null>(null)
   const submitting = useRef(false)
+  const hideTimer = useRef<number>(undefined)
+  /** Một hẹn giờ dùng chung: thông báo mới không bị hẹn giờ của thông báo cũ tắt sớm */
+  const show = (next: { ok: boolean; text: string }) => {
+    setToast(next)
+    window.clearTimeout(hideTimer.current)
+    hideTimer.current = window.setTimeout(() => setToast(null), 4000)
+  }
 
   const handleSubmit = async (e: FormEvent<HTMLDivElement>) => {
     const form = e.target as HTMLFormElement
@@ -34,46 +42,38 @@ export function RfqFormCatcher({ children, onSubmitted }: { children: ReactNode;
       return
     }
     if (user.role !== 'CUSTOMER') {
-      setToast({ ok: false, text: 'Yêu cầu báo giá cần tài khoản khách hàng.' })
+      show({ ok: false, text: 'Yêu cầu báo giá cần tài khoản khách hàng.' })
       return
     }
     if (submitting.current) return
-    const data = new FormData(form)
-    const get = (key: string) => String(data.get(key) ?? '').trim()
-    const quantity = Number(get('requestedQuantity'))
-    const deliveryDate = get('expectedDeliveryDate')
-    if (!Number.isInteger(quantity) || quantity < RFQ_MIN_QUANTITY
-      || !deliveryDate || deliveryDate < toIsoDate(addDays(new Date(), MIN_LEAD_DAYS))) {
-      setToast({ ok: false, text: `Cần ít nhất ${RFQ_MIN_QUANTITY} hộp và ngày nhận cách tối thiểu ${MIN_LEAD_DAYS} ngày.` })
+    // Bỏ lỗi cũ rồi kiểm tra lại toàn bộ form (BE kiểm tra lại cùng quy tắc)
+    form.querySelectorAll('[aria-invalid]').forEach((el) => el.removeAttribute('aria-invalid'))
+    const parsed = rfqSchema.safeParse(Object.fromEntries(new FormData(form)))
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0]
+      const field = form.elements.namedItem(String(issue.path[0]))
+      if (field instanceof HTMLElement) {
+        field.setAttribute('aria-invalid', 'true')
+        field.focus()
+      }
+      show({ ok: false, text: issue.message })
       return
     }
     submitting.current = true
     const button = form.querySelector<HTMLButtonElement>('button[type=submit]')
     if (button) button.disabled = true
     try {
-      const created = await rfqService.submit({
-        companyName: get('companyName'),
-        taxCode: get('taxCode'),
-        contactName: get('contactName'),
-        contactPosition: get('contactPosition'),
-        contactPhone: get('contactPhone'),
-        contactEmail: get('contactEmail'),
-        requestedQuantity: quantity,
-        expectedDeliveryDate: deliveryDate,
-        expectedBudget: get('expectedBudget') ? Number(get('expectedBudget')) : undefined,
-        description: get('description') || undefined,
-      })
+      const created = await rfqService.submit(parsed.data)
       form.reset()
       onSubmitted?.(created)
       document.getElementById('my-rfqs')?.scrollIntoView({ behavior: 'smooth' })
-      setToast({ ok: true, text: `Đã tạo yêu cầu ${created.code}. Xem báo giá ở mục Yêu cầu của tôi.` })
+      show({ ok: true, text: `Đã tạo yêu cầu ${created.code}. Xem báo giá ở mục Yêu cầu của tôi.` })
     } catch (err) {
-      setToast({ ok: false, text: errorMessage(err) })
+      show({ ok: false, text: errorMessage(err) })
     } finally {
       submitting.current = false
       if (button) button.disabled = false
     }
-    window.setTimeout(() => setToast(null), 4000)
   }
 
   return (

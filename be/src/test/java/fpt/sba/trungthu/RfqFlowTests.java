@@ -145,6 +145,26 @@ class RfqFlowTests {
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.status").value("ACCEPTED"));
     }
 
+    @Test
+    void rejectsMalformedTaxCodeAndPhone() throws Exception {
+        LocalDate date = LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh")).plusDays(7);
+        as(createUser(UserRole.CUSTOMER, false));
+        String template = """
+                {"companyName":"Cong ty Anh Trang","taxCode":"%s","contactName":"Mai",
+                 "contactPosition":"Thu mua","contactPhone":"%s","contactEmail":"mai@example.com",
+                 "requestedQuantity":50,"expectedDeliveryDate":"%s"}
+                """;
+        for (String[] bad : new String[][] {{"abc123", "0901234567"}, {"123456789", "0901234567"},
+                {"0123456789-12", "0901234567"}, {"0123456789", "12345"}}) {
+            mvc.perform(post("/api/rfqs").with(user("buyer").roles("CUSTOMER")).contentType(MediaType.APPLICATION_JSON)
+                            .content(template.formatted(bad[0], bad[1], date)))
+                    .andExpect(status().isBadRequest());
+        }
+        mvc.perform(post("/api/rfqs").with(user("buyer").roles("CUSTOMER")).contentType(MediaType.APPLICATION_JSON)
+                        .content(template.formatted("0123456789-001", "0901234567", date)))
+                .andExpect(status().isOk());
+    }
+
     private User createUser(UserRole role, boolean eligible) {
         return users.saveAndFlush(User.builder().email(UUID.randomUUID() + "@example.com")
                 .password("unused").fullName("Test").role(role).storeName(role == UserRole.PROVIDER ? "Xưởng thử" : null)

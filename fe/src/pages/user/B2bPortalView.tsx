@@ -1,5 +1,7 @@
 // Tự sinh từ bản thiết kế Stitch — giữ nguyên nội dung. Sửa logic ở trang bọc ngoài.
 import { Icon } from '../../components/Icon'
+import { MIN_LEAD_DAYS } from '../../constants'
+import { addDays, toIsoDate } from '../../lib/format'
 
 export function B2bPortalView() {
   return (
@@ -724,7 +726,7 @@ export function B2bPortalView() {
                   Vui lòng điền thông tin doanh nghiệp để các xưởng gửi báo giá chi tiết.
                 </p>{' '}
               </div>{' '}
-              <form className="space-y-space-md" id="rfq-form">
+              <form className="space-y-space-md" id="rfq-form" noValidate>
                 {' '}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-space-md">
                   {' '}
@@ -734,7 +736,7 @@ export function B2bPortalView() {
                       Tên Doanh Nghiệp / Tập Đoàn *
                     </label>{' '}
                     <input
-                      className="w-full px-space-md py-2.5 bg-surface-container-low text-primary rounded-[0.125rem] font-body-md text-body-md focus:outline-none focus:ring-1 focus:ring-secondary"
+                      className="w-full px-space-md py-2.5 bg-surface-container-low text-primary rounded-[0.125rem] font-body-md text-body-md focus:outline-none focus:ring-1 focus:ring-secondary aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-error"
                       name="companyName"
                       required
                       type="text"
@@ -746,8 +748,11 @@ export function B2bPortalView() {
                       Mã Số Thuế (Xuất VAT) *
                     </label>{' '}
                     <input
-                      className="w-full px-space-md py-2.5 bg-surface-container-low text-primary rounded-[0.125rem] font-body-md text-body-md focus:outline-none focus:ring-1 focus:ring-secondary"
+                      className="w-full px-space-md py-2.5 bg-surface-container-low text-primary rounded-[0.125rem] font-body-md text-body-md focus:outline-none focus:ring-1 focus:ring-secondary aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-error"
                       name="taxCode"
+                      inputMode="numeric"
+                      maxLength={14}
+                      placeholder="0123456789 hoặc 0123456789-001"
                       required
                       type="text"
                     />{' '}
@@ -761,7 +766,7 @@ export function B2bPortalView() {
                       Người Phụ Trách Thu Mua *
                     </label>{' '}
                     <input
-                      className="w-full px-space-md py-2.5 bg-surface-container-low text-primary rounded-[0.125rem] font-body-md text-body-md focus:outline-none focus:ring-1 focus:ring-secondary"
+                      className="w-full px-space-md py-2.5 bg-surface-container-low text-primary rounded-[0.125rem] font-body-md text-body-md focus:outline-none focus:ring-1 focus:ring-secondary aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-error"
                       name="contactName"
                       required
                       type="text"
@@ -773,7 +778,7 @@ export function B2bPortalView() {
                       Chức Vụ / Phòng Ban
                     </label>{' '}
                     <input
-                      className="w-full px-space-md py-2.5 bg-surface-container-low text-primary rounded-[0.125rem] font-body-md text-body-md focus:outline-none focus:ring-1 focus:ring-secondary"
+                      className="w-full px-space-md py-2.5 bg-surface-container-low text-primary rounded-[0.125rem] font-body-md text-body-md focus:outline-none focus:ring-1 focus:ring-secondary aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-error"
                       name="contactPosition"
                       required
                       type="text"
@@ -788,8 +793,11 @@ export function B2bPortalView() {
                       Số Điện Thoại / Zalo Nhận Báo Giá *
                     </label>{' '}
                     <input
-                      className="w-full px-space-md py-2.5 bg-surface-container-low text-primary rounded-[0.125rem] font-body-md text-body-md focus:outline-none focus:ring-1 focus:ring-secondary"
+                      className="w-full px-space-md py-2.5 bg-surface-container-low text-primary rounded-[0.125rem] font-body-md text-body-md focus:outline-none focus:ring-1 focus:ring-secondary aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-error"
                       name="contactPhone"
+                      inputMode="tel"
+                      maxLength={11}
+                      placeholder="0901234567"
                       required
                       type="tel"
                     />{' '}
@@ -800,7 +808,7 @@ export function B2bPortalView() {
                       Email Doanh Nghiệp *
                     </label>{' '}
                     <input
-                      className="w-full px-space-md py-2.5 bg-surface-container-low text-primary rounded-[0.125rem] font-body-md text-body-md focus:outline-none focus:ring-1 focus:ring-secondary"
+                      className="w-full px-space-md py-2.5 bg-surface-container-low text-primary rounded-[0.125rem] font-body-md text-body-md focus:outline-none focus:ring-1 focus:ring-secondary aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-error"
                       name="contactEmail"
                       required
                       type="email"
@@ -815,8 +823,9 @@ export function B2bPortalView() {
                       Dự Kiến Ngày Nhận Hàng *
                     </label>{' '}
                     <input
-                      className="w-full px-space-md py-2.5 bg-surface-container-low text-primary rounded-[0.125rem] font-body-md text-body-md focus:outline-none focus:ring-1 focus:ring-secondary"
+                      className="w-full px-space-md py-2.5 bg-surface-container-low text-primary rounded-[0.125rem] font-body-md text-body-md focus:outline-none focus:ring-1 focus:ring-secondary aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-error"
                       name="expectedDeliveryDate"
+                      min={toIsoDate(addDays(new Date(), MIN_LEAD_DAYS))}
                       required
                       type="date"
                     />{' '}
@@ -826,7 +835,7 @@ export function B2bPortalView() {
                     <label className="font-label-md text-label-md text-primary uppercase block">
                       Số lượng hộp cần báo giá *
                     </label>{' '}
-                    <input className="w-full px-space-md py-2.5 bg-surface-container-low text-primary rounded-[0.125rem] font-body-md text-body-md focus:outline-none focus:ring-1 focus:ring-secondary"
+                    <input className="w-full px-space-md py-2.5 bg-surface-container-low text-primary rounded-[0.125rem] font-body-md text-body-md focus:outline-none focus:ring-1 focus:ring-secondary aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-error"
                       name="requestedQuantity" type="number" min="20" defaultValue="20" required />{' '}
                   </div>{' '}
                 </div>{' '}
@@ -836,14 +845,14 @@ export function B2bPortalView() {
                     Ngân sách dự kiến (không bắt buộc)
                   </label>{' '}
                   <input id="rfq-budget" name="expectedBudget" type="number" min="0"
-                    className="w-full px-space-md py-2.5 bg-surface-container-low text-primary rounded-[0.125rem] font-body-md text-body-md focus:outline-none focus:ring-1 focus:ring-secondary" />{' '}
+                    className="w-full px-space-md py-2.5 bg-surface-container-low text-primary rounded-[0.125rem] font-body-md text-body-md focus:outline-none focus:ring-1 focus:ring-secondary aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-error" />{' '}
                 </div>{' '}
                 <div className="space-y-space-xs pt-space-xs">
                   <label className="font-label-md text-label-md text-primary uppercase block" htmlFor="rfq-description">
                     Yêu cầu về mẫu hộp, in logo hoặc lịch giao
                   </label>
                   <textarea id="rfq-description" name="description" rows={3}
-                    className="w-full px-space-md py-2.5 bg-surface-container-low text-primary rounded-[0.125rem] font-body-md text-body-md focus:outline-none focus:ring-1 focus:ring-secondary" />
+                    className="w-full px-space-md py-2.5 bg-surface-container-low text-primary rounded-[0.125rem] font-body-md text-body-md focus:outline-none focus:ring-1 focus:ring-secondary aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-error" />
                 </div>
                 <div className="pt-space-md">
                   {' '}

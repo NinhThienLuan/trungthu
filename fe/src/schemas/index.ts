@@ -17,11 +17,14 @@ export const loginSchema = z.object({
 })
 
 
+// Giống VnFormats.TAX_CODE bên BE: 10 số, hoặc 10 số-3 số (chi nhánh)
+const taxCode = z
+  .string()
+  .trim()
+  .regex(/^\d{10}(-\d{3})?$/, 'Mã số thuế gồm 10 số hoặc dạng 10 số-3 số (chi nhánh)')
+
 const vatSchema = z.object({
-  taxCode: z
-    .string()
-    .trim()
-    .regex(/^\d{10}(-\d{3})?$/, 'Mã số thuế gồm 10 hoặc 13 số'),
+  taxCode,
   companyName: required('tên công ty'),
   companyAddress: required('địa chỉ công ty'),
   invoiceEmail: email,
@@ -77,21 +80,24 @@ export const checkoutSchema = z.object({
   vat: vatSchema.optional(),
 })
 
+/** Form RFQ ở /rfq (B2bPortalView #rfq-form): tên trường = name của input = CreateRfqRequest bên BE */
 export const rfqSchema = z.object({
-  companyName: required('tên công ty'),
-  contactName: required('người liên hệ'),
-  phone,
-  email,
-  quantity: z.coerce
-    .number({ invalid_type_error: 'Vui lòng nhập số lượng' })
-    .int()
-    .min(RFQ_MIN_QUANTITY, `Báo giá sỉ áp dụng từ ${RFQ_MIN_QUANTITY} hộp`),
-  expectedDate: z
+  companyName: required('tên doanh nghiệp').min(3, 'Tên doanh nghiệp tối thiểu 3 ký tự').max(255),
+  taxCode,
+  contactName: required('người phụ trách').max(255),
+  contactPosition: required('chức vụ').max(255),
+  contactPhone: phone,
+  contactEmail: email,
+  expectedDeliveryDate: z
     .string()
     .min(1, 'Vui lòng chọn ngày nhận')
     .refine((d) => d >= toIsoDate(addDays(new Date(), MIN_LEAD_DAYS)), `Ngày nhận phải sau hôm nay ít nhất ${MIN_LEAD_DAYS} ngày`),
-  budgetNote: z.string().trim().max(200).optional(),
-  message: z.string().trim().max(1000).optional(),
+  requestedQuantity: z.coerce
+    .number({ invalid_type_error: 'Vui lòng nhập số lượng' })
+    .int('Số lượng phải là số nguyên')
+    .min(RFQ_MIN_QUANTITY, `Báo giá sỉ áp dụng từ ${RFQ_MIN_QUANTITY} hộp`),
+  expectedBudget: z.preprocess((v) => (v === '' ? undefined : v), z.coerce.number().min(0, 'Ngân sách không được âm').optional()),
+  description: z.string().trim().max(100000).optional().transform((v) => v || undefined),
 })
 
 /** Gom lỗi zod thành { field: message } để hiển thị dưới từng ô */

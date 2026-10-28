@@ -86,7 +86,7 @@ public record CreateOrdersCommand(
 
     public record VatInfo(
             @NotBlank @Size(max = 255) String companyName,
-            @NotBlank @Size(max = 50) String taxCode,
+            @NotBlank @Pattern(regexp = VnFormats.TAX_CODE, message = VnFormats.TAX_CODE_MESSAGE) String taxCode,
             @NotBlank @Size(max = 100000) String companyAddress,
             @NotBlank @Email @Size(max = 254) String invoiceEmail) {}
 }
