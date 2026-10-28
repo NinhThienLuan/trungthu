@@ -1,0 +1,47 @@
+spring.application.name=trungthu
+server.port=8080
+
+# Local secrets (Google client, Gmail) - git-ignored, overrides the change-me defaults below
+spring.config.import=optional:classpath:secrets.properties
+
+# Datasource Configuration (SQL Server)
+# Driver & Hibernate dialect are auto-detected from the URL (lets tests swap in H2)
+spring.datasource.url=jdbc:sqlserver://localhost:1433;databaseName=trungthu;encrypt=true;trustServerCertificate=true
+spring.datasource.username=sa
+spring.datasource.password=12345
+
+# JPA / Hibernate Configuration
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=false
+spring.jpa.properties.hibernate.format_sql=true
+
+# JWT Configuration
+# Base64 encoded 256-bit+ key
+jwt.secret=
+jwt.access-token-exp-minutes=15
+jwt.refresh-token-exp-days=7
+
+# Cookie Properties
+app.cookie.secure=false
+app.cookie.same-site=Lax
+app.cookie.domain=
+
+# Google Login (create OAuth client at https://console.cloud.google.com/apis/credentials,
+# redirect URI: http://localhost:8080/login/oauth2/code/google)
+spring.security.oauth2.client.registration.google.client-id=${GOOGLE_CLIENT_ID:change-me}
+spring.security.oauth2.client.registration.google.client-secret=${GOOGLE_CLIENT_SECRET:change-me}
+spring.security.oauth2.client.registration.google.scope=openid,profile,email
+# Where the browser lands after Google login (auth cookies already set)
+app.oauth2.success-redirect=${OAUTH2_SUCCESS_REDIRECT:/api/auth/me}
+
+# Mail (Gmail SMTP - MAIL_PASSWORD is a Gmail App Password, not the account password)
+spring.mail.host=smtp.gmail.com
+spring.mail.port=587
+spring.mail.username=${MAIL_USERNAME:change-me@gmail.com}
+spring.mail.password=${MAIL_PASSWORD:change-me}
+spring.mail.properties.mail.smtp.auth=true
+spring.mail.properties.mail.smtp.starttls.enable=true
+
+# OpenAPI Swagger Path
+springdoc.swagger-ui.path=/swagger-ui.html
+springdoc.api-docs.path=/v3/api-docs

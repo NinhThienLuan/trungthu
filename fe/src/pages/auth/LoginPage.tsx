@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { errorMessage } from '../../apis/http'
 import { useAuthStore } from '../../stores/authStore'
@@ -21,6 +21,7 @@ export function LoginPage() {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitError, setSubmitError] = useState<string>()
   const [submitting, setSubmitting] = useState(false)
+  const submittingRef = useRef(false)
 
   // Chỉ cho quay về đường dẫn nội bộ (chặn open redirect)
   const next = params.get('next')
@@ -33,6 +34,8 @@ export function LoginPage() {
   }
 
   const run = async (action: () => Promise<User>, fallbackError: string) => {
+    if (submittingRef.current) return
+    submittingRef.current = true
     setErrors({})
     setSubmitError(undefined)
     setSubmitting(true)
@@ -41,6 +44,7 @@ export function LoginPage() {
     } catch (err) {
       setSubmitError(errorMessage(err, fallbackError))
     } finally {
+      submittingRef.current = false
       setSubmitting(false)
     }
   }
@@ -101,7 +105,7 @@ export function LoginPage() {
         </button>
       </form>
       <div className="mt-4">
-        <GoogleLoginButton onCredential={handleGoogle} />
+        <GoogleLoginButton onCredential={handleGoogle} onError={setSubmitError} disabled={submitting} />
       </div>
       <p className="mt-6 text-center text-small text-muted">
         Chưa có tài khoản?{' '}

@@ -15,9 +15,11 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 @Slf4j
 @Component
+@ConditionalOnProperty(name = "app.demo-seed", havingValue = "true", matchIfMissing = true)
 @Order(10)
 @RequiredArgsConstructor
 public class DataInitializer implements CommandLineRunner {

@@ -36,7 +36,6 @@ public class ProductImage extends CreatedEntity {
     private String imageUrl;
 
     @lombok.Builder.Default
-    @ColumnDefault("0")
     @Column(name = "is_primary", nullable = false)
     private Boolean isPrimary = false;
 

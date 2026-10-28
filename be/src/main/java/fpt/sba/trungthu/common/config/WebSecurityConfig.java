@@ -41,6 +41,9 @@ public class WebSecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final JsonAuthenticationEntryPoint authenticationEntryPoint;
 
+    @Value("${app.cors.allowed-origins}")
+    private String allowedOrigins;
+
     private static final String[] WHITELIST = new String[]{
             "/v3/api-docs/**",
             "/swagger-ui/**",
@@ -95,7 +98,8 @@ public class WebSecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(List.of("http://localhost:*", "http://127.0.0.1:*"));
+        configuration.setAllowedOrigins(List.of(allowedOrigins.split(",")).stream()
+                .map(String::trim).filter(origin -> !origin.isEmpty()).toList());
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Cookie", "X-Requested-With", "Accept"));
         configuration.setExposedHeaders(List.of("Set-Cookie", "Authorization"));

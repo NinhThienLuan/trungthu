@@ -22,13 +22,17 @@ public class BakeViewInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        String query = new ClassPathResource("db/views/v_bake_lines.sql")
+        String sqlServerQuery = new ClassPathResource("db/views/v_bake_lines.sql")
+                .getContentAsString(StandardCharsets.UTF_8);
+        String postgresQuery = new ClassPathResource("db/views/v_bake_lines_postgres.sql")
                 .getContentAsString(StandardCharsets.UTF_8);
         jdbcTemplate.execute((ConnectionCallback<Void>) connection -> {
             String database = connection.getMetaData().getDatabaseProductName();
+            String query = "PostgreSQL".equals(database) ? postgresQuery : sqlServerQuery;
             String createView = switch (database) {
                 case "Microsoft SQL Server" -> "CREATE OR ALTER VIEW v_bake_lines AS\n";
                 case "H2" -> "CREATE OR REPLACE VIEW v_bake_lines AS\n";
+                case "PostgreSQL" -> "CREATE OR REPLACE VIEW v_bake_lines AS\n";
                 default -> throw new IllegalStateException("Unsupported database for v_bake_lines: " + database);
             };
             try (var statement = connection.createStatement()) {

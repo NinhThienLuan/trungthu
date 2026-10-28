@@ -12,6 +12,14 @@ npm run dev        # http://localhost:5173, /api được proxy sang Spring Boot
 
 Chạy backend (`be/`) trước để có dữ liệu thật cho đăng nhập và sản phẩm.
 
+## Đăng nhập Google
+
+1. Tạo OAuth Client ID loại **Web application** trong Google Cloud Console. Thêm `http://localhost:5173` vào **Authorized JavaScript origins** (và origin FE thật khi triển khai). Luồng FE dùng Google Identity Services lấy ID token, không dùng redirect URI.
+2. Tạo `fe/.env.local` từ `fe/.env.example`, đặt `VITE_GOOGLE_CLIENT_ID` bằng Client ID trên. Đặt cùng Client ID vào biến `GOOGLE_CLIENT_ID` của BE (hoặc `spring.security.oauth2.client.registration.google.client-id` trong `secrets.properties`). Client secret không được đưa vào FE.
+3. Khởi động lại Vite sau khi đổi `.env.local`. Tại `/login`, nút Google gửi ID token tới `POST /api/auth/google`; BE xác minh token và đặt cookie đăng nhập. Nếu chưa có Client ID, nút Google sẽ không xuất hiện.
+
+Khi FE gọi BE qua domain khác, cấu hình `VITE_API_BASE_URL`, CORS origin và cookie phù hợp trên BE. Ưu tiên proxy `/api` cùng origin để cookie hoạt động ổn định.
+
 ## Quy tắc giao diện (bắt buộc)
 
 - Giao diện chuyển từ bản thiết kế **Stitch** (`artisanal_confectionery_luxury`). Mọi token màu / font / cỡ chữ / khoảng cách

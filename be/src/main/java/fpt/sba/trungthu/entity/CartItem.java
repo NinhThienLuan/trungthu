@@ -16,7 +16,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.Check;
-import org.hibernate.annotations.ColumnDefault;
 
 @Entity
 @Table(name = "CART_ITEM", indexes = {
@@ -52,7 +51,6 @@ public class CartItem extends BaseEntity {
     private Integer quantity;
 
     @lombok.Builder.Default
-    @ColumnDefault("0")
     @Column(name = "selected", nullable = false)
     private Boolean selected = false;
 }

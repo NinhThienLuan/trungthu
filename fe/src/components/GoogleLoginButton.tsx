@@ -15,6 +15,7 @@ declare global {
 
 let gisLoading: Promise<void> | undefined
 function loadGis() {
+  if (window.google?.accounts.id) return Promise.resolve()
   gisLoading ??= new Promise((resolve, reject) => {
     const s = document.createElement('script')
     s.src = GIS_SRC
@@ -29,11 +30,17 @@ function loadGis() {
   return gisLoading
 }
 
-/** Nút "Đăng nhập với Google" (Google Identity Services). Trả ID token cho BE1: POST /auth/google. */
-export function GoogleLoginButton({ onCredential }: { onCredential: (idToken: string) => void }) {
+interface GoogleLoginButtonProps {
+  onCredential: (idToken: string) => void
+  onError: (message: string) => void
+  disabled?: boolean
+}
+
+/** Google Identity Services trả ID token cho POST /auth/google. */
+export function GoogleLoginButton({ onCredential, onError, disabled = false }: GoogleLoginButtonProps) {
   const ref = useRef<HTMLDivElement>(null)
-  const callback = useRef(onCredential)
-  callback.current = onCredential
+  const handlers = useRef({ onCredential, onError, disabled })
+  handlers.current = { onCredential, onError, disabled }
 
   useEffect(() => {
     if (!CLIENT_ID) return
@@ -42,8 +49,16 @@ export function GoogleLoginButton({ onCredential }: { onCredential: (idToken: st
       .then(() => {
         const el = ref.current
         const gid = window.google?.accounts.id
-        if (cancelled || !el || !gid) return
-        gid.initialize({ client_id: CLIENT_ID, callback: (res) => callback.current(res.credential) })
+        if (cancelled || !el) return
+        if (!gid) throw new Error('Không khởi tạo được Google Sign-In')
+        gid.initialize({
+          client_id: CLIENT_ID,
+          callback: (res) => {
+            if (!cancelled && !handlers.current.disabled && res.credential) {
+              handlers.current.onCredential(res.credential)
+            }
+          },
+        })
         gid.renderButton(el, {
           theme: 'outline',
           size: 'large',
@@ -53,13 +68,15 @@ export function GoogleLoginButton({ onCredential }: { onCredential: (idToken: st
           width: Math.min(el.offsetWidth || 400, 400),
         })
       })
-      .catch(() => {})
+      .catch(() => {
+        if (!cancelled) handlers.current.onError('Không tải được Google Sign-In. Vui lòng thử lại sau.')
+      })
     return () => {
       cancelled = true
     }
   }, [])
 
-  // Chưa cấu hình VITE_GOOGLE_CLIENT_ID -> ẩn nút thay vì hiện nút hỏng
+  // Chưa cấu hình Client ID thì không hiển thị nút Google.
   if (!CLIENT_ID) return null
-  return <div ref={ref} className="flex min-h-11 w-full justify-center" />
+  return <div ref={ref} className={`flex min-h-11 w-full justify-center ${disabled ? 'pointer-events-none opacity-50' : ''}`} />
 }

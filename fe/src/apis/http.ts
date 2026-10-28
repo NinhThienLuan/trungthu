@@ -6,7 +6,7 @@ import type { ApiResponse } from '../types/api'
  * (access_token / refresh_token) nên FE không tự lưu token.
  */
 export const http = axios.create({
-  baseURL: '/api',
+  baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
   withCredentials: true,
   headers: { 'Content-Type': 'application/json' },
 })
@@ -16,7 +16,7 @@ let refreshing: Promise<void> | null = null
 
 http.interceptors.response.use(undefined, async (error: AxiosError) => {
   const original = error.config as (InternalAxiosRequestConfig & { _retried?: boolean }) | undefined
-  const noRetry = ['/auth/login', '/auth/refresh', '/auth/logout'].includes(original?.url ?? '')
+  const noRetry = ['/auth/login', '/auth/google', '/auth/refresh', '/auth/logout'].includes(original?.url ?? '')
   if (error.response?.status !== 401 || !original || original._retried || noRetry) {
     throw error
   }
