@@ -1,5 +1,6 @@
 package fpt.sba.trungthu.common.security;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
@@ -15,6 +16,7 @@ import java.util.Set;
  * Verifies a Google ID token sent by a frontend / mobile app (Google Sign-In button):
  * signature against Google's public keys, expiry, issuer, and that it was issued for OUR client id.
  */
+@Slf4j
 @Component
 public class GoogleIdTokenVerifier {
 
@@ -33,6 +35,8 @@ public class GoogleIdTokenVerifier {
         try {
             return decoder.decode(idToken);
         } catch (JwtException e) {
+            // Lý do thật (sai aud = GOOGLE_CLIENT_ID trên server khác client id của FE, hết hạn...) chỉ ghi log
+            log.warn("Google ID token rejected: {}", e.getMessage());
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid Google ID token");
         }
     }
