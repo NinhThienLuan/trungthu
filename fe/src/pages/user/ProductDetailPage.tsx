@@ -13,7 +13,7 @@ import { useCartStore } from '../../stores/cartStore'
 import { ROUTES } from '../../constants'
 
 const DETAIL_TABS = [
-  { id: 'story', label: 'Câu Chuyện Nghệ Nhân 70 Năm' },
+  { id: 'story', label: 'Câu Chuyện Sản Phẩm' },
   { id: 'nutrition', label: 'Bảng Dinh Dưỡng & Nguyên Liệu' },
   { id: 'reviews', label: 'Đánh Giá' },
 ] as const
@@ -423,173 +423,12 @@ export function ProductDetailPage() {
                 </button>
               ))}
             </div>{' '}
-            <div className={`tab-panel py-space-lg ${tab === 'story' ? '' : 'hidden'}`} id="tab-story">
-              {' '}
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-xl items-center">
-                {' '}
-                <div className="lg:col-span-5 relative rounded-[0.25rem] overflow-hidden shadow-lg aspect-[4/5] bg-surface-container-lowest">
-                  {' '}
-                  <img
-                    className="w-full h-full object-cover"
-                    data-alt="Black and white authentic portrait of a 75-year-old Vietnamese master pastry artisan carefully dusting flour and placing a mooncake into a hand-carved wooden heritage mold inside a vintage warm kitchen"
-                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuBLWd3HF_DYoy_d4sYRXAZJjJIzJrQrvln4xojEit9j1gXPvxziQLA4-cfsfS8xbw1fa3Huq0Q4-jHqRu6DX_D0Oa8PEKc_eN7wA7QZCPzgB5lbPEoaptfUjdTCZYtJ9sPXpggeDkCs5APR6W-GwfILz_l_51EUmC2u5Vka-Zf2soL0H_dTYiPTiXO1SKrllqCwg-5xO4qagauNDJVnV-4dyuiNxCKg41cpEbnL6aDQnIspUDDP3W8M"
-                  />{' '}
-                  <div className="absolute bottom-space-md left-space-md right-space-md bg-ink-dark/80 backdrop-blur p-space-md rounded-[0.125rem] text-champagne-light">
-                    {' '}
-                    <span className="font-label-sm text-label-sm text-secondary-fixed uppercase tracking-widest block">
-                      Nghệ Nhân Bàn Tay Vàng
-                    </span>{' '}
-                    <p className="font-headline-sm text-headline-sm text-champagne-light">
-                      Đặng Văn Đông • Đông Phương Phủ
-                    </p>{' '}
-                    <p className="font-body-sm text-body-sm text-on-primary-container pt-1">
-                      Gìn giữ 3 đời bí kíp ủ bột và canh lửa than củi từ năm 1954.
-                    </p>{' '}
-                  </div>{' '}
-                </div>{' '}
-                <div className="lg:col-span-7 space-y-space-md">
-                  {' '}
-                  <span className="font-label-lg text-label-lg uppercase tracking-widest text-secondary font-bold">
-                    Kế Thừa Tinh Hoa Hoàng Cung Huế & Cổ Độ Phố Hiến
-                  </span>{' '}
-                  <h2 className="font-headline-xl text-headline-xl text-ink-dark leading-tight">
-                    {' Dòng Sốt Lava Tam Cấp: Kiệt Tác 36 Giờ Chưng Cất '}
-                  </h2>{' '}
-                  <p className="font-body-lg text-body-lg text-on-surface-variant leading-relaxed">
-                    {
-                      ' Khác với dòng bánh công nghiệp sử dụng phụ gia nhũ hóa, dòng sốt Lava Hoàng Kim tại Nguyệt Viên Đài được tạo tác hoàn toàn từ lòng đỏ trứng vịt muối thảo mộc ủ chum sành 30 ngày. Mỗi mẻ trứng được chưng cất cùng cốt dừa tươi Bến Tre và sữa hột điều nguyên bản trong suốt 36 giờ ở nhiệt độ lửa chìm 72°C. '
-                    }
-                  </p>{' '}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-space-md pt-space-xs">
-                    {' '}
-                    <div className="p-space-md rounded-[0.125rem] bg-surface-container-lowest shadow-sm">
-                      {' '}
-                      <span className="font-headline-md text-headline-md text-secondary font-bold">70 Năm</span>{' '}
-                      <p className="font-body-sm text-body-sm text-ink-dark font-medium pt-1">Khuôn Gỗ Thị Cổ</p>{' '}
-                      <p className="font-body-sm text-body-sm text-on-surface-variant">
-                        Tạo hình vân sen nổi mang linh khí hoàng triều.
-                      </p>{' '}
-                    </div>{' '}
-                    <div className="p-space-md rounded-[0.125rem] bg-surface-container-lowest shadow-sm">
-                      {' '}
-                      <span className="font-headline-md text-headline-md text-secondary font-bold">100%</span>{' '}
-                      <p className="font-body-sm text-body-sm text-ink-dark font-medium pt-1">Trứng Muối Thảo Mộc</p>{' '}
-                      <p className="font-body-sm text-body-sm text-on-surface-variant">
-                        Ủ sao biển cùng quế chi, hoa hồi và rượu nếp thơm.
-                      </p>{' '}
-                    </div>{' '}
-                    <div className="p-space-md rounded-[0.125rem] bg-surface-container-lowest shadow-sm">
-                      {' '}
-                      <span className="font-headline-md text-headline-md text-secondary font-bold">0%</span>{' '}
-                      <p className="font-body-sm text-body-sm text-ink-dark font-medium pt-1">Hóa Chất Bảo Quản</p>{' '}
-                      <p className="font-body-sm text-body-sm text-on-surface-variant">
-                        Tươi mới mỗi sáng, tiêu thụ trong vòng 15 ngày lạnh.
-                      </p>{' '}
-                    </div>{' '}
-                  </div>{' '}
-                </div>{' '}
-              </div>{' '}
-            </div>{' '}
-            <div className={`tab-panel py-space-lg ${tab === 'nutrition' ? '' : 'hidden'}`} id="tab-nutrition">
-              {' '}
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-xl">
-                {' '}
-                <div className="lg:col-span-6 bg-surface-container-lowest p-space-xl rounded-[0.25rem] shadow-sm space-y-space-md">
-                  {' '}
-                  <div className="pb-space-sm">
-                    {' '}
-                    <span className="font-label-sm text-label-sm uppercase tracking-widest text-secondary font-bold">
-                      Bảng Giá Trị Dinh Dưỡng Thực Nghiệm
-                    </span>{' '}
-                    <h3 className="font-headline-md text-headline-md text-ink-dark">Khẩu Phần: 1 Chiếc (150g)</h3>{' '}
-                    <p className="font-body-sm text-body-sm text-on-surface-variant">
-                      Đo lường kiểm nghiệm theo tiêu chuẩn Viện Dinh Dưỡng Quốc Gia
-                    </p>{' '}
-                  </div>{' '}
-                  <div className="space-y-space-xs text-ink-dark font-body-md text-body-md">
-                    {' '}
-                    <div className="flex justify-between py-2">
-                      {' '}
-                      <span className="font-bold">Năng Lượng (Calories)</span>{' '}
-                      <span className="font-bold">428 kcal</span>{' '}
-                    </div>{' '}
-                    <div className="flex justify-between py-2">
-                      {' '}
-                      <span className="text-on-surface-variant">Chất đạm (Protein)</span> <span>8.6 g</span>{' '}
-                    </div>{' '}
-                    <div className="flex justify-between py-2">
-                      {' '}
-                      <span className="text-on-surface-variant">Tổng chất béo tự nhiên (Total Fat)</span>{' '}
-                      <span>18.2 g</span>{' '}
-                    </div>{' '}
-                    <div className="flex justify-between py-2 pl-space-md text-on-surface-variant">
-                      {' '}
-                      <span>Chất béo bão hòa tự nhiên</span> <span>4.1 g</span>{' '}
-                    </div>{' '}
-                    <div className="flex justify-between py-2">
-                      {' '}
-                      <span className="text-on-surface-variant">Chất bột đường (Carbohydrates)</span>{' '}
-                      <span>54.5 g</span>{' '}
-                    </div>{' '}
-                    <div className="flex justify-between py-2 pl-space-md text-on-surface-variant">
-                      {' '}
-                      <span>Đường tự nhiên tự luyện (Cane Sugar)</span> <span>21.0 g</span>{' '}
-                    </div>{' '}
-                    <div className="flex justify-between py-2">
-                      {' '}
-                      <span className="text-on-surface-variant">Natri (Sodium)</span> <span>240 mg</span>{' '}
-                    </div>{' '}
-                    <div className="flex justify-between py-2">
-                      {' '}
-                      <span className="text-secondary font-bold">Vàng thực phẩm 24K (Edible Gold)</span>{' '}
-                      <span className="text-secondary font-bold">Vi lượng thuần khiết 99.9%</span>{' '}
-                    </div>{' '}
-                  </div>{' '}
-                </div>{' '}
-                <div className="lg:col-span-6 flex flex-col justify-between gap-space-lg">
-                  {' '}
-                  <div className="space-y-space-md bg-surface-container-lowest p-space-xl rounded-[0.25rem] shadow-sm">
-                    {' '}
-                    <h3 className="font-headline-md text-headline-md text-ink-dark">
-                      Minh Bạch Nguyên Liệu Tự Nhiên
-                    </h3>{' '}
-                    <p className="font-body-md text-body-md text-on-surface-variant leading-relaxed">
-                      {
-                        ' Thành phần trọn vẹn: Bột mì nguyên cám thượng hạng, lòng đỏ trứng vịt muối thảo mộc (26%), hạt sen Tịnh Tâm Huế, đường mía hữu cơ kết tinh tự nhiên, bơ sữa nhập khẩu New Zealand, cốt dừa Bến Tre ép lạnh, bột nghệ tây tây á tạo màu tự nhiên, lá vàng ẩm thực 24K nguyên chất. '
-                      }
-                    </p>{' '}
-                    <div className="p-space-md rounded-[0.125rem] bg-surface-container-low flex items-start gap-space-sm">
-                      {' '}
-                      <Icon name="info" className="text-secondary text-[24px]" aria-hidden />{' '}
-                      <div className="flex flex-col">
-                        {' '}
-                        <span className="font-label-md text-label-md text-ink-dark font-bold uppercase">
-                          Cảnh báo dị ứng
-                        </span>{' '}
-                        <span className="font-body-sm text-body-sm text-on-surface-variant">
-                          Có chứa gluten từ bột mì, trứng và các chế phẩm từ sữa hữu cơ. Hoàn toàn không chứa đậu phộng.
-                        </span>{' '}
-                      </div>{' '}
-                    </div>{' '}
-                  </div>{' '}
-                  <div className="p-space-xl rounded-[0.25rem] bg-tertiary-container text-on-tertiary shadow-md space-y-space-xs">
-                    {' '}
-                    <div className="flex items-center gap-space-xs text-secondary-fixed">
-                      {' '}
-                      <Icon name="thermostat" aria-hidden />{' '}
-                      <span className="font-label-lg text-label-lg uppercase tracking-wider">
-                        Quy Trình Bảo Quản Hoàng Cung
-                      </span>{' '}
-                    </div>{' '}
-                    <p className="font-body-md text-body-md text-champagne-light leading-relaxed">
-                      {
-                        ' Ngon nhất khi thưởng thức ở nhiệt độ phòng sau khi rã đông 15 phút, hoặc nướng lại trong lò vi sóng ở mức nhiệt 150°C trong 45 giây để kích hoạt dòng chảy sốt lava trứng muối óng ả. '
-                      }
-                    </p>{' '}
-                  </div>{' '}
-                </div>{' '}
-              </div>{' '}
-            </div>{' '}
+            {tab === 'story' && (
+              <ProductText id="tab-story" text={product.story} empty="Xưởng chưa cập nhật câu chuyện cho sản phẩm này." />
+            )}
+            {tab === 'nutrition' && (
+              <ProductText id="tab-nutrition" text={product.ingredients} empty="Xưởng chưa cập nhật nguyên liệu và thông tin dinh dưỡng." />
+            )}
             {tab === 'reviews' && (
               <div className="tab-panel py-space-lg" id="tab-reviews">
                 <ProductReviews product={product} />
@@ -628,6 +467,17 @@ function PromotionBox({ promotions }: { promotions: Promotion[] }) {
         ))}
       </ul>
       <p className="font-label-sm text-[11px] text-on-primary-container">Tự động trừ vào giá khi đặt hàng, áp cho số lượng trong cùng một đơn.</p>
+    </div>
+  )
+}
+
+/** Nội dung do xưởng nhập (BE: Product.story / Product.ingredients), giữ xuống dòng */
+function ProductText({ id, text, empty }: { id: string; text?: string | null; empty: string }) {
+  return (
+    <div className="tab-panel py-space-lg" id={id}>
+      {text?.trim()
+        ? <p className="max-w-3xl whitespace-pre-line font-body-lg text-body-lg text-on-surface-variant leading-relaxed">{text}</p>
+        : <p className="p-space-lg rounded-[0.25rem] bg-surface-container-lowest shadow-sm font-body-md text-body-md text-on-surface-variant">{empty}</p>}
     </div>
   )
 }

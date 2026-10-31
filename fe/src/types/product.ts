@@ -18,6 +18,9 @@ export interface Product {
   storeName: string
   name: string
   description: string | null
+  /** Câu chuyện, nguyên liệu/dinh dưỡng do xưởng nhập */
+  story?: string | null
+  ingredients?: string | null
   productType: ProductType
   status: ProductStatus
   createdAt: string

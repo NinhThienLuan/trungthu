@@ -19,6 +19,10 @@ public class ProductRequest {
 
     @Size(max = 100000, message = "Description is too long")
     private String description;
+    @Size(max = 100000, message = "Story is too long")
+    private String story;
+    @Size(max = 100000, message = "Ingredients text is too long")
+    private String ingredients;
 
     @NotNull(message = "Product type is required (LOOSE_CAKE, BOX_SHELL, GREETING_CARD, ADDON_SERVICE)")
     private ProductType productType;

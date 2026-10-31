@@ -20,6 +20,8 @@ interface BeProduct {
   storeName: string
   name: string
   description: string | null
+  story: string | null
+  ingredients: string | null
   productType: ProductType
   status: 'DRAFT' | 'ACTIVE' | 'SOLD_OUT' | 'ARCHIVED'
   createdAt: string
@@ -50,6 +52,8 @@ const toProduct = (p: BeProduct): Product => {
     storeName: p.storeName,
     name: p.name,
     description: p.description,
+    story: p.story,
+    ingredients: p.ingredients,
     productType: p.productType,
     status: p.status === 'ACTIVE' ? 'ACTIVE' : 'OUT_OF_STOCK',
     createdAt: p.createdAt,

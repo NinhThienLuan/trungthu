@@ -29,6 +29,8 @@ public class ProductResponse {
     private String storeName;
     private String name;
     private String description;
+    private String story;
+    private String ingredients;
     private ProductType productType;
     private fpt.sba.trungthu.entity.enumeration.ProductStatus status;
     private LocalDateTime createdAt;
@@ -62,6 +64,8 @@ public class ProductResponse {
                 .storeName(product.getProvider().getStoreName())
                 .name(product.getName())
                 .description(product.getDescription())
+                .story(product.getStory())
+                .ingredients(product.getIngredients())
                 .productType(product.getProductType())
                 .status(product.getStatus())
                 .createdAt(product.getCreatedAt())

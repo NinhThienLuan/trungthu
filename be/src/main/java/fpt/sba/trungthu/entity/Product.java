@@ -34,6 +34,16 @@ public class Product extends BaseEntity {
     @Column(name = "description", length = 100000)
     private String description;
 
+    /** Câu chuyện của xưởng/sản phẩm (tab "Câu chuyện" ở trang chi tiết) */
+    @Nationalized
+    @Column(name = "story", length = 100000)
+    private String story;
+
+    /** Nguyên liệu, dinh dưỡng, dị ứng, bảo quản (tab "Dinh dưỡng & nguyên liệu") */
+    @Nationalized
+    @Column(name = "ingredients", length = 100000)
+    private String ingredients;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "product_type", nullable = false, length = 30)
     private ProductType productType;

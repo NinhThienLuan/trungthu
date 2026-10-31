@@ -24,6 +24,8 @@ export interface SellerProduct {
   id: string
   name: string
   description: string | null
+  story: string | null
+  ingredients: string | null
   productType: ProductType
   status: SellerProductStatus
   primaryImageUrl: string | null
@@ -42,6 +44,8 @@ export interface SellerProduct {
 export interface ProductInput {
   name: string
   description?: string
+  story?: string
+  ingredients?: string
   productType: ProductType
   status?: 'DRAFT' | 'ACTIVE' | 'ARCHIVED'
 }

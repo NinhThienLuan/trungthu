@@ -35,6 +35,8 @@ public class ProductMapper {
                 .provider(provider)
                 .name(request.getName().trim())
                 .description(request.getDescription())
+                .story(request.getStory())
+                .ingredients(request.getIngredients())
                 .productType(request.getProductType())
                 .status(ProductStatus.DRAFT)
                 .build();
@@ -43,6 +45,8 @@ public class ProductMapper {
     public void updateEntity(Product product, ProductRequest request) {
         product.setName(request.getName().trim());
         product.setDescription(request.getDescription());
+        product.setStory(request.getStory());
+        product.setIngredients(request.getIngredients());
         product.setProductType(request.getProductType());
         if (product.getProductType() == fpt.sba.trungthu.entity.enumeration.ProductType.GIFT_SET) {
             product.setSalePrice(request.getSalePrice());

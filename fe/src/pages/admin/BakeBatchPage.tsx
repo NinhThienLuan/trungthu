@@ -86,12 +86,16 @@ export function BakeBatchPage() {
   )
 }
 
-type Panel = { kind: 'variant' } | { kind: 'import' | 'out' | 'edit'; variantId: string }
+type Panel = { kind: 'variant' | 'info' } | { kind: 'import' | 'out' | 'edit'; variantId: string }
 
 function ProductCard({ product: p, run }: { product: SellerProduct; run: (action: () => Promise<unknown>, done: string) => Promise<boolean> }) {
   const [panel, setPanel] = useState<Panel>()
   const toggle = (next: Panel) => setPanel(JSON.stringify(panel) === JSON.stringify(next) ? undefined : next)
-  const input = (status: ProductInput['status']): ProductInput => ({ name: p.name, description: p.description ?? undefined, productType: p.productType, status })
+  // BE ghi đè mọi trường khi sửa -> luôn gửi lại mô tả, câu chuyện, nguyên liệu hiện có
+  const input = (status: ProductInput['status']): ProductInput => ({
+    name: p.name, description: p.description ?? undefined, story: p.story ?? undefined, ingredients: p.ingredients ?? undefined,
+    productType: p.productType, status,
+  })
   const close = (ok: boolean) => ok && setPanel(undefined)
   const isSet = p.productType === 'GIFT_SET'
 
@@ -117,6 +121,7 @@ function ProductCard({ product: p, run }: { product: SellerProduct; run: (action
           {p.status === 'DRAFT' && (
             <button type="button" className="btn btn-primary btn-sm" onClick={() => run(() => sellerService.updateProduct(p.id, input('ACTIVE')), `Đã mở bán "${p.name}".`)}>Mở bán</button>
           )}
+          <button type="button" className="btn btn-outline btn-sm" onClick={() => toggle({ kind: 'info' })}>Sửa thông tin</button>
           {!isSet && <button type="button" className="btn btn-outline btn-sm" onClick={() => toggle({ kind: 'variant' })}>Thêm phân loại</button>}
           <button type="button" className="btn btn-ghost btn-sm text-danger"
             onClick={() => window.confirm(`Lưu trữ "${p.name}"? Sản phẩm sẽ ẩn khỏi cửa hàng.`) && run(() => sellerService.archiveProduct(p.id), `Đã lưu trữ "${p.name}".`)}>
@@ -150,6 +155,23 @@ function ProductCard({ product: p, run }: { product: SellerProduct; run: (action
           </div>
         )}
 
+      {panel?.kind === 'info' && (
+        <form noValidate className="grid gap-3 border-t border-line pt-4" onSubmit={async (e) => {
+          const f = read(e)
+          close(await run(() => sellerService.updateProduct(p.id, {
+            name: f.name, description: f.description || undefined, story: f.story || undefined,
+            ingredients: f.ingredients || undefined, productType: p.productType,
+          }), `Đã cập nhật thông tin "${f.name}".`))
+        }}>
+          <TextInput label="Tên sản phẩm" name="name" defaultValue={p.name} required />
+          <TextArea label="Mô tả ngắn" name="description" defaultValue={p.description ?? ''} rows={2} />
+          <TextArea label="Câu chuyện sản phẩm (hiện ở tab Câu chuyện)" name="story" defaultValue={p.story ?? ''} rows={4}
+            placeholder="Nguồn gốc công thức, nghệ nhân, cách làm..." />
+          <TextArea label="Nguyên liệu & dinh dưỡng (hiện ở tab Dinh dưỡng)" name="ingredients" defaultValue={p.ingredients ?? ''} rows={4}
+            placeholder="Nguyên liệu, năng lượng (kcal), chất gây dị ứng, cách bảo quản..." />
+          <button type="submit" className="btn btn-primary self-start">Lưu thông tin</button>
+        </form>
+      )}
       {panel?.kind === 'variant' && (
         <InlineForm submitLabel="Thêm phân loại" onSubmit={async (f) => close(await run(() => sellerService.addVariant(p.id, {
           variantName: f.variantName, sku: f.sku, price: Number(f.price), stockQuantity: optionalNumber(f.stockQuantity),
