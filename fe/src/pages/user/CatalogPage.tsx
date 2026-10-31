@@ -77,7 +77,7 @@ export function CatalogPage() {
                   Mùa Trăng 2025 • Đại Tuyển Tuyển Chọn
                 </span>{' '}
               </div>{' '}
-              <h1 className="font-headline-xl text-headline-xl text-champagne-light tracking-tight">
+              <h1 className="font-headline-xl text-headline-xl text-champagne-light tracking-tight font-bold whitespace-nowrap">
                 {' Tuyển Tập Ngự Thiện Hoàng Kim '}
               </h1>{' '}
               <p className="font-body-lg text-body-lg text-on-primary-container max-w-xl">
