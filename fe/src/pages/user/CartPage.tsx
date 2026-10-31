@@ -164,7 +164,7 @@ export function CartPage() {
           </dl>
           <div className="mt-4 flex justify-between border-t border-line pt-4">
             <span className="font-semibold">Tạm tính</span>
-            <span className="font-serif text-h3 text-navy">{formatVnd(total)}</span>
+            <span className="font-sans text-h3 text-navy">{formatVnd(total)}</span>
           </div>
           <p className="mt-1 text-small text-muted">Cọc tối thiểu {DEPOSIT_RATE * 100}% khi đặt.</p>
           <button type="button" className="btn btn-primary mt-5 w-full"

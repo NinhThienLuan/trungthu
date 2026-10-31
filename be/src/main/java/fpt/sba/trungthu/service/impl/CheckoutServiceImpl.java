@@ -175,7 +175,7 @@ public class CheckoutServiceImpl implements CheckoutService {
                 if (item.setProductId() != null) {
                     Product set = products.findById(item.setProductId())
                             .filter(p -> p.getProductType() == ProductType.GIFT_SET && p.getStatus() == ProductStatus.ACTIVE)
-                            .orElseThrow(() -> conflict("SET_UNAVAILABLE set=" + item.setProductId()));
+                            .orElseThrow(() -> conflict("Set quà trong giỏ không còn bán. Vui lòng xóa và chọn lại sản phẩm."));
                     User owner = set.getProvider();
                     if (provider != null && !provider.getId().equals(owner.getId())) {
                         throw badRequest("A group must contain variants from only one provider");
@@ -193,7 +193,7 @@ public class CheckoutServiceImpl implements CheckoutService {
                     continue;
                 }
                 ProductVariant variant = (lock ? variants.findForUpdateById(item.variantId()) : variants.findById(item.variantId()))
-                        .orElseThrow(() -> conflict("VARIANT_UNAVAILABLE variant=" + item.variantId()));
+                        .orElseThrow(() -> conflict("Sản phẩm trong giỏ không còn tồn tại. Vui lòng xóa và thêm lại sản phẩm."));
                 User owner = variant.getProduct().getProvider();
                 if (provider != null && !provider.getId().equals(owner.getId())) {
                     throw badRequest("A group must contain variants from only one provider");
@@ -320,7 +320,7 @@ public class CheckoutServiceImpl implements CheckoutService {
         List<GiftSetComponent> rows = setComponents.findBySetProductId(set.getId());
         GiftSetComponent box = rows.stream()
                 .filter(row -> row.getComponentVariant().getProduct().getProductType() == ProductType.BOX_SHELL)
-                .findFirst().orElseThrow(() -> conflict("SET_UNAVAILABLE set=" + set.getId()));
+                .findFirst().orElseThrow(() -> conflict("Set quà không còn đủ thành phần để bán. Vui lòng chọn sản phẩm khác."));
         int setsBefore = box.getQuantity();
         if (setsBefore < quantity) {
             throw conflict("Set quà không đủ số lượng. Vui lòng giảm số lượng hoặc chọn sản phẩm khác.");
@@ -330,7 +330,7 @@ public class CheckoutServiceImpl implements CheckoutService {
         for (GiftSetComponent row : rows) {
             boolean isBox = row == box;
             if (row.getPerSetQuantity() == null && !isBox && row.getQuantity() % setsBefore != 0) {
-                throw conflict("SET_UNAVAILABLE set=" + set.getId());
+                throw conflict("Set quà không còn đủ thành phần để bán. Vui lòng chọn sản phẩm khác.");
             }
             int per = row.getPerSetQuantity() != null && row.getPerSetQuantity() > 0 ? row.getPerSetQuantity()
                     : (isBox ? 1 : row.getQuantity() / setsBefore);

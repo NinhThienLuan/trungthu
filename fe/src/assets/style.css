@@ -4,7 +4,7 @@
  * Bảng màu mặc định của Tailwind đã bị tắt (--color-*: initial) để không ai
  * dùng nhầm `bg-blue-500`, `text-gray-600`... ngoài bộ màu thương hiệu.
  */
-@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap");
 @import "tailwindcss";
 
 @theme {
@@ -42,7 +42,6 @@
   --color-danger-soft: #ffdad6;
 
   /* ---------- Font ---------- */
-  --font-serif: "Playfair Display", "Times New Roman", Times, serif;
   --font-sans: "Plus Jakarta Sans", system-ui, sans-serif;
 
   /* ---------- Cỡ chữ: 7 bậc, khớp thang chữ của Stitch ---------- */
@@ -137,13 +136,13 @@
   --color-border-gold-subtle: rgb(214 167 92 / 0.28);
   --color-emerald-shadow: #0f1e14;
 
-  --font-headline-xl: "Playfair Display", "Times New Roman", Times, serif;
-  --font-headline-xl-mobile: "Playfair Display", "Times New Roman", Times, serif;
-  --font-headline-lg: "Playfair Display", "Times New Roman", Times, serif;
-  --font-headline-lg-mobile: "Playfair Display", "Times New Roman", Times, serif;
-  --font-headline-md: "Playfair Display", "Times New Roman", Times, serif;
-  --font-headline-sm: "Playfair Display", "Times New Roman", Times, serif;
-  --font-imperial-title: "Playfair Display", "Times New Roman", Times, serif;
+  --font-headline-xl: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-headline-xl-mobile: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-headline-lg: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-headline-lg-mobile: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-headline-md: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-headline-sm: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-imperial-title: "Plus Jakarta Sans", system-ui, sans-serif;
   --font-body: "Plus Jakarta Sans", system-ui, sans-serif;
   --font-body-lg: "Plus Jakarta Sans", system-ui, sans-serif;
   --font-body-md: "Plus Jakarta Sans", system-ui, sans-serif;
@@ -220,7 +219,7 @@
   h1:not(.stitch *),
   h2:not(.stitch *),
   h3:not(.stitch *) {
-    @apply font-serif text-navy;
+    @apply font-sans text-navy;
 
     text-wrap: balance;
   }

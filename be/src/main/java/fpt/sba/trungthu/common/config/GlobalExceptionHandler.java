@@ -92,6 +92,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     public ResponseEntity<ApiResponseDTO<Object>> handleGeneralException(Exception ex) {
         log.error("Unhandled Exception: ", ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponseDTO.error(HttpStatus.INTERNAL_SERVER_ERROR.value(), "An unexpected server error occurred: " + ex.getMessage()));
+                .body(ApiResponseDTO.error(HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                        "Máy chủ đang gặp sự cố. Vui lòng thử lại sau."));
     }
 }

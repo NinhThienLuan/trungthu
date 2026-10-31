@@ -56,7 +56,7 @@ public class Promotion extends BaseEntity {
     private LocalDate endDate;
 
     @Builder.Default
-    @ColumnDefault("1")
+    @ColumnDefault("true")
     @Column(name = "active", nullable = false)
     private Boolean active = true;
 

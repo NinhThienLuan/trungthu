@@ -28,7 +28,7 @@ export function EmptyState({ title, action }: { title: string; action?: ReactNod
   return (
     <div className="card flex flex-col items-center gap-4 px-6 py-16 text-center">
       <PackageOpen className="size-10 text-gold" aria-hidden />
-      <p className="font-serif text-h3 text-navy">{title}</p>
+      <p className="font-sans text-h3 text-navy">{title}</p>
       {action}
     </div>
   )

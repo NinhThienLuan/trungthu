@@ -68,7 +68,7 @@ export function SubscriptionPage() {
             className={cn('card flex flex-col gap-2 p-5 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60',
               picked === p.code ? 'ring-2 ring-navy' : 'hover:bg-champagne/30')}>
             <span className="text-h3">{p.name}</span>
-            <span className="font-serif text-h2 text-navy">{formatVnd(p.price)}</span>
+            <span className="font-sans text-h2 text-navy">{formatVnd(p.price)}</span>
             <span className="text-small text-muted">Tối đa {p.maxProducts} sản phẩm · đến hết năm</span>
             {active?.planName === p.name && <span className="text-small font-semibold text-success">Gói hiện tại</span>}
           </button>

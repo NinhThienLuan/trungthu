@@ -141,7 +141,7 @@ export function BoxBuilderPage() {
             <div className="flex flex-wrap items-center gap-3">
               <span className="text-small">Số hộp</span>
               <QuantityStepper value={quantity} max={Math.max(1, box.variant.stockQuantity)} onChange={setQty} />
-              <span className="ml-auto font-serif text-h3 text-navy">{formatVnd(box.variant.price * quantity)}</span>
+              <span className="ml-auto font-sans text-h3 text-navy">{formatVnd(box.variant.price * quantity)}</span>
             </div>
             {notice && <Notice tone={notice.ok ? 'success' : 'danger'}>{notice.text}</Notice>}
             <div className="flex flex-wrap gap-2">

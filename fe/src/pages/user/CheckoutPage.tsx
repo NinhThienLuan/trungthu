@@ -329,7 +329,7 @@ export function CheckoutPage() {
             <div className="flex justify-between text-muted"><dt>Giao hàng</dt><dd>Miễn phí</dd></div>
             <div className="flex justify-between">
               <dt className="font-semibold text-ink">Tổng cộng</dt>
-              <dd className="font-serif text-h3 text-navy">{formatVnd(grandTotal)}</dd>
+              <dd className="font-sans text-h3 text-navy">{formatVnd(grandTotal)}</dd>
             </div>
             <div className="flex justify-between text-muted">
               <dt>Chuyển khoản VietQR</dt>

@@ -5,10 +5,12 @@ import tools.jackson.databind.ObjectMapper;
 import fpt.sba.trungthu.common.security.JwtService;
 import fpt.sba.trungthu.entity.GiftSetComponent;
 import fpt.sba.trungthu.entity.Product;
+import fpt.sba.trungthu.entity.ProductVariant;
 import fpt.sba.trungthu.entity.User;
 import fpt.sba.trungthu.entity.enumeration.ProductType;
 import fpt.sba.trungthu.repository.GiftSetComponentRepository;
 import fpt.sba.trungthu.repository.ProductRepository;
+import fpt.sba.trungthu.repository.ProductVariantRepository;
 import fpt.sba.trungthu.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,6 +44,7 @@ class GiftSetCheckoutTests {
     @Autowired private JwtService jwtService;
     @Autowired private UserRepository users;
     @Autowired private ProductRepository products;
+    @Autowired private ProductVariantRepository variants;
     @Autowired private GiftSetComponentRepository components;
     @Autowired private ObjectMapper json;
     @Autowired private PlatformTransactionManager transactions;
@@ -93,6 +96,49 @@ class GiftSetCheckoutTests {
                                 .getBytes(java.nio.charset.StandardCharsets.UTF_8)))
                 .andExpect(status().isBadRequest());
     }
+
+    @Test
+    void customFourCakeBoxCanBePreviewedAndOrdered() throws Exception {
+        User buyer = users.findByEmail("buyer@gmail.com").orElseThrow();
+        BoxChoice choice = new TransactionTemplate(transactions).execute(tx -> {
+            Product box = products.findAll().stream()
+                    .filter(p -> p.getProductType() == ProductType.BOX_SHELL
+                            && p.getStatus() == fpt.sba.trungthu.entity.enumeration.ProductStatus.ACTIVE)
+                    .filter(p -> variants.findByProductId(p.getId()).stream()
+                            .anyMatch(v -> Integer.valueOf(4).equals(v.getBoxCapacity()) && v.getStockQuantity() > 0))
+                    .findFirst().orElseThrow();
+            ProductVariant boxVariant = variants.findByProductId(box.getId()).stream()
+                    .filter(v -> Integer.valueOf(4).equals(v.getBoxCapacity()) && v.getStockQuantity() > 0)
+                    .findFirst().orElseThrow();
+            Product cake = products.findAll().stream()
+                    .filter(p -> p.getProductType() == ProductType.LOOSE_CAKE
+                            && p.getStatus() == fpt.sba.trungthu.entity.enumeration.ProductStatus.ACTIVE
+                            && p.getProvider().getId().equals(box.getProvider().getId()))
+                    .findFirst().orElseThrow();
+            ProductVariant cakeVariant = variants.findByProductId(cake.getId()).getFirst();
+            return new BoxChoice(boxVariant.getId(), cakeVariant.getId(), boxVariant.getPrice(),
+                    boxVariant.getStockQuantity());
+        });
+        LocalDate delivery = LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh")).plusDays(5);
+        String group = """
+                {"deliveryDate":"%s","province":"Hà Nội","district":"Hoàn Kiếm","paymentMethod":"COD",
+                 "items":[{"variantId":"%s","quantity":1,"boxContents":["%s","%s","%s","%s"]}]}"""
+                .formatted(delivery, choice.boxVariantId(), choice.cakeVariantId(), choice.cakeVariantId(),
+                        choice.cakeVariantId(), choice.cakeVariantId());
+
+        JsonNode preview = call("/api/checkout/preview", "{\"groups\":[" + group + "]}", buyer);
+        assertThat(preview.at("/data/groups/0/lines/0/subtotal").decimalValue())
+                .isEqualByComparingTo(choice.boxPrice());
+        JsonNode created = call("/api/checkout", """
+                {"receiverName":"Mua","receiverPhone":"0903000003","shippingAddress":"12 Tràng Tiền","groups":[%s]}"""
+                .formatted(group), buyer);
+        assertThat(created.at("/data/0/lines/0/variantName").asText()).contains("×4");
+        assertThat(variants.findById(choice.boxVariantId()).orElseThrow().getStockQuantity())
+                .isEqualTo(choice.boxStockBefore() - 1);
+    }
+
+    private record BoxChoice(java.util.UUID boxVariantId, java.util.UUID cakeVariantId,
+            BigDecimal boxPrice, int boxStockBefore) {}
 
     /** Số set đã đóng sẵn (dòng vỏ hộp), đọc trong transaction vì quan hệ LAZY */
     private int boxesOf(Product set) {
