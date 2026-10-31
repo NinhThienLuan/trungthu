@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { MIN_LEAD_DAYS, RFQ_MIN_QUANTITY } from '../constants'
+import { BANK_CODES, MIN_LEAD_DAYS, RFQ_MIN_QUANTITY } from '../constants'
 import { addDays, toIsoDate } from '../lib/format'
 
 // Giống regex của RegisterRequest bên BE
@@ -54,6 +54,15 @@ export const registerSchema = z
     confirmPassword: z.string(),
   })
   .refine((d) => d.password === d.confirmPassword, matches)
+
+/** Phần thêm khi đăng ký mở gian hàng (RegisterRequest role PROVIDER) */
+export const sellerRegisterSchema = z.object({
+  storeName: required('tên gian hàng').max(255),
+  address: required('địa chỉ xưởng').max(500),
+  bankCode: z.enum(BANK_CODES, { errorMap: () => ({ message: 'Vui lòng chọn ngân hàng' }) }),
+  bankAccountNumber: z.string().trim().regex(/^\d{6,20}$/, 'Số tài khoản gồm 6–20 chữ số'),
+  bankAccountName: required('tên chủ tài khoản').max(150),
+})
 
 export const forgotPasswordSchema = z.object({ email })
 

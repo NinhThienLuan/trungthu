@@ -43,6 +43,9 @@ export const HOME_BY_ROLE: Record<UserRole, string> = {
 
 /** OTP quên mật khẩu: 6 số, hiệu lực 10 phút, gửi lại sau 60 giây (khớp AuthServiceImpl) */
 export const OTP_LENGTH = 6
+
+/** Mã ngân hàng BE chấp nhận cho tài khoản nhận tiền của seller (AuthServiceImpl.validateBankCode) */
+export const BANK_CODES = ['VCB', 'TCB', 'MB', 'ACB', 'VIB', 'TPB', 'STB', 'BIDV', 'VPB', 'AGR', 'OCB', 'MSB', 'SEAB', 'SCB'] as const
 export const OTP_EXPIRE_SECONDS = 600
 export const OTP_RESEND_SECONDS = 60
 

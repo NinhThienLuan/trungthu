@@ -5,6 +5,7 @@ import fpt.sba.trungthu.dto.request.CreateSubscriptionRequest;
 import fpt.sba.trungthu.dto.response.SubscriptionResponse;
 import fpt.sba.trungthu.entity.Subscription;
 import fpt.sba.trungthu.entity.User;
+import fpt.sba.trungthu.entity.enumeration.SubscriptionPlan;
 import fpt.sba.trungthu.entity.enumeration.SubscriptionStatus;
 import fpt.sba.trungthu.entity.enumeration.UserStatus;
 import fpt.sba.trungthu.repository.SubscriptionRepository;
@@ -39,26 +40,29 @@ public class SubscriptionServiceImpl implements SubscriptionService {
             User provider = userRepository.findByEmailAndStatus(providerEmail, UserStatus.ACTIVE)
                     .orElseThrow(() -> new IllegalArgumentException("Provider not found or inactive: " + providerEmail));
 
-            // Validate subscription plan
-            if (request.getMaxProductsAllowed() == null || request.getMaxProductsAllowed() <= 0) {
-                throw new IllegalArgumentException("maxProductsAllowed must be greater than 0");
+            // Giá và giới hạn lấy từ bảng gói của sàn; mỗi lúc chỉ một yêu cầu chờ duyệt
+            if (subscriptionRepository.findByProviderIdOrderByCreatedAtDesc(provider.getId()).stream()
+                    .anyMatch(s -> s.getStatus() == SubscriptionStatus.PENDING_PAYMENT)) {
+                throw new IllegalArgumentException("Bạn đã có một yêu cầu gói đang chờ admin xác nhận");
             }
+            SubscriptionPlan plan = request.getPlan();
 
-            if (request.getPrice() == null || request.getPrice().compareTo(BigDecimal.ZERO) <= 0) {
-                throw new IllegalArgumentException("price must be greater than 0");
-            }
 
             // Create subscription with PENDING_PAYMENT status
             // Dates will be set by admin when activating
             Subscription subscription = Subscription.builder()
                     .provider(provider)
-                    .planName(request.getPlanName())
-                    .price(request.getPrice())
-                    .maxProductsAllowed(request.getMaxProductsAllowed())
-                    .isFeatured(request.getIsFeatured() != null ? request.getIsFeatured() : false)
+                    .planName(plan.label())
+                    .price(plan.price())
+                    .maxProductsAllowed(plan.maxProducts())
+                    .isFeatured(plan == SubscriptionPlan.PREMIUM)
+                    .paymentNote(request.getPaymentProof() == null || request.getPaymentProof().isBlank()
+                            ? null : request.getPaymentProof().trim())
                     .status(SubscriptionStatus.PENDING_PAYMENT)
-                    .startDate(null) // Will be set when activated
-                    .endDate(null)   // Will be set when activated
+                    // Cột ngày NOT NULL: ghi ngày dự kiến (hôm nay -> hết năm); admin kích hoạt sẽ ghi ngày thật.
+                    // Gói chờ không tính là đang chạy vì mọi kiểm tra đều đòi status ACTIVE.
+                    .startDate(LocalDate.now())
+                    .endDate(LocalDate.now().withMonth(12).withDayOfMonth(31))
                     .build();
 
             Subscription savedSubscription = subscriptionRepository.save(subscription);
@@ -99,6 +103,10 @@ public class SubscriptionServiceImpl implements SubscriptionService {
             // Set activation dates
             subscription.setStartDate(startDate);
             subscription.setEndDate(endDate);
+            // Một xưởng chỉ có một gói đang chạy: gói cũ hết hạn khi kích hoạt gói mới
+            subscriptionRepository.findByProviderIdOrderByCreatedAtDesc(subscription.getProvider().getId()).stream()
+                    .filter(s -> s.getStatus() == SubscriptionStatus.ACTIVE && !s.getId().equals(subscription.getId()))
+                    .forEach(s -> s.transitionStatus(SubscriptionStatus.EXPIRED));
             subscription.transitionStatus(SubscriptionStatus.ACTIVE);
 
             Subscription updatedSubscription = subscriptionRepository.save(subscription);
@@ -141,12 +149,16 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
     @Override
     @Transactional
-    public SubscriptionResponse cancelSubscription(UUID subscriptionId) {
+    public SubscriptionResponse cancelSubscription(UUID subscriptionId, String ownerEmail) {
         log.info("Cancelling (suspending) subscription: {}", subscriptionId);
         
         try {
             Subscription subscription = subscriptionRepository.findByIdWithLock(subscriptionId)
                     .orElseThrow(() -> new IllegalArgumentException("Subscription not found: " + subscriptionId));
+            // Seller chỉ huỷ gói của chính mình (ownerEmail null = admin)
+            if (ownerEmail != null && !subscription.getProvider().getEmail().equalsIgnoreCase(ownerEmail)) {
+                throw new IllegalArgumentException("Subscription not found: " + subscriptionId);
+            }
 
             // In SubscriptionStatus enum, SUSPENDED is used for cancellation
             if (subscription.getStatus() == SubscriptionStatus.SUSPENDED || subscription.getStatus() == SubscriptionStatus.EXPIRED) {
@@ -237,11 +249,22 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         }
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<SubscriptionResponse> mySubscriptions(String providerEmail) {
+        User provider = userRepository.findByEmailAndStatus(providerEmail, UserStatus.ACTIVE)
+                .orElseThrow(() -> new IllegalArgumentException("Provider not found or inactive: " + providerEmail));
+        return subscriptionRepository.findByProviderIdOrderByCreatedAtDesc(provider.getId()).stream()
+                .map(this::mapToResponse).toList();
+    }
+
     private SubscriptionResponse mapToResponse(Subscription subscription) {
         return SubscriptionResponse.builder()
                 .id(subscription.getId())
                 .providerEmail(subscription.getProvider().getEmail())
                 .providerName(subscription.getProvider().getFullName())
+                .storeName(subscription.getProvider().getStoreName())
+                .paymentNote(subscription.getPaymentNote())
                 .planName(subscription.getPlanName())
                 .price(subscription.getPrice())
                 .maxProductsAllowed(subscription.getMaxProductsAllowed())

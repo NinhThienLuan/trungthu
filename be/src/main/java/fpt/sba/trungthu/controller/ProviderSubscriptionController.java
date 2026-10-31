@@ -3,6 +3,7 @@ package fpt.sba.trungthu.controller;
 import fpt.sba.trungthu.common.security.SecurityContextService;
 import fpt.sba.trungthu.dto.response.ApiResponseDTO;
 import fpt.sba.trungthu.dto.request.CreateSubscriptionRequest;
+import fpt.sba.trungthu.entity.enumeration.SubscriptionPlan;
 import fpt.sba.trungthu.dto.response.SubscriptionResponse;
 import fpt.sba.trungthu.service.SubscriptionService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -60,6 +61,21 @@ public class ProviderSubscriptionController {
         }
     }
 
+    public record PlanView(SubscriptionPlan code, String name, java.math.BigDecimal price, int maxProducts) {}
+
+    /** Bảng giá gói của sàn (seller chọn một mã gói khi đăng ký) */
+    @GetMapping("/plans")
+    public ResponseEntity<ApiResponseDTO<List<PlanView>>> plans() {
+        return ResponseEntity.ok(ApiResponseDTO.success(java.util.Arrays.stream(SubscriptionPlan.values())
+                .map(p -> new PlanView(p, p.label(), p.price(), p.maxProducts())).toList()));
+    }
+
+    /** Mọi gói của tôi (đang chờ, đang chạy, đã hết hạn), mới nhất trước */
+    @GetMapping
+    public ResponseEntity<ApiResponseDTO<List<SubscriptionResponse>>> mine() {
+        return ResponseEntity.ok(ApiResponseDTO.success(subscriptionService.mySubscriptions(getCurrentUserEmail())));
+    }
+
     @GetMapping("/active")
     @Operation(summary = "Get my active subscription")
     public ResponseEntity<ApiResponseDTO<SubscriptionResponse>> getActiveSubscription() {
@@ -109,7 +125,7 @@ public class ProviderSubscriptionController {
         log.info("Provider cancelling subscription: {}", subscriptionId);
         
         try {
-            SubscriptionResponse response = subscriptionService.cancelSubscription(subscriptionId);
+            SubscriptionResponse response = subscriptionService.cancelSubscription(subscriptionId, getCurrentUserEmail());
             
             return ResponseEntity.ok(ApiResponseDTO.success("Subscription cancelled successfully", response));
         } catch (IllegalStateException e) {

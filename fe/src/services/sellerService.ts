@@ -151,3 +151,51 @@ export const promotionService = {
   /** Công khai: khuyến mãi đang chạy hôm nay */
   running: (providerId?: string) => unwrap(http.get<ApiResponse<Promotion[]>>('/public/promotions', { params: { providerId } })),
 }
+
+export type SubscriptionPlanCode = 'BASIC' | 'STANDARD' | 'PREMIUM'
+export type SubscriptionStatus = 'PENDING_PAYMENT' | 'ACTIVE' | 'EXPIRED' | 'SUSPENDED'
+
+export interface SubscriptionPlanView {
+  code: SubscriptionPlanCode
+  name: string
+  price: number
+  maxProducts: number
+}
+
+/** SubscriptionResponse */
+export interface Subscription {
+  id: string
+  providerEmail: string
+  providerName: string
+  storeName: string | null
+  paymentNote: string | null
+  planName: string
+  price: number
+  maxProductsAllowed: number
+  isFeatured: boolean
+  status: SubscriptionStatus
+  startDate: string | null
+  endDate: string | null
+  createdAt: string
+}
+
+export const SUBSCRIPTION_STATUS: Record<Subscription['status'], { text: string; tone: string }> = {
+  PENDING_PAYMENT: { text: 'Chờ admin xác nhận', tone: 'text-navy' },
+  ACTIVE: { text: 'Đang chạy', tone: 'text-success' },
+  EXPIRED: { text: 'Hết hạn', tone: 'text-muted' },
+  SUSPENDED: { text: 'Đã huỷ', tone: 'text-muted' },
+}
+
+/** Gói bán hàng: seller chọn gói (giá do sàn quy định), admin xác nhận chuyển khoản rồi kích hoạt */
+export const subscriptionService = {
+  plans: () => unwrap(http.get<ApiResponse<SubscriptionPlanView[]>>('/provider/subscriptions/plans')),
+  mine: () => unwrap(http.get<ApiResponse<Subscription[]>>('/provider/subscriptions')),
+  request: (plan: SubscriptionPlanCode, paymentProof?: string) =>
+    unwrap(http.post<ApiResponse<Subscription>>('/provider/subscriptions', { plan, paymentProof })),
+  cancel: (id: string) => unwrap(http.put<ApiResponse<Subscription>>(`/provider/subscriptions/${id}/cancel`)),
+  // Admin
+  byStatus: (status: SubscriptionStatus) => unwrap(http.get<ApiResponse<Subscription[]>>(`/admin/subscriptions/status/${status}`)),
+  activate: (id: string, endDate: string) =>
+    unwrap(http.put<ApiResponse<Subscription>>(`/admin/subscriptions/${id}/activate`, { endDate })),
+  adminCancel: (id: string) => unwrap(http.put<ApiResponse<Subscription>>(`/admin/subscriptions/${id}/cancel`)),
+}

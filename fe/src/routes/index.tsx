@@ -31,6 +31,8 @@ import { BakeBatchPage } from '../pages/admin/BakeBatchPage'
 import { OrdersPage } from '../pages/admin/OrdersPage'
 import { SellerRfqPage } from '../pages/admin/SellerRfqPage'
 import { PromotionsPage } from '../pages/admin/PromotionsPage'
+import { SubscriptionPage } from '../pages/admin/SubscriptionPage'
+import { SubscriptionsAdminPage } from '../pages/admin/SubscriptionsAdminPage'
 import { QualityReviewPage } from '../pages/admin/QualityReviewPage'
 import { DashboardPage } from '../pages/admin/DashboardPage'
 
@@ -79,6 +81,7 @@ export const router = createBrowserRouter([
           { path: '/seller/settings', element: <SettingsPage /> },
           { path: '/seller/b2b', element: <SellerRfqPage /> },
           { path: '/seller/promotions', element: <PromotionsPage /> },
+          { path: '/seller/subscription', element: <SubscriptionPage /> },
         ],
       },
       {
@@ -86,6 +89,7 @@ export const router = createBrowserRouter([
         element: <ProtectedRoute allowedRoles={['PLATFORM_ADMIN']} />,
         children: [
           { path: '/admin/kyc', element: <QualityReviewPage /> },
+          { path: '/admin/subscriptions', element: <SubscriptionsAdminPage /> },
         ],
       },
     ],

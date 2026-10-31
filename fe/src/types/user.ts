@@ -7,6 +7,8 @@ export interface User {
   phone: string | null
   role: UserRole
   storeName: string | null
+  /** Seller: admin đã duyệt đủ ATTP + giấy phép + CCCD (điều kiện được bán) */
+  isComplianceApproved?: boolean
   address: string | null
   status: string
   /** Đăng ký nhận mật khẩu tạm qua email -> phải đổi ở lần đăng nhập đầu */

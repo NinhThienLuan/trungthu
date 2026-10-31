@@ -128,7 +128,7 @@ public class AdminSubscriptionController {
         log.info("Admin cancelling subscription: {}", subscriptionId);
         
         try {
-            SubscriptionResponse response = subscriptionService.cancelSubscription(subscriptionId);
+            SubscriptionResponse response = subscriptionService.cancelSubscription(subscriptionId, null);
             
             return ResponseEntity.ok(ApiResponseDTO.success("Subscription cancelled successfully", response));
         } catch (IllegalStateException e) {

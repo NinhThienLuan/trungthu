@@ -24,7 +24,10 @@ public interface SubscriptionService {
     SubscriptionResponse expireSubscription(UUID subscriptionId);
     
     // Admin or Provider cancels subscription
-    SubscriptionResponse cancelSubscription(UUID subscriptionId);
+    /** ownerEmail: seller chỉ huỷ được gói của mình; null = admin huỷ bất kỳ gói nào */
+    SubscriptionResponse cancelSubscription(UUID subscriptionId, String ownerEmail);
+
+    List<SubscriptionResponse> mySubscriptions(String providerEmail);
     
     // Provider gets their active subscription
     SubscriptionResponse getActiveSubscription(String providerEmail);

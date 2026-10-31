@@ -39,6 +39,10 @@ public class Subscription extends CreatedEntity {
     @Column(name = "end_date", nullable = false)
     private LocalDate endDate;
 
+    /** Ghi chú / mã giao dịch chuyển khoản seller gửi kèm yêu cầu gói */
+    @Column(name = "payment_note", length = 500)
+    private String paymentNote;
+
     @Column(name = "max_products_allowed")
     private Integer maxProductsAllowed;
 

@@ -119,9 +119,11 @@ export const authService = {
   },
 
   /** Khách tự đặt mật khẩu; BE kiểm tra PasswordPolicy, tạo tài khoản CUSTOMER */
-  register: async (body: { email: string; fullName: string; phone?: string; password: string }): Promise<User> => {
+  /** seller có giá trị -> tạo tài khoản PROVIDER (chờ nộp hồ sơ + gói), không thì CUSTOMER */
+  register: async (body: { email: string; fullName: string; phone?: string; password: string },
+    seller?: { storeName: string; address: string; bankCode: string; bankAccountNumber: string; bankAccountName: string }): Promise<User> => {
     if (!USE_MOCK.auth) {
-      return unwrap(http.post<ApiResponse<User>>('/auth/register', { ...body, role: 'CUSTOMER' }))
+      return unwrap(http.post<ApiResponse<User>>('/auth/register', { ...body, ...seller, role: seller ? 'PROVIDER' : 'CUSTOMER' }))
     }
     await delay(400)
     const newUser: User = {

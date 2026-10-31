@@ -30,7 +30,7 @@ const TEXT_PATHS: Record<string, string> = {
   'Khám Phá Gian Hàng Nghệ Nhân': '/products',
   'Khám Phá Bộ Sưu Tập': '/products',
   'Bắt đầu phối hộp': '/box-builder',
-  'Đăng ký tham gia': '/seller/profile',
+  'Đăng ký tham gia': '/register?role=seller',
 }
 
 /** Chữ người dùng thấy trên nút: bỏ phần aria-hidden (icon Material là chữ ligature, vd "arrow_forward") */

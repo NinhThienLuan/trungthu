@@ -18,7 +18,7 @@ const COLUMNS = [
       { label: 'Yêu Cầu Báo Giá Khối Lượng Lớn', to: ROUTES.rfq },
       { label: 'Khắc Kim & Ép Kim Biểu Tượng', to: ROUTES.rfq },
       { label: 'Hợp Đồng & Hóa Đơn Doanh Nghiệp', to: ROUTES.rfq },
-      { label: 'Đăng Ký Đối Tác Nghệ Nhân', to: '/seller/profile' },
+      { label: 'Đăng Ký Đối Tác Nghệ Nhân', to: '/register?role=seller' },
     ],
   },
 ]

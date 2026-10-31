@@ -19,6 +19,9 @@ public class SubscriptionResponse {
     private UUID id;
     private String providerEmail;
     private String providerName;
+    private String storeName;
+    /** Ghi chú / mã giao dịch seller gửi kèm yêu cầu */
+    private String paymentNote;
     private String planName;
     private BigDecimal price;
     private Integer maxProductsAllowed;

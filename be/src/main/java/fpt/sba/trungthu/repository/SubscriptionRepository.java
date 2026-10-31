@@ -36,6 +36,8 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, UUID
      */
     List<Subscription> findByStatusOrderByCreatedAtDesc(SubscriptionStatus status);
 
+    List<Subscription> findByProviderIdOrderByCreatedAtDesc(UUID providerId);
+
     /**
      * Tìm subscription với pessimistic lock (để update trạng thái)
      */
