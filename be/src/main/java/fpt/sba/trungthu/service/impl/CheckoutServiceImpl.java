@@ -87,7 +87,7 @@ public class CheckoutServiceImpl implements CheckoutService {
                 reserveLines.add(new ReserveStockCommand.ReserveLine(line.variant().getId(), line.quantity(),
                         plan.deliveryDate(), null, futureBake));
                 snaps.add(new Snap(plan.provider().getId(), line.variant().getId(),
-                        line.variant().getProduct().getName(), line.variant().getVariantName(), line.quantity(),
+                        line.variant().getProduct().getName(), line.variantName(), line.quantity(),
                         line.unitPrice(), line.personalizationText(), line.personalizationFee()));
             }
         }
@@ -230,11 +230,12 @@ public class CheckoutServiceImpl implements CheckoutService {
                     throw badRequest("Personalization is only available for gift boxes");
                 }
                 if (personal != null) personalizedBoxes += item.quantity();
+                String contents = boxContents(variant, item.boxContents());
                 long bake = bakeFor(variant, item.quantity());
                 if (bake > Integer.MAX_VALUE - (long) bakeQuantity) throw badRequest("Baking quantity is too large");
                 bakeQuantity += (int) bake;
                 BigDecimal amount = variant.getPrice().multiply(BigDecimal.valueOf(item.quantity()));
-                lines.add(new Line(variant, null, item.quantity(), (int) bake, personal, BigDecimal.ZERO, amount, amount, null));
+                lines.add(new Line(variant, null, item.quantity(), (int) bake, personal, BigDecimal.ZERO, amount, amount, null, contents));
             }
             if (provider == null || !seenProviders.add(provider.getId())) {
                 throw badRequest("Only one delivery group per provider is supported");
@@ -265,7 +266,8 @@ public class CheckoutServiceImpl implements CheckoutService {
                 merchandise = merchandise.add(priced.amount());
                 personalization = personalization.add(fee);
                 pricedLines.add(new Line(priced.variant(), priced.set(), priced.quantity(), priced.bakeQuantity(),
-                        priced.personalizationText(), fee, priced.amount(), priced.listAmount(), priced.promotion()));
+                        priced.personalizationText(), fee, priced.amount(), priced.listAmount(), priced.promotion(),
+                        priced.contents()));
             }
             // Sàn không thu phí giao hàng
             BigDecimal shipping = BigDecimal.ZERO;
@@ -365,7 +367,7 @@ public class CheckoutServiceImpl implements CheckoutService {
         }
         BigDecimal amount = others.add(boxUnit.multiply(BigDecimal.valueOf(boxTake)));
         if (bake > Integer.MAX_VALUE) throw badRequest("Baking quantity is too large");
-        return new Line(null, set, quantity, (int) bake, null, BigDecimal.ZERO, amount, list, null);
+        return new Line(null, set, quantity, (int) bake, null, BigDecimal.ZERO, amount, list, null, null);
     }
 
     private User requireCustomer() {
@@ -420,7 +422,34 @@ public class CheckoutServiceImpl implements CheckoutService {
         if (best == null) return line;
         BigDecimal unit = list.subtract(bestDiscount).divide(BigDecimal.valueOf(line.quantity()), 0, RoundingMode.FLOOR);
         return new Line(line.variant(), null, line.quantity(), line.bakeQuantity(), line.personalizationText(),
-                line.personalizationFee(), unit.multiply(BigDecimal.valueOf(line.quantity())), list, best);
+                line.personalizationFee(), unit.multiply(BigDecimal.valueOf(line.quantity())), list, best, line.contents());
+    }
+
+    /**
+     * Hộp tự phối: mỗi ô một vị bánh lẻ đang bán của cùng xưởng, đủ đúng số ô của hộp.
+     * Giá và số bánh nướng vẫn theo hộp (BOX_SHELL = hộp đã gồm bánh), nên vị không đổi giá.
+     * Trả nhãn "Thập cẩm 150 g ×2, Đậu xanh 150 g ×2" hoặc null nếu không phải hộp tự phối.
+     */
+    private String boxContents(ProductVariant box, List<UUID> slots) {
+        if (slots == null || slots.isEmpty()) return null;
+        if (box.getProduct().getProductType() != ProductType.BOX_SHELL || box.getBoxCapacity() == null
+                || slots.size() != box.getBoxCapacity()) {
+            throw badRequest("Hộp tự phối cần chọn đủ " + box.getBoxCapacity() + " vị bánh");
+        }
+        Map<UUID, ProductVariant> cakes = new HashMap<>();
+        variants.findAllById(new HashSet<>(slots)).forEach(v -> cakes.put(v.getId(), v));
+        Map<String, Integer> counts = new LinkedHashMap<>();
+        for (UUID id : slots) {
+            ProductVariant cake = cakes.get(id);
+            if (cake == null || cake.getProduct().getProductType() != ProductType.LOOSE_CAKE
+                    || cake.getProduct().getStatus() != ProductStatus.ACTIVE
+                    || !cake.getProduct().getProvider().getId().equals(box.getProduct().getProvider().getId())) {
+                throw badRequest("Vị bánh trong hộp phải là bánh lẻ đang bán của cùng xưởng");
+            }
+            counts.merge(cake.getProduct().getName() + " " + cake.getVariantName(), 1, Integer::sum);
+        }
+        return counts.entrySet().stream().map(e -> e.getKey() + " ×" + e.getValue())
+                .collect(java.util.stream.Collectors.joining(", "));
     }
 
     /** Cọc tối thiểu 50%, làm tròn lên nghìn đồng cho dễ chuyển khoản (không vượt tổng) */
@@ -443,7 +472,7 @@ public class CheckoutServiceImpl implements CheckoutService {
     /** variant = dòng lẻ; set = dòng set quà (variant null). amount = tiền hàng, listAmount = theo giá gốc */
     private record Line(ProductVariant variant, Product set, int quantity, int bakeQuantity,
             String personalizationText, BigDecimal personalizationFee, BigDecimal amount, BigDecimal listAmount,
-            Promotion promotion) {
+            Promotion promotion, String contents) {
         BigDecimal unitPrice() {
             return amount.divide(BigDecimal.valueOf(quantity), 2, RoundingMode.HALF_UP);
         }
@@ -457,7 +486,10 @@ public class CheckoutServiceImpl implements CheckoutService {
         }
 
         String variantName() {
-            return set != null ? "Set quà" : variant.getVariantName();
+            if (set != null) return "Set quà";
+            // Hộp tự phối: lưu vị từng ô ngay trong tên phân loại của dòng đơn để xưởng biết đóng hộp
+            String name = contents == null ? variant.getVariantName() : variant.getVariantName() + " · " + contents;
+            return name.length() > 255 ? name.substring(0, 254) + "…" : name;
         }
     }
 

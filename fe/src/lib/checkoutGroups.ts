@@ -18,12 +18,11 @@ export const toCheckoutGroups = (cart: CartItem[], dates: Record<string, string>
       deliveryDate: dates[group.providerId],
       paymentMethod: choice === 'COD' ? 'COD' : 'VIETQR',
       depositOption: choice === 'COD' ? undefined : choice,
-      items: group.items.filter((item) => item.kind === 'single').map((item) =>
+      // Hộp tự phối = dòng vỏ hộp kèm vị từng ô (BE: Item.boxContents)
+      items: group.items.map((item) =>
         item.setProductId ? { setProductId: item.setProductId, quantity: item.quantity }
-          : { variantId: item.variantId, quantity: item.quantity }),
-      boxes: group.items.filter((item) => item.kind === 'box').map((item) => ({
-        boxVariantId: item.variantId, quantity: item.quantity,
-        cakeVariantIds: (item.slots ?? []).map((slot) => slot.variantId), note: item.note,
-      })),
+          : item.kind === 'box'
+            ? { variantId: item.variantId, quantity: item.quantity, boxContents: (item.slots ?? []).map((slot) => slot.variantId) }
+            : { variantId: item.variantId, quantity: item.quantity }),
     }
   })

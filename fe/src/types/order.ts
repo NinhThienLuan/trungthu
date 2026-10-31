@@ -19,14 +19,8 @@ export interface CheckoutLine {
   variantId?: string
   setProductId?: string
   quantity: number
-}
-
-/** [Phase 2 — FE đề xuất] Hộp tự phối; hợp đồng MVP chưa nhận trường này */
-export interface CheckoutBox {
-  boxVariantId: string
-  quantity: number
-  cakeVariantIds: string[]
-  note?: string
+  /** Hộp tự phối: variant bánh lẻ cho từng ô, đủ đúng sức chứa hộp */
+  boxContents?: string[]
 }
 
 /** Mỗi Provider một nhóm = một Order: một ngày nhận, một phương thức thanh toán */
@@ -40,7 +34,6 @@ export interface CheckoutGroup {
   /** Chỉ dùng khi thanh toán online */
   depositOption?: DepositOption
   items: CheckoutLine[]
-  boxes?: CheckoutBox[]
 }
 
 /** Khớp CreateOrdersCommand.VatInfo */

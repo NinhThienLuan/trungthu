@@ -46,7 +46,7 @@ export const router = createBrowserRouter([
       { path: '/', element: stitch('', <RfqFormCatcher><HomePage /></RfqFormCatcher>) },
       { path: '/products', element: stitch('Bộ sưu tập', <CatalogPage />) },
       { path: '/products/:id', element: stitch(undefined, <ProductDetailPage />) },
-      { path: '/box-builder', element: stitch('Tự phối hộp quà', <BoxBuilderPage />) },
+      { path: '/box-builder', element: <BoxBuilderPage /> },
       { path: '/rfq', element: stitch('Báo giá doanh nghiệp', <RfqPortalPage />) },
       // Đặt sỉ đi qua RFQ (báo giá -> chấp nhận); link cũ chuyển về đó
       { path: '/b2b/checkout', element: <Navigate to={ROUTES.rfq} replace /> },

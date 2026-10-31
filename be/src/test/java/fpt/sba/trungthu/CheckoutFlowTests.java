@@ -152,9 +152,9 @@ class CheckoutFlowTests {
     void vietQrCreatesDistinctInstructionsPerSellerAndOnlyOwnerConfirms() {
         CheckoutRequest request = new CheckoutRequest("Buyer", "0123456789", "Address", null, List.of(
                 new CheckoutRequest.Group(delivery, "Hồ Chí Minh", "Quận 1", PaymentMethod.VIETQR, true,
-                        List.of(new CheckoutRequest.Item(cake.getId(), null, 2, null))),
+                        List.of(new CheckoutRequest.Item(cake.getId(), null, 2, null, null))),
                 new CheckoutRequest.Group(delivery, "Hồ Chí Minh", "Quận 1", PaymentMethod.VIETQR, true,
-                        List.of(new CheckoutRequest.Item(box.getId(), null, 1, "Chuc mung")))));
+                        List.of(new CheckoutRequest.Item(box.getId(), null, 1, "Chuc mung", null)))));
         when(security.getCurrentUserId()).thenReturn(customer.getId());
         var created = checkout.checkout(request);
         assertThat(created).hasSize(2);
@@ -256,7 +256,7 @@ class CheckoutFlowTests {
         variants.saveAndFlush(box);
         CheckoutRequest boxRequest = new CheckoutRequest("Buyer", "0123456789", "Address", null, List.of(
                 new CheckoutRequest.Group(futureDate, "Hồ Chí Minh", "Quận 1", PaymentMethod.VIETQR, false,
-                        List.of(new CheckoutRequest.Item(box.getId(), null, 1, null)))));
+                        List.of(new CheckoutRequest.Item(box.getId(), null, 1, null, null)))));
         assertThatThrownBy(() -> checkout.preview(boxRequest))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("không đủ số lượng");
@@ -265,15 +265,41 @@ class CheckoutFlowTests {
     private CheckoutRequest cakeRequest(LocalDate date, int quantity) {
         return new CheckoutRequest("Buyer", "0123456789", "Address", null, List.of(
                 new CheckoutRequest.Group(date, "Hồ Chí Minh", "Quận 1", PaymentMethod.VIETQR, false,
-                        List.of(new CheckoutRequest.Item(cake.getId(), null, quantity, null)))));
+                        List.of(new CheckoutRequest.Item(cake.getId(), null, quantity, null, null)))));
+    }
+
+    @Test
+    void customBoxStoresChosenFlavoursOnTheOrderLine() {
+        User boxProvider = users.findById(products.findById(box.getProduct().getId()).orElseThrow()
+                .getProvider().getId()).orElseThrow();
+        ProductVariant lotus = variant(boxProvider, ProductType.LOOSE_CAKE, "60000", null);
+        ProductVariant mung = variant(boxProvider, ProductType.LOOSE_CAKE, "50000", null);
+        java.util.function.Function<List<UUID>, CheckoutRequest> boxWith = slots -> new CheckoutRequest("Buyer", "0123456789",
+                "Address", null, List.of(new CheckoutRequest.Group(delivery, "Hồ Chí Minh", "Quận 1", PaymentMethod.VIETQR, false,
+                        List.of(new CheckoutRequest.Item(box.getId(), null, 1, null, slots)))));
+
+        var line = checkout.preview(boxWith.apply(List.of(lotus.getId(), mung.getId()))).groups().getFirst().lines().getFirst();
+        assertThat(line.variantName()).isEqualTo("Variant · LOOSE_CAKE Variant ×2"); // 2 bánh test trùng tên -> gộp
+        assertThat(line.subtotal()).isEqualByComparingTo("200000"); // giá theo hộp, vị không đổi giá
+
+        assertThatThrownBy(() -> checkout.preview(boxWith.apply(List.of(lotus.getId()))))
+                .hasMessageContaining("đủ 2 vị");
+        assertThatThrownBy(() -> checkout.preview(boxWith.apply(List.of(lotus.getId(), cake.getId()))))
+                .hasMessageContaining("cùng xưởng");
+
+        Order order = orders.findById(checkout.checkout(boxWith.apply(List.of(lotus.getId(), lotus.getId())))
+                .getFirst().getId()).orElseThrow();
+        assertThat(checkout.preview(boxWith.apply(List.of(lotus.getId(), lotus.getId()))).groups().getFirst()
+                .lines().getFirst().variantName()).endsWith("×2");
+        assertThat(order.getTotalAmount()).isEqualByComparingTo("200000");
     }
 
     private CheckoutRequest request() {
         return new CheckoutRequest("Buyer", "0123456789", "Address", null, List.of(
                 new CheckoutRequest.Group(delivery, "Hồ Chí Minh", "Quận 1", PaymentMethod.COD, false,
-                        List.of(new CheckoutRequest.Item(cake.getId(), null, 2, null))),
+                        List.of(new CheckoutRequest.Item(cake.getId(), null, 2, null, null))),
                 new CheckoutRequest.Group(delivery, "Hồ Chí Minh", "Quận 1", PaymentMethod.VIETQR, false,
-                        List.of(new CheckoutRequest.Item(box.getId(), null, 1, "Chuc mung")))));
+                        List.of(new CheckoutRequest.Item(box.getId(), null, 1, "Chuc mung", null)))));
     }
 
     private User user(UserRole role, boolean provider) {

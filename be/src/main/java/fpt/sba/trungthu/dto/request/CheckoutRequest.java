@@ -38,7 +38,9 @@ public record CheckoutRequest(
             UUID variantId,
             UUID setProductId,
             @Positive int quantity,
-            @Size(max = 50) String personalizationText) {
+            @Size(max = 50) String personalizationText,
+            /** Hộp tự phối: vị (variant bánh lẻ cùng xưởng) cho từng ô của hộp BOX_SHELL; số phần tử = sức chứa hộp */
+            @Size(max = 50) List<UUID> boxContents) {
         // Không thêm constructor phụ: Jackson 3 khi đó không còn đọc được record từ JSON
         public UUID key() {
             return variantId != null ? variantId : setProductId;
