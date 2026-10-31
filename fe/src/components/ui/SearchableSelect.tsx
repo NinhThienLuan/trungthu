@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { ChevronDown, Search } from 'lucide-react'
 import { cn } from '../../lib/format'
 
-export type SelectOption = { value: string; label: string }
+export type SelectOption = { value: string; label: string; description?: string; imageUrl?: string; searchText?: string }
 export type SelectGroup = { label?: string; options: SelectOption[] }
 
 type SearchableSelectProps = {
@@ -34,7 +34,8 @@ export function SearchableSelect({ id, value, groups, placeholder, onChange, dis
     ...group,
     options: search && group.label && normalize(group.label).includes(search)
       ? group.options
-      : group.options.filter((option) => normalize(option.label).includes(search)),
+      : group.options.filter((option) => normalize([option.label, option.description, option.searchText]
+        .filter(Boolean).join(' ')).includes(search)),
   })).filter((group) => group.options.length > 0)
   const visibleOptions = visibleGroups.flatMap((group) => group.options)
   const active = visibleOptions[Math.min(activeIndex, visibleOptions.length - 1)]
@@ -95,7 +96,12 @@ export function SearchableSelect({ id, value, groups, placeholder, onChange, dis
   return (
     <div ref={rootRef} className="relative">
       <div className="relative">
-        <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
+        {selected?.imageUrl ? (
+          <img src={selected.imageUrl} alt="" aria-hidden="true"
+            className="pointer-events-none absolute left-3 top-1/2 h-6 w-8 -translate-y-1/2 object-contain" />
+        ) : (
+          <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
+        )}
         <input
           id={id}
           type="search"
@@ -140,13 +146,18 @@ export function SearchableSelect({ id, value, groups, placeholder, onChange, dis
                   role="option"
                   aria-selected={option.value === value}
                   data-active={option.value === active?.value}
-                  className={cn('block w-full px-3 py-2 text-left text-body text-ink hover:bg-champagne/60',
+                  className={cn('flex w-full items-center gap-3 px-3 py-2 text-left text-body text-ink hover:bg-champagne/60',
                     option.value === active?.value && 'bg-champagne/60', option.value === value && 'font-semibold text-navy')}
                   onMouseDown={(event) => event.preventDefault()}
                   onClick={() => choose(option)}
                   onMouseEnter={() => setActiveIndex(visibleOptions.findIndex((item) => item.value === option.value))}
                 >
-                  {option.label}
+                  {option.imageUrl && <img src={option.imageUrl} alt="" aria-hidden="true"
+                    className="h-8 w-12 shrink-0 object-contain" loading="lazy" />}
+                  <span className="min-w-0">
+                    <span className="block">{option.label}</span>
+                    {option.description && <span className="block text-small font-normal text-muted">{option.description}</span>}
+                  </span>
                 </button>
               ))}
             </div>

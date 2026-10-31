@@ -23,6 +23,7 @@ export interface CartItem {
   /** Giá 1 đơn vị: bánh lẻ = giá variant; hộp = giá vỏ + tổng giá bánh trong hộp */
   unitPrice: number
   stock: number
+  canPreorder?: boolean // bánh nướng theo đơn nếu ngày nhận cách ít nhất 7 ngày
   quantity: number
   imageUrl?: string | null
   /** Set quà: checkout gửi setProductId thay cho variantId */
@@ -56,6 +57,8 @@ interface CartState {
 }
 
 const clamp = (value: number, max: number) => Math.max(1, Math.min(value, Math.max(max, 1)))
+const maxOrderQuantity = (item: Pick<CartItem, 'stock' | 'canPreorder'>) =>
+  item.canPreorder ? 10_000 : item.stock
 
 export const useCartStore = create<CartState>()(
   persist(
@@ -69,11 +72,13 @@ export const useCartStore = create<CartState>()(
           if (existing) {
             return {
               items: state.items.map((i) =>
-                i.lineId === item.variantId ? { ...i, quantity: clamp(i.quantity + quantity, item.stock) } : i,
+                i.lineId === item.variantId ? { ...i, stock: item.stock, canPreorder: item.canPreorder,
+                  quantity: clamp(i.quantity + quantity, maxOrderQuantity(item)) } : i,
               ),
             }
           }
-          const line: CartItem = { ...item, lineId: item.variantId, kind: 'single', quantity: clamp(quantity, item.stock) }
+          const line: CartItem = { ...item, lineId: item.variantId, kind: 'single',
+            quantity: clamp(quantity, maxOrderQuantity(item)) }
           return { items: [...state.items, line] }
         }),
 
@@ -84,7 +89,8 @@ export const useCartStore = create<CartState>()(
 
       setQuantity: (lineId, quantity) =>
         set((state) => ({
-          items: state.items.map((i) => (i.lineId === lineId ? { ...i, quantity: clamp(quantity, i.stock) } : i)),
+          items: state.items.map((i) => (i.lineId === lineId
+            ? { ...i, quantity: clamp(quantity, maxOrderQuantity(i)) } : i)),
         })),
 
       remove: (lineId) =>

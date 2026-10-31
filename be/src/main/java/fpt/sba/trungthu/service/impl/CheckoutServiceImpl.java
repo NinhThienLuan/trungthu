@@ -1,5 +1,6 @@
 package fpt.sba.trungthu.service.impl;
 
+import fpt.sba.trungthu.common.policy.CheckoutLeadTime;
 import fpt.sba.trungthu.common.security.SecurityContextService;
 import fpt.sba.trungthu.dto.request.CheckoutRequest;
 import fpt.sba.trungthu.dto.request.CreateOrdersCommand;
@@ -81,8 +82,10 @@ public class CheckoutServiceImpl implements CheckoutService {
                             line.set().getId()));
                     continue;
                 }
+                boolean futureBake = line.variant().getProduct().getProductType() == ProductType.LOOSE_CAKE
+                        && CheckoutLeadTime.canBakeToOrder(plan.deliveryDate(), LocalDate.now(VIETNAM));
                 reserveLines.add(new ReserveStockCommand.ReserveLine(line.variant().getId(), line.quantity(),
-                        plan.deliveryDate()));
+                        plan.deliveryDate(), null, futureBake));
                 snaps.add(new Snap(plan.provider().getId(), line.variant().getId(),
                         line.variant().getProduct().getName(), line.variant().getVariantName(), line.quantity(),
                         line.unitPrice(), line.personalizationText(), line.personalizationFee()));
@@ -104,11 +107,11 @@ public class CheckoutServiceImpl implements CheckoutService {
                                 .filter(line -> line.sourceSetId() == null && snap.variantId().equals(line.variantId())
                                         && snap.providerId().equals(line.providerId()))
                                 .findFirst()
-                                .orElseThrow(() -> conflict("STOCK_UNAVAILABLE provider=" + snap.providerId()
-                                        + " variant=" + snap.variantId()));
+                                .orElseThrow(() -> conflict("Không thể giữ hàng cho sản phẩm đã chọn. Vui lòng thử lại."));
                         return new CreateOrdersCommand.ItemSnapshot(snap.variantId(), snap.productName(),
                                 snap.variantName(), snap.quantity(), snap.unitPrice(), held.bakeQuantity(),
-                                snap.personalizationText(), snap.personalizationFee());
+                                null, 0, snap.personalizationText(), snap.personalizationFee(),
+                                held.stockReservedQuantity());
                     }).toList());
             reserved.stream()
                     .filter(line -> line.sourceSetId() != null && plan.provider().getId().equals(line.providerId()))
@@ -149,14 +152,19 @@ public class CheckoutServiceImpl implements CheckoutService {
             if (group.boxes() != null && !group.boxes().isEmpty()) {
                 throw badRequest("Custom box combinations are not supported in MVP");
             }
-            if (group.deliveryDate() == null || group.deliveryDate().isBefore(today.plusDays(3))) {
-                throw badRequest("Delivery date must be at least 3 days from today in Vietnam");
-            }
+            if (group.deliveryDate() == null) throw badRequest("Vui lòng chọn ngày nhận hàng");
             List<CheckoutRequest.Item> sortedItems = new ArrayList<>(group.items());
             if (sortedItems.stream().anyMatch(item -> item == null
                     || (item.variantId() == null) == (item.setProductId() == null)
                     || item.quantity() <= 0 || item.quantity() > 10_000)) {
                 throw badRequest("Invalid cart item");
+            }
+            long totalQuantity = sortedItems.stream().mapToLong(CheckoutRequest.Item::quantity).sum();
+            int minLeadDays = CheckoutLeadTime.requiredDays(totalQuantity);
+            if (group.deliveryDate().isBefore(today.plusDays(minLeadDays))) {
+                throw badRequest("Đơn từ " + CheckoutLeadTime.BULK_QUANTITY + " sản phẩm cần đặt trước ít nhất "
+                        + CheckoutLeadTime.EXTENDED_DAYS + " ngày; đơn ít hơn cần ít nhất "
+                        + CheckoutLeadTime.STANDARD_DAYS + " ngày");
             }
             sortedItems.sort(Comparator.comparing(item -> item.key().toString()));
             Set<UUID> seenVariants = new HashSet<>();
@@ -193,9 +201,24 @@ public class CheckoutServiceImpl implements CheckoutService {
                     throw badRequest("A group must contain variants from only one provider");
                 }
                 provider = owner;
-                if (variant.getStatus() != VariantStatus.IN_STOCK || variant.getProduct().getStatus() != ProductStatus.ACTIVE
-                        || variant.getStockQuantity() < item.quantity()) {
-                    throw conflict("STOCK_UNAVAILABLE provider=" + owner.getId() + " variant=" + variant.getId());
+                boolean stockReady = variant.getStatus() == VariantStatus.IN_STOCK
+                        && variant.getProduct().getStatus() == ProductStatus.ACTIVE
+                        && variant.getStockQuantity() >= item.quantity();
+                boolean futureBake = variant.getProduct().getProductType() == ProductType.LOOSE_CAKE
+                        && CheckoutLeadTime.canBakeToOrder(group.deliveryDate(), today)
+                        && (variant.getProduct().getStatus() == ProductStatus.ACTIVE
+                            || variant.getProduct().getStatus() == ProductStatus.SOLD_OUT)
+                        && (variant.getStatus() == VariantStatus.IN_STOCK
+                            || variant.getStatus() == VariantStatus.OUT_OF_STOCK);
+                if (!stockReady && !futureBake) {
+                    if (variant.getProduct().getProductType() == ProductType.LOOSE_CAKE
+                            && variant.getStockQuantity() < item.quantity()) {
+                        throw conflict("Xưởng " + owner.getStoreName() + " chưa đủ " + variant.getVariantName()
+                                + ". Chọn ngày nhận cách ít nhất " + CheckoutLeadTime.EXTENDED_DAYS
+                                + " ngày để xưởng nướng theo đơn, hoặc giảm số lượng.");
+                    }
+                    throw conflict("Sản phẩm " + variant.getProduct().getName()
+                            + " không đủ số lượng hoặc không còn nhận đặt. Vui lòng giảm số lượng hoặc chọn sản phẩm khác.");
                 }
                 if (variant.getPrice() == null || variant.getPrice().signum() < 0
                         || variant.getPrice().stripTrailingZeros().scale() > 0) {
@@ -268,9 +291,10 @@ public class CheckoutServiceImpl implements CheckoutService {
                 LocalDate bakeDate = group.deliveryDate().minusDays(1);
                 capacity = (lock ? capacities.findForUpdateByProviderIdAndCapacityDate(providerId, bakeDate)
                         : capacities.findByProviderIdAndCapacityDate(providerId, bakeDate))
-                        .orElseThrow(() -> conflict("CAPACITY_MISSING provider=" + providerId + " date=" + bakeDate));
+                        .orElseThrow(() -> conflict("Xưởng chưa mở lịch nướng cho ngày nhận " + group.deliveryDate()));
                 if (capacity.getReservedQuantity() > capacity.getMaxQuantity() - bakeQuantity) {
-                    throw conflict("CAPACITY_FULL provider=" + providerId + " date=" + bakeDate);
+                    throw conflict("Xưởng không đủ suất nướng cho số lượng đã chọn vào ngày nhận "
+                            + group.deliveryDate() + ". Vui lòng giảm số lượng hoặc chọn ngày khác.");
                 }
             }
             result.add(new Plan(provider, group.deliveryDate(), group.paymentMethod(), pricedLines,
@@ -298,7 +322,7 @@ public class CheckoutServiceImpl implements CheckoutService {
                 .findFirst().orElseThrow(() -> conflict("SET_UNAVAILABLE set=" + set.getId()));
         int setsBefore = box.getQuantity();
         if (setsBefore < quantity) {
-            throw conflict("STOCK_UNAVAILABLE provider=" + set.getProvider().getId() + " set=" + set.getId());
+            throw conflict("Set quà không đủ số lượng. Vui lòng giảm số lượng hoặc chọn sản phẩm khác.");
         }
         Map<GiftSetComponent, Integer> perSet = new LinkedHashMap<>();
         BigDecimal unitList = BigDecimal.ZERO;
@@ -312,7 +336,7 @@ public class CheckoutServiceImpl implements CheckoutService {
             perSet.put(row, per);
             unitList = unitList.add(row.getComponentVariant().getPrice().multiply(BigDecimal.valueOf(per)));
         }
-        BigDecimal sale = set.getSalePrice();
+        BigDecimal sale = set.getSalePrice() == null ? null : set.getSalePrice().setScale(0, RoundingMode.DOWN);
         BigDecimal factor = sale == null || unitList.signum() == 0 ? BigDecimal.ONE
                 : sale.divide(unitList, 8, RoundingMode.HALF_UP);
         BigDecimal others = BigDecimal.ZERO;
@@ -324,19 +348,20 @@ public class CheckoutServiceImpl implements CheckoutService {
             int take = entry.getValue() * quantity;
             if (take <= 0) continue;
             ProductVariant component = entry.getKey().getComponentVariant();
-            BigDecimal charged = component.getPrice().multiply(factor).setScale(2, RoundingMode.HALF_UP);
+            BigDecimal charged = component.getPrice().multiply(factor).setScale(0, RoundingMode.DOWN);
             if (entry.getKey() == box) {
                 boxUnit = charged;
                 boxTake = take;
             }
             else others = others.add(charged.multiply(BigDecimal.valueOf(take)));
-            list = list.add(component.getPrice().multiply(BigDecimal.valueOf(take)));
+            list = list.add(component.getPrice().setScale(0, RoundingMode.DOWN)
+                    .multiply(BigDecimal.valueOf(take)));
             bake += bakeFor(component, take);
         }
         // Như expandSet: phần lệch do làm tròn dồn vào vỏ hộp để tổng = salePrice × số set
         if (sale != null) {
             boxUnit = sale.multiply(BigDecimal.valueOf(quantity)).subtract(others);
-            if (quantity > 1) boxUnit = boxUnit.divide(BigDecimal.valueOf(quantity), 2, RoundingMode.HALF_UP);
+            if (quantity > 1) boxUnit = boxUnit.divide(BigDecimal.valueOf(quantity), 0, RoundingMode.HALF_UP);
         }
         BigDecimal amount = others.add(boxUnit.multiply(BigDecimal.valueOf(boxTake)));
         if (bake > Integer.MAX_VALUE) throw badRequest("Baking quantity is too large");

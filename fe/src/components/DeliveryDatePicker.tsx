@@ -11,14 +11,16 @@ interface Props {
   providerId: string
   value?: string
   onChange: (date: string) => void
+  minLeadDays?: number
 }
 
 /**
  * Lịch chọn ngày nhận cho 1 Provider.
  * Ngày < hôm nay + MIN_LEAD_DAYS hoặc đã kín hạn ngạch thì bị khoá (dữ liệu từ capacityService).
  */
-export function DeliveryDatePicker({ providerId, value, onChange }: Props) {
-  const minDate = useMemo(() => addDays(new Date(), MIN_LEAD_DAYS), [])
+export function DeliveryDatePicker({ providerId, value, onChange, minLeadDays = MIN_LEAD_DAYS }: Props) {
+  const minDate = useMemo(() => addDays(new Date(), minLeadDays), [minLeadDays])
+  const minIso = toIsoDate(minDate)
   const [month, setMonth] = useState(() => {
     const start = value ? parseIsoDate(value) : minDate
     return new Date(start.getFullYear(), start.getMonth(), 1)
@@ -70,7 +72,7 @@ export function DeliveryDatePicker({ providerId, value, onChange }: Props) {
         ))}
         {Array.from({ length: daysInMonth }, (_, i) => {
           const iso = toIsoDate(new Date(month.getFullYear(), month.getMonth(), i + 1))
-          const available = !loading && availability.get(iso) === true
+          const available = !loading && iso >= minIso && availability.get(iso) === true
           const selected = iso === value
           return (
             <button
@@ -96,7 +98,7 @@ export function DeliveryDatePicker({ providerId, value, onChange }: Props) {
       {error ? (
         <p className="field-error">{error}</p>
       ) : (
-        <p className="mt-2 text-small text-muted">Ngày bị gạch: chưa đủ {MIN_LEAD_DAYS} ngày chuẩn bị hoặc xưởng đã kín lịch.</p>
+        <p className="mt-2 text-small text-muted">Ngày bị gạch: chưa đủ {minLeadDays} ngày chuẩn bị hoặc xưởng đã kín lịch.</p>
       )}
     </div>
   )

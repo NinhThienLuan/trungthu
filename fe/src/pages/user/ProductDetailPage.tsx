@@ -58,8 +58,9 @@ export function ProductDetailPage() {
   const ratio = product.display ? product.display.oldPrice / product.variants[0].price : 1
   const oldPrice = Math.round((price * ratio) / 1000) * 1000
   const discountPct = oldPrice > price ? Math.round((1 - price / oldPrice) * 100) : 0
-  const maxQty = Math.max(1, variant?.stockQuantity ?? 1)
-  const inStock = !!variant && variant.stockQuantity > 0
+  const canPreorder = product.productType === 'LOOSE_CAKE'
+  const maxQty = canPreorder ? 10_000 : Math.max(1, variant?.stockQuantity ?? 1)
+  const inStock = !!variant && (variant.stockQuantity > 0 || canPreorder)
   const gallery = product.gallery?.length
     ? product.gallery
     : [product.imageUrl ?? DETAIL_GALLERY[0], ...DETAIL_GALLERY.slice(2, 5)]
@@ -86,6 +87,7 @@ export function ProductDetailPage() {
         variantName: variant.variantName,
         unitPrice: variant.price,
         stock: variant.stockQuantity,
+        canPreorder,
         imageUrl: product.imageUrl,
       },
       quantity,
@@ -381,7 +383,8 @@ export function ProductDetailPage() {
                   >
                     {' '}
                     <Icon name="add_shopping_cart" className="text-secondary text-[20px]" aria-hidden />{' '}
-                    <span>{added ? 'Đã Thêm Vào Giỏ' : 'Thêm Vào Giỏ Hàng'}</span>{' '}
+                    <span>{added ? 'Đã Thêm Vào Giỏ' : variant?.stockQuantity === 0 && canPreorder
+                      ? 'Đặt Trước Bánh Tươi' : 'Thêm Vào Giỏ Hàng'}</span>{' '}
                   </button>{' '}
                   <button
                     className="bg-tertiary-container text-secondary-fixed hover:bg-tertiary px-space-md py-2.5 rounded-[0.125rem] shadow-sm flex items-center justify-center gap-space-xs font-label-md text-label-md uppercase tracking-wider transition-colors"

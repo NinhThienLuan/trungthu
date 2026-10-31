@@ -14,7 +14,8 @@ export function CatalogCard({ product, promotion }: { product: Product; promotio
   const [added, setAdded] = useState(false)
   const variant = product.variants[0]
   const d = product.display
-  const inStock = !!variant && variant.stockQuantity > 0
+  const canPreorder = product.productType === 'LOOSE_CAKE'
+  const inStock = !!variant && (variant.stockQuantity > 0 || canPreorder)
 
   const buyOne = () => {
     if (!variant) return
@@ -29,6 +30,7 @@ export function CatalogCard({ product, promotion }: { product: Product; promotio
         variantName: variant.variantName,
         unitPrice: variant.price,
         stock: variant.stockQuantity,
+        canPreorder,
         imageUrl: product.imageUrl,
       },
       1,
@@ -106,7 +108,8 @@ export function CatalogCard({ product, promotion }: { product: Product; promotio
             className="mt-2 w-full py-2.5 px-2 rounded-[0.125rem] bg-primary text-secondary-fixed hover:bg-ink-dark font-label-sm text-label-sm uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5 disabled:opacity-40"
           >
             <Icon name={added ? 'check' : 'shopping_cart'} className="text-[16px]" aria-hidden />
-            {added ? 'Đã thêm vào giỏ' : inStock ? 'Thêm vào giỏ' : 'Hết hàng'}
+            {added ? 'Đã thêm vào giỏ' : variant?.stockQuantity === 0 && canPreorder
+              ? 'Đặt trước · nhận sau 7 ngày' : inStock ? 'Thêm vào giỏ' : 'Hết hàng'}
           </button>
         </div>
       </div>

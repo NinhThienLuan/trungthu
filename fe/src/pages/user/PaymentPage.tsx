@@ -1,9 +1,11 @@
+import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { orderService } from '../../services/orderService'
 import { useApi } from '../../hooks/useApi'
 import { useDocumentTitle } from '../../hooks/useDocumentTitle'
 import { PAYMENT_METHOD_LABEL, ROUTES } from '../../constants'
 import { formatDate, formatVnd } from '../../lib/format'
+import { cn } from '../../lib/format'
 import { OrderPaymentPanel } from '../../components/OrderPaymentPanel'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { ErrorState, Spinner } from '../../components/ui/States'
@@ -13,6 +15,7 @@ import type { OrderDetail } from '../../types/order'
 export function PaymentPage() {
   useDocumentTitle('Đặt hàng thành công')
   const [params] = useSearchParams()
+  const [selectedId, setSelectedId] = useState<string | null>(null)
   const idsParam = params.get('ids') ?? ''
   const { data, loading, error, reload } = useApi(
     () => Promise.all(idsParam.split(',').filter(Boolean).map((id) => orderService.detail(id))),
@@ -21,6 +24,7 @@ export function PaymentPage() {
 
   if (loading) return <Spinner />
   const hasVietQr = data?.some((o) => o.paymentMethod === 'VIETQR' && o.status === 'PENDING_DEPOSIT')
+  const selected = data?.find((order) => order.id === selectedId) ?? data?.[0]
 
   return (
     <div className="page section">
@@ -33,23 +37,45 @@ export function PaymentPage() {
         <ErrorState message={error} onRetry={reload} />
       ) : (
         <div className="flex flex-col gap-6">
-          {data?.map((order) => (
-            <section key={order.id} className="card p-5 md:p-6">
+          {data && data.length > 1 && (
+            <div className="card p-5 md:p-6" aria-label="Chọn đơn để thanh toán">
+              <h2 className="text-h3">Chọn đơn để thanh toán</h2>
+              <p className="mt-1 text-small text-muted">Mỗi đơn có mã QR và số tiền riêng. Hãy chọn một đơn để xem chi tiết.</p>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                {data.map((order) => (
+                  <button key={order.id} type="button" aria-pressed={selected?.id === order.id}
+                    onClick={() => setSelectedId(order.id)}
+                    className={cn('rounded-sm border p-4 text-left transition-colors',
+                      selected?.id === order.id ? 'border-navy bg-champagne/40' : 'border-line hover:bg-ivory')}>
+                    <span className="block font-semibold text-navy">{order.storeName} · {order.code}</span>
+                    <span className="block text-small text-muted">Giao cho {order.receiverName} · {formatDate(order.deliveryDate)}</span>
+                    <span className="mt-2 block font-semibold text-gold-ink">
+                      {order.paymentMethod === 'VIETQR' && order.status === 'PENDING_DEPOSIT'
+                        ? `Cần chuyển ${formatVnd(order.depositAmount)}`
+                        : order.paymentMethod === 'COD' ? 'Thanh toán khi nhận hàng' : 'Đã xác nhận thanh toán'}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {selected && (
+            <section key={selected.id} className="card p-5 md:p-6">
               <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
                 <div>
-                  <p className="eyebrow">Đơn {order.code}</p>
-                  <h2 className="mt-1 text-h3">{order.storeName}</h2>
+                  <p className="eyebrow">Đơn {selected.code}</p>
+                  <h2 className="mt-1 text-h3">{selected.storeName}</h2>
                 </div>
                 <p className="text-small text-muted">
-                  Nhận {formatDate(order.deliveryDate)} · {PAYMENT_METHOD_LABEL[order.paymentMethod]}
+                  Nhận {formatDate(selected.deliveryDate)} · {PAYMENT_METHOD_LABEL[selected.paymentMethod]}
                 </p>
               </div>
               <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
-                <OrderPaymentPanel order={order} />
-                <OrderSummary order={order} />
+                <OrderPaymentPanel order={selected} />
+                <OrderSummary order={selected} />
               </div>
             </section>
-          ))}
+          )}
           <Link to={ROUTES.orders} className="btn btn-outline self-start">
             Xem đơn của tôi
           </Link>

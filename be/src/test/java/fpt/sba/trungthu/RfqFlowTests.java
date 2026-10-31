@@ -165,6 +165,67 @@ class RfqFlowTests {
                 .andExpect(status().isOk());
     }
 
+    @Test
+    void rejectsInvalidRfqContactAndMoneyBeforeSaving() throws Exception {
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh"));
+        User buyer = createUser(UserRole.CUSTOMER, false);
+        as(buyer);
+
+        String validContact = """
+                {"companyName":"Công ty Ánh Trăng","taxCode":"0123456789","contactName":"Mai",
+                 "contactPosition":"Thu mua","contactPhone":"0901234567","contactEmail":"mai@example.com",
+                 "requestedQuantity":50,"expectedDeliveryDate":"%s"}
+                """.formatted(today.plusDays(7));
+        mvc.perform(post("/api/rfqs").with(user("buyer").roles("CUSTOMER"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validContact.replace("0123456789", "abc")))
+                .andExpect(status().isBadRequest());
+        mvc.perform(post("/api/rfqs").with(user("buyer").roles("CUSTOMER"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validContact.replace("0901234567", "not-a-phone")))
+                .andExpect(status().isBadRequest());
+
+        String invalidBudget = """
+                {"companyName":"Công ty Ánh Trăng","taxCode":"0123456789","contactName":"Mai",
+                 "contactPosition":"Thu mua","contactPhone":"0901234567","contactEmail":"mai@example.com",
+                 "requestedQuantity":50,"expectedDeliveryDate":"%s","expectedBudget":123.456}
+                """.formatted(today.plusDays(7));
+        mvc.perform(post("/api/rfqs").with(user("buyer").roles("CUSTOMER"))
+                        .contentType(MediaType.APPLICATION_JSON).content(invalidBudget))
+                .andExpect(status().isBadRequest());
+        assertThat(requests.findTop100ByCustomerIdOrderByCreatedAtDesc(buyer.getId())).isEmpty();
+
+        String whitespaceName = invalidBudget.replace("Công ty Ánh Trăng", "  A  ")
+                .replace("123.456", "123");
+        mvc.perform(post("/api/rfqs").with(user("buyer").roles("CUSTOMER"))
+                        .contentType(MediaType.APPLICATION_JSON).content(whitespaceName))
+                .andExpect(status().isBadRequest());
+        assertThat(requests.findTop100ByCustomerIdOrderByCreatedAtDesc(buyer.getId())).isEmpty();
+    }
+
+    @Test
+    void rejectsQuotePriceThatCannotFitDatabaseColumn() throws Exception {
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh"));
+        User buyer = createUser(UserRole.CUSTOMER, false);
+        User seller = createUser(UserRole.PROVIDER, true);
+        subscribe(seller, today);
+        as(buyer);
+        var request = rfq.create(new CreateRfqRequest("Công ty Mặt Trăng", "0123456789", "Lan",
+                "Thu mua", "0901234567", "lan@example.com", 100, today.plusDays(7),
+                null, null, null));
+
+        as(seller);
+        String invalidQuote = """
+                {"unitPrice":123.456,"offeredQuantity":100,
+                 "estimatedDeliveryDate":"%s","validUntil":"%s"}
+                """.formatted(today.plusDays(7), today.plusDays(5));
+        mvc.perform(post("/api/provider/rfqs/{requestId}/quotes", request.id())
+                        .with(user("seller").roles("PROVIDER"))
+                        .contentType(MediaType.APPLICATION_JSON).content(invalidQuote))
+                .andExpect(status().isBadRequest());
+        assertThat(quotations.findTop100ByProviderIdOrderByCreatedAtDesc(seller.getId())).isEmpty();
+    }
+
     private User createUser(UserRole role, boolean eligible) {
         return users.saveAndFlush(User.builder().email(UUID.randomUUID() + "@example.com")
                 .password("unused").fullName("Test").role(role).storeName(role == UserRole.PROVIDER ? "Xưởng thử" : null)

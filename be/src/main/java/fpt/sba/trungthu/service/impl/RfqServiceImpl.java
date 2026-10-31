@@ -46,6 +46,10 @@ public class RfqServiceImpl implements RfqService {
     public RfqResponse create(CreateRfqRequest input) {
         User customer = security.getCurrentUser();
         LocalDate today = LocalDate.now(VIETNAM);
+        String companyName = input.companyName().trim();
+        if (companyName.length() < 3) {
+            throw badRequest("Tên doanh nghiệp phải có ít nhất 3 ký tự");
+        }
         if (input.expectedDeliveryDate().isBefore(today.plusDays(3))) {
             throw badRequest("Ngày nhận hàng phải cách ít nhất 3 ngày");
         }
@@ -57,7 +61,7 @@ public class RfqServiceImpl implements RfqService {
         }
         if (code == null) throw new ResponseStatusException(HttpStatus.CONFLICT, "Không tạo được mã RFQ");
         BulkRequest request = requests.saveAndFlush(BulkRequest.builder().customer(customer).requestCode(code)
-                .companyName(input.companyName().trim()).taxCode(input.taxCode().trim())
+                .companyName(companyName).taxCode(input.taxCode().trim())
                 .contactName(input.contactName().trim()).contactPosition(input.contactPosition().trim())
                 .contactPhone(input.contactPhone().trim()).contactEmail(input.contactEmail().trim())
                 .requestedQuantity(input.requestedQuantity()).expectedDate(input.expectedDeliveryDate())

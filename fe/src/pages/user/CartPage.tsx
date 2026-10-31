@@ -1,9 +1,14 @@
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { CalendarDays, Store, Trash2 } from 'lucide-react'
 import { groupByProvider, useCartStore } from '../../stores/cartStore'
 import { useDocumentTitle } from '../../hooks/useDocumentTitle'
-import { DEPOSIT_RATE, ROUTES } from '../../constants'
-import { formatVnd } from '../../lib/format'
+import { useAuthStore } from '../../stores/authStore'
+import { orderService } from '../../services/orderService'
+import { errorMessage } from '../../apis/http'
+import { BULK_LEAD_DAYS, BULK_ORDER_QUANTITY, DEPOSIT_RATE, MIN_LEAD_DAYS, ROUTES } from '../../constants'
+import { addDays, formatVnd, toIsoDate } from '../../lib/format'
+import { leadDaysForItems, toCheckoutGroups } from '../../lib/checkoutGroups'
 import { DeliveryDateField } from '../../components/DeliveryDateField'
 import { BoxItemDetails } from '../../components/OrderItemsSummary'
 import { PageHeader } from '../../components/ui/PageHeader'
@@ -13,10 +18,46 @@ import { EmptyState } from '../../components/ui/States'
 export function CartPage() {
   useDocumentTitle('Giỏ hàng')
   const { items, deliveryDates, setQuantity, remove, setDeliveryDate } = useCartStore()
+  const user = useAuthStore((state) => state.user)
+  const [dateErrors, setDateErrors] = useState<Record<string, string>>({})
+  const [checkingDates, setCheckingDates] = useState(false)
   const navigate = useNavigate()
   const groups = groupByProvider(items)
   const total = groups.reduce((sum, g) => sum + g.subtotal, 0)
-  const missingDate = groups.some((g) => !deliveryDates[g.providerId])
+  const missingDate = groups.some((group) => !deliveryDates[group.providerId]
+    || deliveryDates[group.providerId] < toIsoDate(addDays(new Date(), leadDaysForItems(group.items))))
+
+  // Kiểm tra đủ hàng và suất nướng khi chọn ngày hoặc đổi số lượng trong giỏ.
+  useEffect(() => {
+    if (user?.role !== 'CUSTOMER') {
+      setDateErrors({})
+      setCheckingDates(false)
+      return
+    }
+    const datedGroups = groupByProvider(items).filter((group) => deliveryDates[group.providerId])
+    if (datedGroups.length === 0) {
+      setDateErrors({})
+      setCheckingDates(false)
+      return
+    }
+    let cancelled = false
+    setCheckingDates(true)
+    Promise.all(datedGroups.map(async (group) => {
+      const date = deliveryDates[group.providerId]
+      if (date < toIsoDate(addDays(new Date(), leadDaysForItems(group.items)))) return null
+      try {
+        await orderService.preview({ receiverName: '', receiverPhone: '', shippingAddress: '',
+          groups: toCheckoutGroups(group.items, { [group.providerId]: date }, {}) }, group.items)
+        return null
+      } catch (error) {
+        return { providerId: group.providerId, message: errorMessage(error) }
+      }
+    })).then((results) => {
+      if (!cancelled) setDateErrors(Object.fromEntries(results.filter((result) => result)
+        .map((result) => [result!.providerId, result!.message])))
+    }).finally(() => { if (!cancelled) setCheckingDates(false) })
+    return () => { cancelled = true }
+  }, [items, deliveryDates, user?.role])
 
   if (items.length === 0) {
     return (
@@ -61,7 +102,8 @@ export function CartPage() {
                           {item.quantity} × {formatVnd(item.unitPrice)}
                         </p>
                       </div>
-                      <QuantityStepper size="sm" value={item.quantity} max={item.stock} onChange={(q) => setQuantity(item.lineId, q)} />
+                      <QuantityStepper size="sm" value={item.quantity} max={item.canPreorder ? 10_000 : item.stock}
+                        onChange={(q) => setQuantity(item.lineId, q)} />
                       <p className="w-28 text-right font-semibold text-navy">{formatVnd(item.unitPrice * item.quantity)}</p>
                       <button
                         type="button"
@@ -84,9 +126,28 @@ export function CartPage() {
                 <DeliveryDateField
                   providerId={group.providerId}
                   value={deliveryDates[group.providerId]}
+                  minLeadDays={leadDaysForItems(group.items)}
                   onChange={(d) => setDeliveryDate(group.providerId, d)}
                 />
               </div>
+              {leadDaysForItems(group.items) === BULK_LEAD_DAYS && (
+                <p className="px-5 pb-2 text-small text-gold-ink">
+                  {group.items.reduce((sum, item) => sum + item.quantity, 0) >= BULK_ORDER_QUANTITY
+                    ? `Từ ${BULK_ORDER_QUANTITY} sản phẩm cần chọn ngày nhận cách ít nhất ${BULK_LEAD_DAYS} ngày.`
+                    : `Bánh nướng theo đơn khi vượt tồn kho cần chọn ngày nhận cách ít nhất ${BULK_LEAD_DAYS} ngày.`}
+                </p>
+              )}
+              {deliveryDates[group.providerId] && deliveryDates[group.providerId] < toIsoDate(addDays(new Date(), leadDaysForItems(group.items))) && (
+                <p className="px-5 pb-3 text-small text-danger" role="alert">
+                  Ngày đã chọn không còn hợp lệ. Vui lòng chọn ngày nhận cách ít nhất {leadDaysForItems(group.items)} ngày.
+                </p>
+              )}
+              {dateErrors[group.providerId] && (
+                <p className="px-5 pb-3 text-small text-danger" role="alert">{dateErrors[group.providerId]}</p>
+              )}
+              {checkingDates && deliveryDates[group.providerId] && (
+                <p className="px-5 pb-3 text-small text-muted">Đang kiểm tra số lượng và lịch nướng...</p>
+              )}
             </section>
           ))}
         </div>
@@ -106,10 +167,12 @@ export function CartPage() {
             <span className="font-serif text-h3 text-navy">{formatVnd(total)}</span>
           </div>
           <p className="mt-1 text-small text-muted">Cọc tối thiểu {DEPOSIT_RATE * 100}% khi đặt.</p>
-          <button type="button" className="btn btn-primary mt-5 w-full" disabled={missingDate} onClick={() => navigate(ROUTES.checkout)}>
+          <button type="button" className="btn btn-primary mt-5 w-full"
+            disabled={missingDate || checkingDates || Object.keys(dateErrors).length > 0}
+            onClick={() => navigate(ROUTES.checkout)}>
             Đặt hàng
           </button>
-          {missingDate && <p className="mt-2 text-small text-danger">Chọn ngày nhận cho tất cả các xưởng.</p>}
+          {missingDate && <p className="mt-2 text-small text-danger">Chọn ngày nhận hợp lệ cho tất cả các xưởng. Đơn thường tối thiểu {MIN_LEAD_DAYS} ngày.</p>}
         </aside>
       </div>
     </div>

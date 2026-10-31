@@ -43,6 +43,7 @@ class CheckoutFlowTests {
     @Autowired private DailyCapacityRepository capacities;
     @Autowired private SubscriptionRepository subscriptions;
     @Autowired private OrderRepository orders;
+    @Autowired private OrderItemRepository orderItems;
     @Autowired private PaymentTransactionRepository payments;
     @Autowired private PromotionRepository promotions;
     @Autowired private PlatformTransactionManager transactionManager;
@@ -206,6 +207,65 @@ class CheckoutFlowTests {
         assertThat(order.getTotalAmount()).isEqualByComparingTo("100000");
         assertThat(order.getListAmount()).isEqualByComparingTo("200000");
         assertThat(order.getDiscountAmount()).isEqualByComparingTo("100000");
+    }
+
+    @Test
+    void bulkOrderNeedsSevenDaysWhenDeliveryDateIsSelected() {
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh"));
+        CheckoutRequest tooSoon = cakeRequest(today.plusDays(6), 20);
+        assertThatThrownBy(() -> checkout.preview(tooSoon))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("ít nhất 7 ngày");
+
+        User provider = cake.getProduct().getProvider();
+        capacities.save(DailyCapacity.builder().provider(provider).capacityDate(today.plusDays(6))
+                .maxQuantity(30).reservedQuantity(0).build());
+        CheckoutPreviewResponse preview = checkout.preview(cakeRequest(today.plusDays(7), 20));
+        assertThat(preview.groups()).hasSize(1);
+        assertThat(preview.grandTotal()).isEqualByComparingTo("2000000");
+    }
+
+    @Test
+    void onlyCakeCanBeOrderedAheadWithoutStockAndCancellationDoesNotCreateStock() {
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh"));
+        LocalDate futureDate = today.plusDays(7);
+        DailyCapacity futureCapacity = capacities.save(DailyCapacity.builder()
+                .provider(cake.getProduct().getProvider()).capacityDate(futureDate.minusDays(1))
+                .maxQuantity(10).reservedQuantity(0).build());
+        cake.setStockQuantity(0);
+        cake.setStatus(VariantStatus.OUT_OF_STOCK);
+        variants.saveAndFlush(cake);
+
+        assertThatThrownBy(() -> checkout.preview(cakeRequest(today.plusDays(5), 2)))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("Chọn ngày nhận cách ít nhất 7 ngày");
+
+        Order order = orders.findById(checkout.checkout(cakeRequest(futureDate, 2))
+                .getFirst().getId()).orElseThrow();
+        assertThat(orderItems.findByOrderBatchOrderId(order.getId())).hasSize(1);
+        assertThat(orderItems.findByOrderBatchOrderId(order.getId()).getFirst().getStockReservedQuantity()).isZero();
+        assertThat(variants.findById(cake.getId()).orElseThrow().getStockQuantity()).isZero();
+        assertThat(capacities.findById(futureCapacity.getId()).orElseThrow().getReservedQuantity()).isEqualTo(2);
+
+        lifecycle.cancel(order.getId());
+        assertThat(variants.findById(cake.getId()).orElseThrow().getStockQuantity()).isZero();
+        assertThat(capacities.findById(futureCapacity.getId()).orElseThrow().getReservedQuantity()).isZero();
+
+        box.setStockQuantity(0);
+        box.setStatus(VariantStatus.OUT_OF_STOCK);
+        variants.saveAndFlush(box);
+        CheckoutRequest boxRequest = new CheckoutRequest("Buyer", "0123456789", "Address", null, List.of(
+                new CheckoutRequest.Group(futureDate, "Hồ Chí Minh", "Quận 1", PaymentMethod.VIETQR, false,
+                        List.of(new CheckoutRequest.Item(box.getId(), null, 1, null)))));
+        assertThatThrownBy(() -> checkout.preview(boxRequest))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("không đủ số lượng");
+    }
+
+    private CheckoutRequest cakeRequest(LocalDate date, int quantity) {
+        return new CheckoutRequest("Buyer", "0123456789", "Address", null, List.of(
+                new CheckoutRequest.Group(date, "Hồ Chí Minh", "Quận 1", PaymentMethod.VIETQR, false,
+                        List.of(new CheckoutRequest.Item(cake.getId(), null, quantity, null)))));
     }
 
     private CheckoutRequest request() {

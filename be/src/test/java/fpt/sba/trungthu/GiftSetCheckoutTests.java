@@ -22,6 +22,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.ZoneId;
 
@@ -54,6 +55,8 @@ class GiftSetCheckoutTests {
                         && p.getStatus() == fpt.sba.trungthu.entity.enumeration.ProductStatus.ACTIVE
                         && boxesOf(p) > 0)
                 .findFirst().orElseThrow();
+        set.setSalePrice(set.getSalePrice().add(new BigDecimal("0.75")));
+        products.saveAndFlush(set);
         int boxesBefore = boxesOf(set);
         LocalDate delivery = LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh")).plusDays(5);
         String group = """
@@ -63,13 +66,15 @@ class GiftSetCheckoutTests {
         JsonNode preview = call("/api/checkout/preview", "{\"groups\":[" + group + "]}", buyer);
         BigDecimal previewTotal = preview.at("/data/grandTotal").decimalValue();
         BigDecimal setPrice = preview.at("/data/groups/0/lines/0/subtotal").decimalValue();
-        assertThat(setPrice).isEqualByComparingTo(set.getSalePrice());
+        assertThat(setPrice).isEqualByComparingTo(set.getSalePrice().setScale(0, RoundingMode.DOWN));
+        assertThat(previewTotal.stripTrailingZeros().scale()).isLessThanOrEqualTo(0);
 
         JsonNode orders = call("/api/checkout", """
                 {"receiverName":"Mua","receiverPhone":"0903000003","shippingAddress":"12 Tràng Tiền","groups":[%s]}"""
                 .formatted(group), buyer);
         JsonNode order = orders.at("/data/0");
         assertThat(order.get("totalAmount").decimalValue()).isEqualByComparingTo(previewTotal);
+        assertThat(order.get("totalAmount").decimalValue().stripTrailingZeros().scale()).isLessThanOrEqualTo(0);
         assertThat(order.get("discountAmount").decimalValue()).isPositive();
         assertThat(order.get("lines")).isNotEmpty().allSatisfy(line ->
                 assertThat(line.get("sourceSetId").asText()).isEqualTo(set.getId().toString()));

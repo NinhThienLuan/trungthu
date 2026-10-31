@@ -138,7 +138,8 @@ public class OrderLifecycleServiceImpl implements OrderLifecycleService {
                 .map(line -> new ReleaseStockCommand.ReleaseLine(line.getVariant().getId(), line.getQuantity(),
                         line.getBakeQuantity() > 0 ? capacityId : null, line.getBakeQuantity(),
                         line.getSourceSet() == null ? null : line.getSourceSet().getId(),
-                        line.getDirectFromSet() == null ? 0 : line.getDirectFromSet()))
+                        line.getDirectFromSet() == null ? 0 : line.getDirectFromSet(),
+                        line.getStockReservedQuantity() == null ? line.getQuantity() : line.getStockReservedQuantity()))
                 .toList();
         if (!lines.isEmpty()) {
             inventory.release(new ReleaseStockCommand(lines));

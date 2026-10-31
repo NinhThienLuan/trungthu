@@ -1,5 +1,6 @@
 package fpt.sba.trungthu.service.impl;
 
+import fpt.sba.trungthu.common.policy.CheckoutLeadTime;
 import fpt.sba.trungthu.common.exception.InventoryConflictException;
 import fpt.sba.trungthu.common.mapper.ProductMapper;
 import fpt.sba.trungthu.dto.request.AdjustStockRequest;
@@ -43,6 +44,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -53,6 +55,7 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class InventoryServiceImpl implements InventoryService {
+    private static final ZoneId VIETNAM = ZoneId.of("Asia/Ho_Chi_Minh");
 
     private final ProductRepository productRepository;
     private final ProductVariantRepository variantRepository;
@@ -193,14 +196,26 @@ public class InventoryServiceImpl implements InventoryService {
             ProductVariant variant = preview.get(line.variantId());
             Product product = variant.getProduct();
             int bake = bakeQuantity(product.getProductType(), variant, line.quantity());
-            stockDemand.merge(variant.getId(), line.quantity(), Integer::sum);
+            if (line.futureBake()) {
+                if (product.getProductType() != ProductType.LOOSE_CAKE
+                        || !CheckoutLeadTime.canBakeToOrder(line.deliveryDate(), LocalDate.now(VIETNAM))
+                        || (product.getStatus() != ProductStatus.ACTIVE && product.getStatus() != ProductStatus.SOLD_OUT)
+                        || (variant.getStatus() != VariantStatus.IN_STOCK
+                            && variant.getStatus() != VariantStatus.OUT_OF_STOCK)) {
+                    throw new ResponseStatusException(HttpStatus.CONFLICT,
+                            "Sản phẩm không thể đặt nướng trước cho ngày nhận đã chọn");
+                }
+            } else {
+                stockDemand.merge(variant.getId(), line.quantity(), Integer::sum);
+            }
             LocalDate bakeDate = line.deliveryDate().minusDays(1);
             if (bake > 0) {
                 CapacityKey key = new CapacityKey(product.getProvider().getId(), bakeDate);
                 bakeDemand.merge(key, bake, Integer::sum);
             }
             reserved.add(new ReservedLineResponse(variant.getId(), product.getProvider().getId(), product.getName(),
-                    variant.getVariantName(), variant.getPrice(), line.quantity(), bake, null, bakeDate));
+                    variant.getVariantName(), variant.getPrice(), line.quantity(), bake, null, bakeDate,
+                    null, variant.getPrice(), 0, line.futureBake() ? 0 : line.quantity()));
         }
         entityManager.flush();
         entityManager.clear();
@@ -264,7 +279,8 @@ public class InventoryServiceImpl implements InventoryService {
                     : null;
             withCapacity.add(new ReservedLineResponse(line.variantId(), line.providerId(), line.productName(),
                     line.variantName(), line.unitPrice(), line.quantity(), line.bakeQuantity(), capacityId,
-                    line.bakeDate(), line.sourceSetId(), line.listUnitPrice(), line.directUnits()));
+                    line.bakeDate(), line.sourceSetId(), line.listUnitPrice(), line.directUnits(),
+                    line.stockReservedQuantity()));
         }
         stockDemand.keySet().forEach(id -> events.publishEvent(new StockChangedEvent(id)));
         saleStatus.refreshByVariants(variantOrder);
@@ -281,7 +297,8 @@ public class InventoryServiceImpl implements InventoryService {
         }
         List<ReleaseStockCommand.ReleaseLine> lines = command.lines();
         for (ReleaseStockCommand.ReleaseLine line : lines) {
-            if (line.variantId() == null || line.quantity() <= 0 || line.bakeQuantity() < 0) {
+            if (line.variantId() == null || line.quantity() <= 0 || line.bakeQuantity() < 0
+                    || line.stockReservedQuantity() < 0 || line.stockReservedQuantity() > line.quantity()) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Release line is invalid");
             }
             if (line.bakeQuantity() > 0 && line.capacityId() == null) {
@@ -326,12 +343,15 @@ public class InventoryServiceImpl implements InventoryService {
                         "Order cancelled");
                 continue;
             }
-            variant.setStockQuantity(variant.getStockQuantity() + line.quantity());
-            if (variant.getStockQuantity() > 0 && variant.getStatus() == VariantStatus.OUT_OF_STOCK) {
-                variant.setStatus(VariantStatus.IN_STOCK);
+            if (line.stockReservedQuantity() > 0) {
+                variant.setStockQuantity(variant.getStockQuantity() + line.stockReservedQuantity());
+                if (variant.getStockQuantity() > 0 && variant.getStatus() == VariantStatus.OUT_OF_STOCK) {
+                    variant.setStatus(VariantStatus.IN_STOCK);
+                }
+                audit(variant, InventoryAuditType.ORDER_RETURN, line.stockReservedQuantity(),
+                        physicalStock(variant), "Order cancelled");
+                events.publishEvent(new StockChangedEvent(variant.getId()));
             }
-            audit(variant, InventoryAuditType.ORDER_RETURN, line.quantity(), physicalStock(variant), "Order cancelled");
-            events.publishEvent(new StockChangedEvent(variant.getId()));
         }
         saleStatus.refreshByVariants(lines.stream().map(ReleaseStockCommand.ReleaseLine::variantId).distinct().toList());
     }
@@ -381,7 +401,8 @@ public class InventoryServiceImpl implements InventoryService {
             }
             list = list.add(row.getComponentVariant().getPrice().multiply(java.math.BigDecimal.valueOf(Math.max(perSet, 0))));
         }
-        java.math.BigDecimal sale = set.getSalePrice();
+        java.math.BigDecimal sale = set.getSalePrice() == null ? null
+                : set.getSalePrice().setScale(0, java.math.RoundingMode.DOWN);
         if (sale != null && (list.signum() <= 0 || sale.compareTo(list) >= 0)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Giá chiết khấu phải nhỏ hơn giá gốc");
         }
@@ -417,7 +438,7 @@ public class InventoryServiceImpl implements InventoryService {
                 bakeDemand.merge(new CapacityKey(product.getProvider().getId(), bakeDate), bake, Integer::sum);
             }
             java.math.BigDecimal charged = component.getPrice().multiply(factor)
-                    .setScale(2, java.math.RoundingMode.HALF_UP);
+                    .setScale(0, java.math.RoundingMode.DOWN);
             reserved.add(new ReservedLineResponse(component.getId(), product.getProvider().getId(), product.getName(),
                     component.getVariantName(), charged, take, bake, null, bakeDate, set.getId(),
                     component.getPrice(), directTake));
@@ -442,7 +463,7 @@ public class InventoryServiceImpl implements InventoryService {
                 ReservedLineResponse current = reserved.get(boxIndex);
                 java.math.BigDecimal boxUnit = target.subtract(others);
                 if (selling > 1) {
-                    boxUnit = boxUnit.divide(java.math.BigDecimal.valueOf(selling), 2, java.math.RoundingMode.HALF_UP);
+                    boxUnit = boxUnit.divide(java.math.BigDecimal.valueOf(selling), 0, java.math.RoundingMode.HALF_UP);
                 }
                 reserved.set(boxIndex, new ReservedLineResponse(current.variantId(), current.providerId(),
                         current.productName(), current.variantName(), boxUnit, current.quantity(),
@@ -493,9 +514,10 @@ public class InventoryServiceImpl implements InventoryService {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Reserve line is invalid");
             }
             String key = (line.setProductId() == null ? line.variantId().toString() : "set:" + line.setProductId())
-                    + "|" + line.deliveryDate();
+                    + "|" + line.deliveryDate() + "|" + line.futureBake();
             merged.merge(key, line, (left, right) -> new ReserveStockCommand.ReserveLine(left.variantId(),
-                    left.quantity() + right.quantity(), left.deliveryDate(), left.setProductId()));
+                    left.quantity() + right.quantity(), left.deliveryDate(), left.setProductId(),
+                    left.futureBake()));
         }
         return List.copyOf(merged.values());
     }
@@ -539,9 +561,11 @@ public class InventoryServiceImpl implements InventoryService {
         }
         for (int index = lines.size() - 1; index >= 0; index--) {
             ReservedLineResponse line = lines.get(index);
+            if (line.stockReservedQuantity() == 0) continue;
             int after = cursor.get(line.variantId());
-            audit(variants.get(line.variantId()), InventoryAuditType.ORDER_HOLD, -line.quantity(), after, "Order reserved");
-            cursor.put(line.variantId(), after + line.quantity());
+            audit(variants.get(line.variantId()), InventoryAuditType.ORDER_HOLD,
+                    -line.stockReservedQuantity(), after, "Order reserved");
+            cursor.put(line.variantId(), after + line.stockReservedQuantity());
         }
     }
 

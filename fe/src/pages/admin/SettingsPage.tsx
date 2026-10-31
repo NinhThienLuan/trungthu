@@ -4,11 +4,49 @@ import { useApi } from '../../hooks/useApi'
 import { useDocumentTitle } from '../../hooks/useDocumentTitle'
 import { addDays, toIsoDate } from '../../lib/format'
 import { sellerSettingsService } from '../../services/sellerSettingsService'
-import { TextInput } from '../../components/ui/Field'
+import type { SellerSettings } from '../../services/sellerSettingsService'
+import { Field, TextInput } from '../../components/ui/Field'
+import { SearchableSelect, type SelectGroup } from '../../components/ui/SearchableSelect'
+import banks from '../../data/vietqrBanks.json'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { ErrorState, Notice, Spinner } from '../../components/ui/States'
 
 const today = () => toIsoDate(new Date())
+
+// Danh sách ngân hàng và logo từ https://api.vietqr.io/v2/banks (28/10/2026).
+const bankNameCollator = new Intl.Collator('vi', { sensitivity: 'base' })
+const bankGroups: SelectGroup[] = [{ options: [...banks]
+  .sort((a, b) => bankNameCollator.compare(a.shortName, b.shortName))
+  .map((bank) => ({
+    value: bank.bin,
+    label: bank.shortName,
+    description: bank.name,
+    imageUrl: bank.logo,
+    searchText: `${bank.code} ${bank.bin}`,
+  })) }]
+
+const savedBankBin = (code: string | null) => {
+  const normalized = code?.trim().toUpperCase() === 'AGR' ? 'VBA' : code?.trim().toUpperCase()
+  return banks.find((bank) => bank.bin === normalized || bank.code.toUpperCase() === normalized)?.bin ?? ''
+}
+
+function BankAccountFields({ settings }: { settings: SellerSettings }) {
+  const [bankBin, setBankBin] = useState(() => savedBankBin(settings.bankCode))
+
+  return (
+    <div className="grid gap-4 sm:grid-cols-2">
+      <Field label="Ngân hàng" name="bank" className="sm:col-span-2">
+        <SearchableSelect id="bank" value={bankBin} groups={bankGroups}
+          placeholder="Tìm tên hoặc mã ngân hàng" onChange={setBankBin} />
+        <input type="hidden" name="bankCode" value={bankBin} />
+      </Field>
+      <TextInput label="Số tài khoản" name="accountNumber" inputMode="numeric"
+        defaultValue={settings.accountNumber ?? ''} required />
+      <TextInput label="Tên chủ tài khoản" name="accountName"
+        defaultValue={settings.accountName ?? ''} required />
+    </div>
+  )
+}
 
 /** Một khối form: gửi, báo lỗi/thành công tại chỗ */
 function Section({ title, hint, submitLabel, onSubmit, children }: {
@@ -91,16 +129,15 @@ export function SettingsPage() {
           hint="Khách chuyển khoản cọc vào tài khoản này; bạn xác nhận đã nhận tiền ở trang đơn hàng."
           submitLabel="Lưu tài khoản"
           onSubmit={async (f) => {
+            if (!banks.some((bank) => bank.bin === f.bankCode)) {
+              throw new Error('Vui lòng chọn ngân hàng trong danh sách.')
+            }
             await sellerSettingsService.setBankAccount({ bankCode: f.bankCode, accountNumber: f.accountNumber, accountName: f.accountName })
             reload()
             return 'Đã lưu tài khoản ngân hàng.'
           }}
         >
-          <div className="grid gap-4 sm:grid-cols-3">
-            <TextInput label="Mã ngân hàng" name="bankCode" placeholder="VCB" defaultValue={data.bankCode ?? ''} required />
-            <TextInput label="Số tài khoản" name="accountNumber" inputMode="numeric" defaultValue={data.accountNumber ?? ''} required />
-            <TextInput label="Tên chủ tài khoản" name="accountName" defaultValue={data.accountName ?? ''} required />
-          </div>
+          <BankAccountFields key={data.bankCode ?? ''} settings={data} />
         </Section>
 
       </div>

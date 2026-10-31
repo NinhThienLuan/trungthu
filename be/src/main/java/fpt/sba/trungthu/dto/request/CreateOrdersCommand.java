@@ -51,12 +51,24 @@ public record CreateOrdersCommand(
             UUID sourceSetId,
             int directUnits,
             @Size(max = 50) String personalizationText,
-            @NotNull @DecimalMin("0") BigDecimal personalizationFee) {
+            @NotNull @DecimalMin("0") BigDecimal personalizationFee,
+            Integer stockReservedQuantity) {
 
         public ItemSnapshot {
             if (personalizationFee == null) {
                 personalizationFee = BigDecimal.ZERO;
             }
+            if (stockReservedQuantity == null) stockReservedQuantity = quantity;
+            if (stockReservedQuantity < 0 || stockReservedQuantity > quantity) {
+                throw new IllegalArgumentException("Reserved stock quantity must be between 0 and ordered quantity");
+            }
+        }
+
+        public ItemSnapshot(UUID variantId, String productName, String variantName, int quantity, BigDecimal unitPrice,
+                int bakeQuantity, UUID sourceSetId, int directUnits, String personalizationText,
+                BigDecimal personalizationFee) {
+            this(variantId, productName, variantName, quantity, unitPrice, bakeQuantity, sourceSetId, directUnits,
+                    personalizationText, personalizationFee, quantity);
         }
 
         public ItemSnapshot(UUID variantId, String productName, String variantName, int quantity, BigDecimal unitPrice,

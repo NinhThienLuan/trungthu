@@ -16,7 +16,9 @@ import java.math.BigDecimal;
         @Check(name = "CK_ORDER_ITEM_unit_price", constraints = "unit_price >= 0"),
         @Check(name = "CK_ORDER_ITEM_subtotal", constraints = "subtotal >= 0"),
         @Check(name = "CK_ORDER_ITEM_personalization_fee", constraints = "personalization_fee >= 0"),
-        @Check(name = "CK_ORDER_ITEM_bake_quantity", constraints = "bake_quantity >= 0") })
+        @Check(name = "CK_ORDER_ITEM_bake_quantity", constraints = "bake_quantity >= 0"),
+        @Check(name = "CK_ORDER_ITEM_stock_reserved_quantity",
+                constraints = "stock_reserved_quantity IS NULL OR (stock_reserved_quantity >= 0 AND stock_reserved_quantity <= quantity)") })
 @Getter
 @Setter
 @SuperBuilder
@@ -54,6 +56,10 @@ public class OrderItem extends CreatedEntity {
 
     @Column(name = "quantity", nullable = false)
     private Integer quantity;
+
+    // NULL on legacy orders means the full quantity was reserved from stock.
+    @Column(name = "stock_reserved_quantity")
+    private Integer stockReservedQuantity;
 
     @Column(name = "unit_price", nullable = false, precision = 18, scale = 2)
     private BigDecimal unitPrice;

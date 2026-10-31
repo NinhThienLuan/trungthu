@@ -10,16 +10,15 @@ import { useDocumentTitle } from '../../hooks/useDocumentTitle'
 import { checkoutSchema, fieldErrors } from '../../schemas'
 import { COD_MAX_TOTAL, DEPOSIT_RATE, ROUTES } from '../../constants'
 import { cn, formatVnd } from '../../lib/format'
+import { addDays, toIsoDate } from '../../lib/format'
+import { leadDaysForItems, toCheckoutGroups, type PayChoice } from '../../lib/checkoutGroups'
 import { Field, TextInput } from '../../components/ui/Field'
 import { OrderItemsSummary } from '../../components/OrderItemsSummary'
 import { SearchableSelect, type SelectGroup } from '../../components/ui/SearchableSelect'
 import administrativeUnits from '../../data/vietnamAdministrativeUnits.json'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { Notice, Spinner } from '../../components/ui/States'
-import type { CheckoutGroup, CheckoutPreview, OrderDetail } from '../../types/order'
-
-/** Lựa chọn thanh toán của một xưởng: COD hoặc VietQR (cọc 50% / trả đủ) */
-type PayChoice = 'COD' | 'MIN_DEPOSIT' | 'FULL'
+import type { CheckoutPreview, OrderDetail } from '../../types/order'
 
 /** Một người nhận: địa chỉ riêng + số lượng mỗi món gửi cho người này (người đầu tiên nhận phần còn lại) */
 interface Recipient {
@@ -63,22 +62,6 @@ function allocate(items: CartItem[], recipients: Recipient[]): CartItem[][] {
     .filter((item) => item.quantity > 0))
 }
 
-const toGroups = (cart: CartItem[], dates: Record<string, string>, choices: Record<string, PayChoice>): CheckoutGroup[] =>
-  groupByProvider(cart).map((g) => {
-    const choice = choices[g.providerId] ?? 'MIN_DEPOSIT'
-    return {
-      providerId: g.providerId,
-      deliveryDate: dates[g.providerId],
-      paymentMethod: choice === 'COD' ? 'COD' : 'VIETQR',
-      depositOption: choice === 'COD' ? undefined : choice,
-      items: g.items.filter((i) => i.kind === 'single').map((i) =>
-        i.setProductId ? { setProductId: i.setProductId, quantity: i.quantity } : { variantId: i.variantId, quantity: i.quantity }),
-      boxes: g.items
-        .filter((i) => i.kind === 'box')
-        .map((i) => ({ boxVariantId: i.variantId, quantity: i.quantity, cakeVariantIds: (i.slots ?? []).map((s) => s.variantId), note: i.note })),
-    }
-  })
-
 const fullAddress = (r: Recipient) =>
   `${r.street.trim()}, ${wardOf(r.provinceCode, r.wardCode)?.name}, ${provinceOf(r.provinceCode)?.name}`
 
@@ -96,7 +79,8 @@ export function CheckoutPage() {
   const placed = useRef(false)
 
   const groups = groupByProvider(items)
-  const ready = groups.length > 0 && groups.every((g) => deliveryDates[g.providerId])
+  const ready = groups.length > 0 && groups.every((group) => deliveryDates[group.providerId]
+    && deliveryDates[group.providerId] >= toIsoDate(addDays(new Date(), leadDaysForItems(group.items))))
   const carts = allocate(items, recipients)
   const overAllocated = items.filter((item) => recipients.slice(1)
     .reduce((sum, r) => sum + (r.qty[item.lineId] ?? 0), 0) > item.quantity)
@@ -108,7 +92,7 @@ export function CheckoutPage() {
   const { data: previews, loading: previewLoading, error: previewError } = useApi(
     (): Promise<CheckoutPreview[] | null> => ready && overAllocated.length === 0
       ? Promise.all(active.map(({ cart }) => orderService.preview(
-          { receiverName: '', receiverPhone: '', shippingAddress: '', groups: toGroups(cart, deliveryDates, {}) }, cart)))
+          { receiverName: '', receiverPhone: '', shippingAddress: '', groups: toCheckoutGroups(cart, deliveryDates, {}) }, cart)))
       : Promise.resolve(null),
     [items, deliveryDates, allocationKey],
   )
@@ -170,7 +154,7 @@ export function CheckoutPage() {
           receiverPhone: r.phone.trim(),
           shippingAddress: fullAddress(r),
           vat: vatCheck.success ? vatCheck.data.vat : undefined,
-          groups: toGroups(cart, deliveryDates, effectiveChoices),
+          groups: toCheckoutGroups(cart, deliveryDates, effectiveChoices),
         }, cart))
       } catch (err) {
         failure = `${r.name.trim()}: ${errorMessage(err)}`

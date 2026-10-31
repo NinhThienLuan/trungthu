@@ -6,6 +6,8 @@ export const BRAND = 'Nguyệt Viên Đài'
 
 // Quy tắc nghiệp vụ (SRS) — đổi ở đây, không viết số cứng trong component
 export const MIN_LEAD_DAYS = 3 // ngày nhận >= hôm nay + 3
+export const BULK_ORDER_QUANTITY = 20 // từ 20 sản phẩm/xưởng cần chuẩn bị lâu hơn
+export const BULK_LEAD_DAYS = 7
 export const RFQ_MIN_QUANTITY = 20 // RFQ sỉ từ 20 hộp
 export const DEPOSIT_RATE = 0.5 // cọc tối thiểu 50%
 export const HOLD_MINUTES = 300 // VietQR: tối đa 5 giờ từ lúc đặt

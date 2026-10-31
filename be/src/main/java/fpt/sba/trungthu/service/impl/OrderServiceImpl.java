@@ -136,7 +136,8 @@ public class OrderServiceImpl implements OrderService {
                 .variant(variants.get(item.variantId())).sourceSet(sourceSet(group, item))
                 .directFromSet(item.directUnits())
                 .productName(item.productName()).variantName(item.variantName())
-                .quantity(item.quantity()).unitPrice(item.unitPrice()).bakeQuantity(item.bakeQuantity())
+                .quantity(item.quantity()).stockReservedQuantity(item.stockReservedQuantity())
+                .unitPrice(item.unitPrice()).bakeQuantity(item.bakeQuantity())
                 .personalizationText(item.personalizationText()).personalizationFee(item.personalizationFee())
                 .subtotal(item.unitPrice().multiply(BigDecimal.valueOf(item.quantity()))
                         .add(item.personalizationFee())).build()).toList());
