@@ -29,6 +29,11 @@ export interface SellerProduct {
   productType: ProductType
   status: SellerProductStatus
   primaryImageUrl: string | null
+  /** Set quà: số set đã đóng sẵn, giá gốc (tổng thành phần) và giá ưu đãi của set */
+  assembledQuantity?: number
+  listPrice?: number
+  salePrice?: number | null
+  components?: Array<{ variantId: string; productName: string; variantName: string; productType: ProductType; perSetQuantity: number | null; boxCapacity: number | null }>
   variants: Array<{
     id: string
     variantName: string
@@ -46,6 +51,8 @@ export interface ProductInput {
   description?: string
   story?: string
   ingredients?: string
+  /** Chỉ set quà: giá bán set, phải nhỏ hơn tổng giá thành phần */
+  salePrice?: number
   productType: ProductType
   status?: 'DRAFT' | 'ACTIVE' | 'ARCHIVED'
 }
@@ -90,6 +97,13 @@ export const sellerService = {
   /** Thay album bằng một ảnh đại diện (URL hoặc data URI, BE giới hạn 2MB ký tự) */
   setImage: (id: string, imageUrl: string) =>
     unwrap(http.put<ApiResponse<SellerProduct>>(`${P}/${id}/images`, { images: [{ imageUrl, isPrimary: true, displayOrder: 0 }] })),
+  /** Set quà: công thức 1 hộp + bánh lẻ (tổng bánh = sức chứa hộp) */
+  saveSetRecipe: (setId: string, boxVariantId: string, cakes: Array<{ variantId: string; quantity: number }>) =>
+    unwrap(http.post<ApiResponse<SellerProduct>>(`${P}/${setId}/composition`, { box: { variantId: boxVariantId, quantity: 1 }, cakes })),
+  /** Đóng thêm set theo công thức (nháp: đặt số set ban đầu; đang bán: cần lý do) */
+  packSets: (setId: string, setCount: number, reason?: string) =>
+    unwrap(http.post<ApiResponse<SellerProduct>>(`${P}/${setId}/composition/stock`, { setCount, reason })),
+  releaseSets: (setId: string) => unwrap(http.post<ApiResponse<SellerProduct>>(`${P}/${setId}/composition/release`)),
   archiveProduct: (id: string) => unwrap(http.post<ApiResponse<SellerProduct>>(`${P}/${id}/archive`)),
   addVariant: (productId: string, body: VariantInput) => unwrap(http.post<ApiResponse<unknown>>(`${P}/${productId}/variants`, body)),
   /** Sửa phân loại: SKU/khối lượng/sức chứa gửi lại giá trị cũ; tồn chỉ sửa được khi sản phẩm còn nháp */

@@ -11,8 +11,7 @@ import { PageHeader } from '../../components/ui/PageHeader'
 import { EmptyState, ErrorState, Notice, Spinner } from '../../components/ui/States'
 
 const STATUS_LABEL: Record<SellerProductStatus, string> = { DRAFT: 'Nháp', ACTIVE: 'Đang bán', SOLD_OUT: 'Hết hàng', ARCHIVED: 'Đã lưu trữ' }
-// ponytail: set quà (GIFT_SET) cần phối hộp + bánh, chưa làm form ở đây; thêm khi seller cần tự đóng set trên web
-const CREATABLE: ProductType[] = ['LOOSE_CAKE', 'BOX_SHELL', 'GREETING_CARD', 'ADDON_SERVICE']
+const CREATABLE: ProductType[] = ['LOOSE_CAKE', 'BOX_SHELL', 'GIFT_SET', 'GREETING_CARD', 'ADDON_SERVICE']
 
 type Form = Record<string, string>
 const read = (e: FormEvent<HTMLFormElement>): Form => {
@@ -79,22 +78,22 @@ export function BakeBatchPage() {
       {loading && !data ? <Spinner /> : error ? <ErrorState message={error} onRetry={reload} />
         : products.length === 0 ? <EmptyState title="Chưa có sản phẩm nào" /> : (
           <div className="flex flex-col gap-4">
-            {products.map((p) => <ProductCard key={p.id} product={p} run={run} />)}
+            {products.map((p) => <ProductCard key={p.id} product={p} catalog={products} run={run} />)}
           </div>
         )}
     </div>
   )
 }
 
-type Panel = { kind: 'variant' | 'info' } | { kind: 'import' | 'out' | 'edit'; variantId: string }
+type Panel = { kind: 'variant' | 'info' | 'recipe' | 'pack' } | { kind: 'import' | 'out' | 'edit'; variantId: string }
 
-function ProductCard({ product: p, run }: { product: SellerProduct; run: (action: () => Promise<unknown>, done: string) => Promise<boolean> }) {
+function ProductCard({ product: p, catalog, run }: { product: SellerProduct; catalog: SellerProduct[]; run: (action: () => Promise<unknown>, done: string) => Promise<boolean> }) {
   const [panel, setPanel] = useState<Panel>()
   const toggle = (next: Panel) => setPanel(JSON.stringify(panel) === JSON.stringify(next) ? undefined : next)
   // BE ghi đè mọi trường khi sửa -> luôn gửi lại mô tả, câu chuyện, nguyên liệu hiện có
   const input = (status: ProductInput['status']): ProductInput => ({
     name: p.name, description: p.description ?? undefined, story: p.story ?? undefined, ingredients: p.ingredients ?? undefined,
-    productType: p.productType, status,
+    salePrice: p.salePrice ?? undefined, productType: p.productType, status,
   })
   const close = (ok: boolean) => ok && setPanel(undefined)
   const isSet = p.productType === 'GIFT_SET'
@@ -130,7 +129,8 @@ function ProductCard({ product: p, run }: { product: SellerProduct; run: (action
         </div>
       </div>
 
-      {isSet ? <p className="text-small text-muted">Set quà: giá và số set đóng sẵn quản lý theo công thức set.</p>
+      {isSet ? <SetSummary set={p} onRecipe={() => toggle({ kind: 'recipe' })} onPack={() => toggle({ kind: 'pack' })}
+          onRelease={() => window.confirm('Trả toàn bộ set đã đóng về kho thành phần?') && run(() => sellerService.releaseSets(p.id), 'Đã trả set về kho.')} />
         : p.variants.length === 0 ? <p className="text-small text-muted">Chưa có phân loại nào.</p> : (
           <div className="overflow-x-auto">
             <table className="w-full text-small">
@@ -155,15 +155,24 @@ function ProductCard({ product: p, run }: { product: SellerProduct; run: (action
           </div>
         )}
 
+      {panel?.kind === 'recipe' && <RecipeForm set={p} catalog={catalog} onSave={async (box, cakes) => close(await run(() => sellerService.saveSetRecipe(p.id, box, cakes), 'Đã lưu công thức set.'))} />}
+      {panel?.kind === 'pack' && (
+        <InlineForm submitLabel="Đóng set" onSubmit={async (f) => close(await run(() => sellerService.packSets(p.id, Number(f.setCount), f.reason || undefined), `Đã đóng ${f.setCount} set.`))}>
+          <TextInput label={p.status === 'DRAFT' ? 'Số set ban đầu' : 'Đóng thêm (set)'} name="setCount" type="number" min={1} defaultValue={10} required />
+          {p.status !== 'DRAFT' && <TextInput label="Lý do" name="reason" defaultValue="Đóng thêm set" required />}
+        </InlineForm>
+      )}
       {panel?.kind === 'info' && (
         <form noValidate className="grid gap-3 border-t border-line pt-4" onSubmit={async (e) => {
           const f = read(e)
           close(await run(() => sellerService.updateProduct(p.id, {
             name: f.name, description: f.description || undefined, story: f.story || undefined,
             ingredients: f.ingredients || undefined, productType: p.productType,
+            salePrice: isSet ? optionalNumber(f.salePrice) : undefined,
           }), `Đã cập nhật thông tin "${f.name}".`))
         }}>
           <TextInput label="Tên sản phẩm" name="name" defaultValue={p.name} required />
+          {isSet && <TextInput label={`Giá bán set (đ) — phải nhỏ hơn giá gốc ${formatVnd(p.listPrice ?? 0)}`} name="salePrice" type="number" min={0} defaultValue={p.salePrice ?? ''} />}
           <TextArea label="Mô tả ngắn" name="description" defaultValue={p.description ?? ''} rows={2} />
           <TextArea label="Câu chuyện sản phẩm (hiện ở tab Câu chuyện)" name="story" defaultValue={p.story ?? ''} rows={4}
             placeholder="Nguồn gốc công thức, nghệ nhân, cách làm..." />
@@ -221,5 +230,64 @@ function InlineForm({ submitLabel, onSubmit, children }: { submitLabel: string; 
       {children}
       <button type="submit" className="btn btn-primary self-end">{submitLabel}</button>
     </form>
+  )
+}
+
+/** Set quà: công thức hiện tại, số set đã đóng, giá */
+function SetSummary({ set, onRecipe, onPack, onRelease }: { set: SellerProduct; onRecipe: () => void; onPack: () => void; onRelease: () => void }) {
+  const parts = set.components ?? []
+  return (
+    <div className="flex flex-col gap-2 text-small">
+      {parts.length === 0
+        ? <p className="text-muted">Chưa có công thức: chọn 1 hộp và các loại bánh lẻ cho mỗi set.</p>
+        : <p>Mỗi set: {parts.map((c) => `${c.productName} ${c.variantName} ×${c.perSetQuantity ?? 1}`).join(' + ')}</p>}
+      <p className="text-muted">
+        Đã đóng {set.assembledQuantity ?? 0} set · giá gốc {formatVnd(set.listPrice ?? 0)}
+        {set.salePrice ? ` · giá bán ${formatVnd(set.salePrice)}` : ' · chưa đặt giá bán (Sửa thông tin)'}
+      </p>
+      <div className="flex flex-wrap gap-2">
+        <button type="button" className="btn btn-outline btn-sm" onClick={onRecipe}>{parts.length ? 'Đổi công thức' : 'Lập công thức'}</button>
+        {parts.length > 0 && <button type="button" className="btn btn-outline btn-sm" onClick={onPack}>Đóng set</button>}
+        {(set.assembledQuantity ?? 0) > 0 && <button type="button" className="btn btn-ghost btn-sm text-danger" onClick={onRelease}>Trả set về kho</button>}
+      </div>
+    </div>
+  )
+}
+
+/** Công thức set: 1 hộp (sức chứa N) + số bánh từng loại, tổng = N. BE kiểm tra lại */
+function RecipeForm({ set, catalog, onSave }: { set: SellerProduct; catalog: SellerProduct[]; onSave: (box: string, cakes: Array<{ variantId: string; quantity: number }>) => void }) {
+  const boxes = catalog.filter((p) => p.productType === 'BOX_SHELL').flatMap((p) => p.variants.filter((v) => (v.boxCapacity ?? 0) > 0).map((v) => ({ p, v })))
+  const cakes = catalog.filter((p) => p.productType === 'LOOSE_CAKE').flatMap((p) => p.variants.map((v) => ({ p, v })))
+  const current = set.components ?? []
+  const [box, setBox] = useState(current.find((c) => c.productType === 'BOX_SHELL')?.variantId ?? boxes[0]?.v.id ?? '')
+  const [qty, setQty] = useState<Record<string, number>>(() => Object.fromEntries(
+    current.filter((c) => c.productType === 'LOOSE_CAKE').map((c) => [c.variantId, c.perSetQuantity ?? 0])))
+  const capacity = boxes.find((b) => b.v.id === box)?.v.boxCapacity ?? 0
+  const total = Object.values(qty).reduce((a, b) => a + b, 0)
+  if (boxes.length === 0 || cakes.length === 0) {
+    return <p className="border-t border-line pt-4 text-small text-muted">Cần có ít nhất một sản phẩm Hộp quà (có sức chứa) và một Bánh lẻ để lập công thức set.</p>
+  }
+  return (
+    <div className="flex flex-col gap-3 border-t border-line pt-4 text-small">
+      <Field label="Hộp" name={`box-${set.id}`}>
+        <select id={`box-${set.id}`} className="input" value={box} onChange={(e) => setBox(e.target.value)}>
+          {boxes.map(({ p, v }) => <option key={v.id} value={v.id}>{p.name} · {v.variantName} ({v.boxCapacity} bánh)</option>)}
+        </select>
+      </Field>
+      <p className="field-label">Bánh trong mỗi set ({total}/{capacity})</p>
+      <ul className="grid gap-2 sm:grid-cols-2">
+        {cakes.map(({ p, v }) => (
+          <li key={v.id} className="flex items-center justify-between gap-2">
+            <span>{p.name} · {v.variantName}</span>
+            <input type="number" min={0} className="input w-20 text-right" aria-label={`Số ${p.name} ${v.variantName} mỗi set`} value={qty[v.id] ?? 0}
+              onChange={(e) => setQty((q) => ({ ...q, [v.id]: Math.max(0, Math.floor(Number(e.target.value) || 0)) }))} />
+          </li>
+        ))}
+      </ul>
+      <button type="button" className="btn btn-primary self-start" disabled={total !== capacity}
+        onClick={() => onSave(box, Object.entries(qty).filter(([, n]) => n > 0).map(([variantId, quantity]) => ({ variantId, quantity })))}>
+        {total === capacity ? 'Lưu công thức' : `Cần đủ ${capacity} bánh`}
+      </button>
+    </div>
   )
 }

@@ -294,6 +294,30 @@ class CheckoutFlowTests {
         assertThat(order.getTotalAmount()).isEqualByComparingTo("200000");
     }
 
+    @Test
+    void severalRecipientsCheckoutInOneTransaction() {
+        java.util.function.BiFunction<String, Integer, CheckoutRequest.Group> to = (who, qty) -> new CheckoutRequest.Group(
+                null, delivery, null, null, null, PaymentMethod.VIETQR, false, "MIN_DEPOSIT",
+                List.of(new CheckoutRequest.Item(cake.getId(), null, qty, null, null)), null,
+                who, "0901234567", who + " street");
+        int stock = variants.findById(cake.getId()).orElseThrow().getStockQuantity();
+
+        // Cùng xưởng, cùng món, hai người nhận -> hai đơn, hai địa chỉ
+        var created = checkout.checkout(new CheckoutRequest(null, null, null, null, List.of(to.apply("An", 2), to.apply("Binh", 3))));
+        assertThat(created).hasSize(2);
+        assertThat(created).extracting("shippingAddress").containsExactlyInAnyOrder("An street", "Binh street");
+        assertThat(variants.findById(cake.getId()).orElseThrow().getStockQuantity()).isEqualTo(stock - 5);
+
+        // Nhóm sau thiếu hàng -> không đơn nào được tạo, kho giữ nguyên
+        long before = orders.count();
+        int left = stock - 5;
+        assertThatThrownBy(() -> checkout.checkout(new CheckoutRequest(null, null, null, null,
+                List.of(to.apply("Chi", 1), to.apply("Dung", left)))))
+                .isInstanceOf(org.springframework.web.server.ResponseStatusException.class);
+        assertThat(orders.count()).isEqualTo(before);
+        assertThat(variants.findById(cake.getId()).orElseThrow().getStockQuantity()).isEqualTo(left);
+    }
+
     private CheckoutRequest request() {
         return new CheckoutRequest("Buyer", "0123456789", "Address", null, List.of(
                 new CheckoutRequest.Group(delivery, "Hồ Chí Minh", "Quận 1", PaymentMethod.COD, false,

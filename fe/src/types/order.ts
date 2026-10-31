@@ -34,6 +34,10 @@ export interface CheckoutGroup {
   /** Chỉ dùng khi thanh toán online */
   depositOption?: DepositOption
   items: CheckoutLine[]
+  /** Nhiều người nhận: người nhận riêng của nhóm (trống = người nhận chung của request) */
+  receiverName?: string
+  receiverPhone?: string
+  shippingAddress?: string
 }
 
 /** Khớp CreateOrdersCommand.VatInfo */

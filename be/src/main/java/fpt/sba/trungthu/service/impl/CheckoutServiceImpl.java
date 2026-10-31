@@ -65,16 +65,19 @@ public class CheckoutServiceImpl implements CheckoutService {
     @Transactional(rollbackFor = Exception.class)
     public List<OrderDetailResponse> checkout(CheckoutRequest request) {
         User customer = requireCustomer();
-        if (request == null || request.receiverName() == null || request.receiverName().isBlank()
-                || request.receiverPhone() == null || request.receiverPhone().isBlank()
-                || request.shippingAddress() == null || request.shippingAddress().isBlank()) {
-            throw badRequest("Receiver name, phone and shipping address are required");
-        }
         Instant orderedAt = Instant.now();
         List<Plan> plans = plan(request, true);
-        List<ReserveStockCommand.ReserveLine> reserveLines = new ArrayList<>();
-        List<Snap> snaps = new ArrayList<>();
         for (Plan plan : plans) {
+            if (plan.receiver().name().isEmpty() || plan.receiver().phone().isEmpty() || plan.receiver().address().isEmpty()) {
+                throw badRequest("Receiver name, phone and shipping address are required");
+            }
+        }
+        // Giữ hàng riêng từng nhóm (hai người nhận cùng xưởng, cùng món không bị gộp); một transaction nên
+        // nhóm nào lỗi thì toàn bộ lần đặt huỷ. Mỗi người nhận một lệnh tạo đơn (mỗi xưởng một đơn).
+        Map<Receiver, List<CreateOrdersCommand.ProviderOrder>> byReceiver = new LinkedHashMap<>();
+        for (Plan plan : plans) {
+            List<ReserveStockCommand.ReserveLine> reserveLines = new ArrayList<>();
+            List<Snap> snaps = new ArrayList<>();
             for (Line line : plan.lines()) {
                 if (line.set() != null) {
                     // BE2 tách set thành các dòng thành phần (sourceSetId) khi giữ hàng
@@ -90,46 +93,41 @@ public class CheckoutServiceImpl implements CheckoutService {
                         line.variant().getProduct().getName(), line.variantName(), line.quantity(),
                         line.unitPrice(), line.personalizationText(), line.personalizationFee()));
             }
-        }
-        List<ReservedLineResponse> reserved = inventory.reserve(new ReserveStockCommand(reserveLines));
-        List<CreateOrdersCommand.ProviderOrder> groups = new ArrayList<>();
-        for (Plan plan : plans) {
-            UUID capacityId = reserved.stream()
-                    .filter(line -> plan.provider().getId().equals(line.providerId()) && line.capacityId() != null)
-                    .map(ReservedLineResponse::capacityId).findFirst().orElse(null);
+            List<ReservedLineResponse> reserved = inventory.reserve(new ReserveStockCommand(reserveLines));
+            UUID capacityId = reserved.stream().map(ReservedLineResponse::capacityId).filter(Objects::nonNull)
+                    .findFirst().orElse(null);
             if (plan.bakeQuantity() > 0 && capacityId == null) {
                 throw conflict("CAPACITY_MISSING provider=" + plan.provider().getId());
             }
-            List<CreateOrdersCommand.ItemSnapshot> items = new ArrayList<>(snaps.stream()
-                    .filter(snap -> plan.provider().getId().equals(snap.providerId()))
-                    .map(snap -> {
-                        ReservedLineResponse held = reserved.stream()
-                                .filter(line -> line.sourceSetId() == null && snap.variantId().equals(line.variantId())
-                                        && snap.providerId().equals(line.providerId()))
-                                .findFirst()
-                                .orElseThrow(() -> conflict("Không thể giữ hàng cho sản phẩm đã chọn. Vui lòng thử lại."));
-                        return new CreateOrdersCommand.ItemSnapshot(snap.variantId(), snap.productName(),
-                                snap.variantName(), snap.quantity(), snap.unitPrice(), held.bakeQuantity(),
-                                null, 0, snap.personalizationText(), snap.personalizationFee(),
-                                held.stockReservedQuantity());
-                    }).toList());
+            List<CreateOrdersCommand.ItemSnapshot> items = new ArrayList<>(snaps.stream().map(snap -> {
+                ReservedLineResponse held = reserved.stream()
+                        .filter(line -> line.sourceSetId() == null && snap.variantId().equals(line.variantId()))
+                        .findFirst()
+                        .orElseThrow(() -> conflict("Không thể giữ hàng cho sản phẩm đã chọn. Vui lòng thử lại."));
+                return new CreateOrdersCommand.ItemSnapshot(snap.variantId(), snap.productName(),
+                        snap.variantName(), snap.quantity(), snap.unitPrice(), held.bakeQuantity(),
+                        null, 0, snap.personalizationText(), snap.personalizationFee(),
+                        held.stockReservedQuantity());
+            }).toList());
             reserved.stream()
-                    .filter(line -> line.sourceSetId() != null && plan.provider().getId().equals(line.providerId()))
+                    .filter(line -> line.sourceSetId() != null)
                     .map(line -> new CreateOrdersCommand.ItemSnapshot(line.variantId(), line.productName(),
                             line.variantName(), line.quantity(), line.unitPrice(), line.bakeQuantity(),
                             line.sourceSetId(), line.directUnits()))
                     .forEach(items::add);
             BigDecimal list = plan.lines().stream().map(Line::listAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
-            groups.add(new CreateOrdersCommand.ProviderOrder(plan.provider().getId(), plan.deliveryDate(),
+            byReceiver.computeIfAbsent(plan.receiver(), r -> new ArrayList<>()).add(new CreateOrdersCommand.ProviderOrder(
+                    plan.provider().getId(), plan.deliveryDate(),
                     capacityId, plan.shippingFee(), plan.deposit(), plan.paymentMethod(),
                     plan.paymentMethod() == PaymentMethod.VIETQR ? orderedAt.plusSeconds(5 * 60 * 60) : null,
                     list, list.subtract(plan.merchandise()).max(BigDecimal.ZERO), items));
         }
-        var command = new CreateOrdersCommand(UUID.randomUUID(), customer.getId(), orderedAt,
-                request.receiverName().trim(), request.receiverPhone().trim(), request.shippingAddress().trim(),
-                request.vat(), groups);
-        return orderService.createOrders(command).stream()
-                .map(order -> orderService.getOrderDetail(order.getId())).toList();
+        // Mỗi người nhận một mã checkout riêng (DB: một đơn mỗi xưởng trong một checkout); vẫn chung transaction
+        List<OrderDetailResponse> created = new ArrayList<>();
+        byReceiver.forEach((receiver, groups) -> orderService.createOrders(new CreateOrdersCommand(UUID.randomUUID(),
+                customer.getId(), orderedAt, receiver.name(), receiver.phone(), receiver.address(), request.vat(), groups))
+                .forEach(order -> created.add(orderService.getOrderDetail(order.getId()))));
+        return created;
     }
 
     private List<Plan> plan(CheckoutRequest request, boolean lock) {
@@ -139,7 +137,7 @@ public class CheckoutServiceImpl implements CheckoutService {
         }
         LocalDate today = LocalDate.now(VIETNAM);
         List<Plan> result = new ArrayList<>();
-        Set<UUID> seenProviders = new HashSet<>();
+        Set<String> seenProviders = new HashSet<>(); // mỗi người nhận một nhóm cho mỗi xưởng
         // Resolve provider IDs before taking locks; then lock every group in stable order.
         List<CheckoutRequest.Group> sorted = new ArrayList<>(request.groups());
         sorted.sort(Comparator.comparing(group -> group == null || group.items() == null || group.items().isEmpty()
@@ -237,7 +235,8 @@ public class CheckoutServiceImpl implements CheckoutService {
                 BigDecimal amount = variant.getPrice().multiply(BigDecimal.valueOf(item.quantity()));
                 lines.add(new Line(variant, null, item.quantity(), (int) bake, personal, BigDecimal.ZERO, amount, amount, null, contents));
             }
-            if (provider == null || !seenProviders.add(provider.getId())) {
+            Receiver receiver = receiverOf(request, group);
+            if (provider == null || !seenProviders.add(receiver + "|" + provider.getId())) {
                 throw badRequest("Only one delivery group per provider is supported");
             }
             if (group.providerId() != null && !provider.getId().equals(group.providerId())) {
@@ -299,7 +298,7 @@ public class CheckoutServiceImpl implements CheckoutService {
                             + group.deliveryDate() + ". Vui lòng giảm số lượng hoặc chọn ngày khác.");
                 }
             }
-            result.add(new Plan(provider, group.deliveryDate(), group.paymentMethod(), pricedLines,
+            result.add(new Plan(provider, receiver, group.deliveryDate(), group.paymentMethod(), pricedLines,
                     merchandise, personalization, shipping, total, deposit, bakeQuantity, capacity));
         }
         return result;
@@ -493,7 +492,18 @@ public class CheckoutServiceImpl implements CheckoutService {
         }
     }
 
-    private record Plan(User provider, LocalDate deliveryDate, PaymentMethod paymentMethod, List<Line> lines,
+    /** Người nhận của một nhóm: của nhóm nếu có, không thì người nhận chung của lần đặt */
+    private record Receiver(String name, String phone, String address) {}
+
+    private static Receiver receiverOf(CheckoutRequest request, CheckoutRequest.Group group) {
+        java.util.function.BiFunction<String, String, String> pick = (own, shared) ->
+                own != null && !own.isBlank() ? own.trim() : shared == null ? "" : shared.trim();
+        return new Receiver(pick.apply(group.receiverName(), request.receiverName()),
+                pick.apply(group.receiverPhone(), request.receiverPhone()),
+                pick.apply(group.shippingAddress(), request.shippingAddress()));
+    }
+
+    private record Plan(User provider, Receiver receiver, LocalDate deliveryDate, PaymentMethod paymentMethod, List<Line> lines,
             BigDecimal merchandise, BigDecimal personalization, BigDecimal shippingFee, BigDecimal total,
             BigDecimal deposit, int bakeQuantity, DailyCapacity capacity) {
         CheckoutPreviewResponse.ProviderPrice preview() {

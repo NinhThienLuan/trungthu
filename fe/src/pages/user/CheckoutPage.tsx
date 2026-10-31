@@ -143,33 +143,27 @@ export function CheckoutPage() {
     }
     setSubmitting(true)
 
-    // ponytail: mỗi người nhận một lần checkout (BE nhận 1 địa chỉ / request). Người sau lỗi thì đơn người trước
-    // vẫn giữ; muốn tất cả-hoặc-không thì BE cần nhận địa chỉ theo từng nhóm trong một request.
-    const created: OrderDetail[] = []
-    let failure: string | undefined
-    for (const { r, cart } of active) {
-      try {
-        created.push(...await orderService.checkout({
-          receiverName: r.name.trim(),
-          receiverPhone: r.phone.trim(),
-          shippingAddress: fullAddress(r),
-          vat: vatCheck.success ? vatCheck.data.vat : undefined,
-          groups: toCheckoutGroups(cart, deliveryDates, effectiveChoices),
-        }, cart))
-      } catch (err) {
-        failure = `${r.name.trim()}: ${errorMessage(err)}`
-        break
-      }
-    }
-    setSubmitting(false)
-    if (created.length === 0) {
-      // Chưa tạo đơn nào -> giữ nguyên giỏ để khách sửa lại
-      setSubmitError(failure)
+    // Một lần đặt cho mọi người nhận: mỗi nhóm mang người nhận riêng; BE tạo tất cả hoặc không đơn nào
+    let created: OrderDetail[]
+    try {
+      created = await orderService.checkout({
+        receiverName: '',
+        receiverPhone: '',
+        shippingAddress: '',
+        vat: vatCheck.success ? vatCheck.data.vat : undefined,
+        groups: active.flatMap(({ r, cart }) => toCheckoutGroups(cart, deliveryDates, effectiveChoices).map((g) => ({
+          ...g, receiverName: r.name.trim(), receiverPhone: r.phone.trim(), shippingAddress: fullAddress(r),
+        }))),
+      }, items)
+    } catch (err) {
+      // Không đơn nào được tạo -> giữ nguyên giỏ để khách sửa lại
+      setSubmitError(errorMessage(err))
+      setSubmitting(false)
       return
     }
+    setSubmitting(false)
     placed.current = true
-    navigate(`${ROUTES.payment}?ids=${created.map((o) => o.id).join(',')}`,
-      { replace: true, state: failure ? { flash: `Chưa đặt được đơn cho ${failure}` } : undefined })
+    navigate(`${ROUTES.payment}?ids=${created.map((o) => o.id).join(',')}`, { replace: true })
     clear()
   }
 

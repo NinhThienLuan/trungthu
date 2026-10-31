@@ -26,10 +26,14 @@ public record CheckoutRequest(
             Boolean payInFull, // FE gửi depositOption, có thể bỏ trống trường này (null = false)
             String depositOption,
             @NotEmpty List<@NotNull @Valid Item> items,
-            List<?> boxes) {
+            List<?> boxes,
+            /** Gửi nhiều người nhận trong một lần đặt: người nhận riêng của nhóm (trống = dùng người nhận chung) */
+            @Size(max = 255) String receiverName,
+            @Size(max = 20) String receiverPhone,
+            @Size(max = 2000) String shippingAddress) {
         public Group(LocalDate deliveryDate, String province, String district, PaymentMethod paymentMethod,
                 boolean payInFull, List<Item> items) {
-            this(null, deliveryDate, province, district, null, paymentMethod, payInFull, null, items, null);
+            this(null, deliveryDate, province, district, null, paymentMethod, payInFull, null, items, null, null, null, null);
         }
     }
 
