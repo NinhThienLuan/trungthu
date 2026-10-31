@@ -115,6 +115,7 @@ function ProductCard({ product: p, catalog, run }: { product: SellerProduct; cat
         <div className="min-w-0 flex-1">
           <h2 className="text-h3">{p.name}</h2>
           <p className="text-small text-muted">{PRODUCT_TYPE_LABEL[p.productType]} · {STATUS_LABEL[p.status]}</p>
+          {p.productType === 'BOX_SHELL' && <p className="text-small text-muted">Vỏ hộp chỉ bán kèm bánh (khách tự phối hoặc trong set quà); giá ở đây là giá vỏ.</p>}
         </div>
         <div className="flex flex-wrap gap-2">
           {p.status === 'DRAFT' && (
@@ -188,7 +189,7 @@ function ProductCard({ product: p, catalog, run }: { product: SellerProduct; cat
         }), 'Đã thêm phân loại.'))}>
           <TextInput label="Tên phân loại" name="variantName" placeholder="Hộp 4 bánh 150g" required />
           <TextInput label="SKU" name="sku" placeholder="KD-THAPCAM-150" required />
-          <TextInput label="Giá (đ)" name="price" type="number" min={0} required />
+          <TextInput label={p.productType === 'BOX_SHELL' ? 'Giá vỏ hộp (đ) — bánh tính riêng' : 'Giá (đ)'} name="price" type="number" min={0} required />
           <TextInput label="Tồn ban đầu" name="stockQuantity" type="number" min={0} defaultValue={0} />
           {p.productType === 'LOOSE_CAKE' && <TextInput label="Khối lượng (gram)" name="weightGram" type="number" min={1} required />}
           {p.productType === 'BOX_SHELL' && <TextInput label="Sức chứa (số bánh)" name="boxCapacity" type="number" min={1} required />}
@@ -204,7 +205,7 @@ function ProductCard({ product: p, catalog, run }: { product: SellerProduct; cat
             weightGram: v.weightGram ?? undefined, boxCapacity: v.boxCapacity ?? undefined,
           }), `Đã cập nhật "${f.variantName}".`))}>
             <TextInput label="Tên phân loại" name="variantName" defaultValue={v.variantName} required />
-            <TextInput label="Giá (đ)" name="price" type="number" min={0} defaultValue={v.price} required />
+            <TextInput label={p.productType === 'BOX_SHELL' ? 'Giá vỏ hộp (đ) — bánh tính riêng' : 'Giá (đ)'} name="price" type="number" min={0} defaultValue={v.price} required />
             {p.status === 'DRAFT' && <TextInput label="Tồn ban đầu" name="stockQuantity" type="number" min={0} defaultValue={v.stockQuantity ?? 0} />}
           </InlineForm>
         )

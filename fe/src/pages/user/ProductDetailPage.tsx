@@ -10,6 +10,7 @@ import { DETAIL_GALLERY } from '../../apis/mockData'
 import { useApi } from '../../hooks/useApi'
 import { useDocumentTitle } from '../../hooks/useDocumentTitle'
 import { useCartStore } from '../../stores/cartStore'
+import type { Product } from '../../types/product'
 import { ROUTES } from '../../constants'
 
 const DETAIL_TABS = [
@@ -76,6 +77,11 @@ export function ProductDetailPage() {
 
   const addToCart = () => {
     if (!variant) return
+    // Vỏ hộp chỉ bán kèm bánh: sang trang Tự phối để chọn bánh cho từng ô
+    if (product.productType === 'BOX_SHELL') {
+      navigate(ROUTES.boxBuilder)
+      return
+    }
     add(
       {
         variantId: variant.id,
@@ -102,7 +108,7 @@ export function ProductDetailPage() {
 
   const buyNow = () => {
     addToCart()
-    navigate(ROUTES.cart)
+    if (product.productType !== 'BOX_SHELL') navigate(ROUTES.cart)
   }
 
   return (
@@ -266,9 +272,7 @@ export function ProductDetailPage() {
                     {' Giá Bán Lẻ Đã Gồm VAT '}
                   </span>{' '}
                 </div>{' '}
-                <p className="font-body-sm text-body-sm text-on-surface-variant">
-                  {' Đã bao gồm hộp sơn mài mạ vàng kim nhũ, dao cắt ngọc giả sứ và thiệp chúc mừng dập nổi thủ công. '}
-                </p>{' '}
+                <SetContents product={product} setPrice={price} />
               </div>{' '}
               <PromotionBox promotions={promotions} />
               <div className="space-y-space-xs">
@@ -383,7 +387,7 @@ export function ProductDetailPage() {
                   >
                     {' '}
                     <Icon name="add_shopping_cart" className="text-secondary text-[20px]" aria-hidden />{' '}
-                    <span>{added ? 'Đã Thêm Vào Giỏ' : variant?.stockQuantity === 0 && canPreorder
+                    <span>{product.productType === 'BOX_SHELL' ? 'Phối Bánh Vào Hộp Này' : added ? 'Đã Thêm Vào Giỏ' : variant?.stockQuantity === 0 && canPreorder
                       ? 'Đặt Trước Bánh Tươi' : 'Thêm Vào Giỏ Hàng'}</span>{' '}
                   </button>{' '}
                   <button
@@ -478,6 +482,34 @@ function ProductText({ id, text, empty }: { id: string; text?: string | null; em
       {text?.trim()
         ? <p className="max-w-3xl whitespace-pre-line font-body-lg text-body-lg text-on-surface-variant leading-relaxed">{text}</p>
         : <p className="p-space-lg rounded-[0.25rem] bg-surface-container-lowest shadow-sm font-body-md text-body-md text-on-surface-variant">{empty}</p>}
+    </div>
+  )
+}
+
+/** Set quà: liệt kê từng thành phần (vỏ hộp + từng loại bánh) với số lượng và giá; vỏ hộp: ghi chú bán kèm bánh */
+function SetContents({ product, setPrice }: { product: Product; setPrice: number }) {
+  if (product.productType === 'BOX_SHELL') {
+    return (
+      <p className="font-body-sm text-body-sm text-on-surface-variant">
+        Giá trên là giá vỏ hộp. Hộp chỉ bán kèm bánh: bấm “Phối bánh vào hộp này” để chọn bánh cho từng ô (bánh tính tiền riêng).
+      </p>
+    )
+  }
+  if (product.productType !== 'GIFT_SET' || !product.components?.length) return null
+  const list = product.components.reduce((sum, c) => sum + c.price * (c.perSetQuantity ?? 1), 0)
+  return (
+    <div className="font-body-sm text-body-sm">
+      <p className="font-label-md text-label-md uppercase tracking-wider text-secondary">Trong mỗi set gồm</p>
+      <ul className="mt-1 divide-y divide-outline-variant/40">
+        {product.components.map((c) => (
+          <li key={`${c.productName}-${c.variantName}`} className="flex justify-between gap-3 py-1">
+            <span>{c.productType === 'BOX_SHELL' ? 'Vỏ hộp' : 'Bánh'}: {c.productName} · {c.variantName} <b>×{c.perSetQuantity ?? 1}</b></span>
+            <span className="shrink-0 text-on-surface-variant">{vnd(c.price * (c.perSetQuantity ?? 1))}</span>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-1 flex justify-between text-on-surface-variant"><span>Mua lẻ từng món</span><span className="line-through">{vnd(list)}</span></p>
+      {setPrice < list && <p className="flex justify-between font-semibold text-secondary"><span>Giá set (tiết kiệm {vnd(list - setPrice)})</span><span>{vnd(setPrice)}</span></p>}
     </div>
   )
 }

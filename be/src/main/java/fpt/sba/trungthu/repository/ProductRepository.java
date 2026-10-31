@@ -25,18 +25,19 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
 
     Optional<Product> findByIdAndProviderEmail(UUID id, String email);
 
+    /** Danh mục công khai; không lọc loại thì bỏ vỏ hộp (chỉ bán kèm bánh qua Tự phối / set quà) */
     @EntityGraph(attributePaths = {"variants", "provider"})
     @Query("SELECT p FROM Product p WHERE p.status IN ('ACTIVE', 'SOLD_OUT') AND p.provider.status = 'ACTIVE' " +
             "AND (EXISTS (SELECT 1 FROM ProductVariant v WHERE v.product = p) " +
             "OR EXISTS (SELECT 1 FROM GiftSetComponent c WHERE c.setProduct = p)) " +
-            "AND (:type IS NULL OR p.productType = :type) ORDER BY p.createdAt DESC")
+            "AND ((:type IS NULL AND p.productType <> fpt.sba.trungthu.entity.enumeration.ProductType.BOX_SHELL) OR p.productType = :type) ORDER BY p.createdAt DESC")
     List<Product> findPublic(@Param("type") ProductType type);
 
     @EntityGraph(attributePaths = {"variants", "provider"})
     @Query("SELECT p FROM Product p WHERE p.status IN ('ACTIVE', 'SOLD_OUT') AND p.provider.status = 'ACTIVE' " +
             "AND (EXISTS (SELECT 1 FROM ProductVariant v WHERE v.product = p) " +
             "OR EXISTS (SELECT 1 FROM GiftSetComponent c WHERE c.setProduct = p)) " +
-            "AND (:type IS NULL OR p.productType = :type)")
+            "AND ((:type IS NULL AND p.productType <> fpt.sba.trungthu.entity.enumeration.ProductType.BOX_SHELL) OR p.productType = :type)")
     Page<Product> findPublic(@Param("type") ProductType type, Pageable pageable);
 
     @EntityGraph(attributePaths = {"variants", "provider"})

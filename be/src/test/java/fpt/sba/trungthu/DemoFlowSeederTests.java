@@ -49,8 +49,9 @@ class DemoFlowSeederTests {
         assertThat(statusOf(sellerProducts, "Bánh nướng gà quay")).isEqualTo(ProductStatus.ARCHIVED);
         assertThat(statusOf(sellerProducts, "Bánh nướng đậu xanh")).isEqualTo(ProductStatus.SOLD_OUT);
         assertThat(productService.getPublicProducts(null)).extracting(product -> product.getName())
-                .contains("Bánh nướng thập cẩm", "Hộp đoàn viên", "Set đoàn viên", "Thiệp trung thu", "Bánh nướng đậu xanh")
-                .doesNotContain("Bánh dẻo hạt sen", "Bánh nướng gà quay");
+                .contains("Bánh nướng thập cẩm", "Set đoàn viên", "Thiệp trung thu", "Bánh nướng đậu xanh")
+                // vỏ hộp chỉ bán kèm bánh (Tự phối / set quà) nên không có trong danh mục chung
+                .doesNotContain("Hộp đoàn viên", "Bánh dẻo hạt sen", "Bánh nướng gà quay");
 
         var cake = variant(sellerProducts, "DEMO-THAPCAM-150");
         var balance = stats.stats("seller@kinhdo.vn", cake.productId(), cake.variant().getId());

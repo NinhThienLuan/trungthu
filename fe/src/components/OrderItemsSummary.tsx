@@ -28,7 +28,7 @@ export function BoxItemDetails({ item }: { item: CartItem }) {
               </li>
             ))}
           </ul>
-          <p className="mt-1 text-small text-muted">Giá bánh lẻ chỉ để tham khảo — đã gồm trong giá quy cách.</p>
+          <p className="mt-1 text-small text-muted">Giá 1 hộp = vỏ hộp + từng bánh; đơn ghi riêng từng dòng.</p>
         </>
       )}
       {item.note && <p className="mt-2 text-small italic text-muted">Lời chúc: “{item.note}”</p>}
