@@ -31,6 +31,7 @@ import { BakeBatchPage } from '../pages/admin/BakeBatchPage'
 import { OrdersPage } from '../pages/admin/OrdersPage'
 import { SellerRfqPage } from '../pages/admin/SellerRfqPage'
 import { PromotionsPage } from '../pages/admin/PromotionsPage'
+import { ComplaintsPage } from '../pages/admin/ComplaintsPage'
 import { SubscriptionPage } from '../pages/admin/SubscriptionPage'
 import { SubscriptionsAdminPage } from '../pages/admin/SubscriptionsAdminPage'
 import { QualityReviewPage } from '../pages/admin/QualityReviewPage'
@@ -81,6 +82,7 @@ export const router = createBrowserRouter([
           { path: '/seller/settings', element: <SettingsPage /> },
           { path: '/seller/b2b', element: <SellerRfqPage /> },
           { path: '/seller/promotions', element: <PromotionsPage /> },
+          { path: '/seller/complaints', element: <ComplaintsPage scope="provider" /> },
           { path: '/seller/subscription', element: <SubscriptionPage /> },
         ],
       },
@@ -90,6 +92,7 @@ export const router = createBrowserRouter([
         children: [
           { path: '/admin/kyc', element: <QualityReviewPage /> },
           { path: '/admin/subscriptions', element: <SubscriptionsAdminPage /> },
+          { path: '/admin/complaints', element: <ComplaintsPage scope="admin" /> },
         ],
       },
     ],

@@ -10,7 +10,8 @@ import { DETAIL_GALLERY } from '../../apis/mockData'
 import { useApi } from '../../hooks/useApi'
 import { useDocumentTitle } from '../../hooks/useDocumentTitle'
 import { useCartStore } from '../../stores/cartStore'
-import { ROUTES } from '../../constants'
+import type { Product } from '../../types/product'
+import { PRODUCT_TYPE_LABEL, ROUTES } from '../../constants'
 
 const DETAIL_TABS = [
   { id: 'story', label: 'Câu Chuyện Sản Phẩm' },
@@ -31,7 +32,6 @@ export function ProductDetailPage() {
   const [variantId, setVariantId] = useState<string>()
   const [activeImage, setActiveImage] = useState(0)
   const [quantity, setQuantity] = useState(1)
-  const [logoName, setLogoName] = useState<string | null>(null)
   const [added, setAdded] = useState(false)
   const [tab, setTab] = useState<DetailTab>('story')
   useDocumentTitle(product?.name)
@@ -76,6 +76,11 @@ export function ProductDetailPage() {
 
   const addToCart = () => {
     if (!variant) return
+    // Vỏ hộp chỉ bán kèm bánh: sang trang Tự phối để chọn bánh cho từng ô
+    if (product.productType === 'BOX_SHELL') {
+      navigate(ROUTES.boxBuilder)
+      return
+    }
     add(
       {
         variantId: variant.id,
@@ -102,7 +107,7 @@ export function ProductDetailPage() {
 
   const buyNow = () => {
     addToCart()
-    navigate(ROUTES.cart)
+    if (product.productType !== 'BOX_SHELL') navigate(ROUTES.cart)
   }
 
   return (
@@ -128,13 +133,9 @@ export function ProductDetailPage() {
             </div>{' '}
             <div className="flex items-center gap-space-md">
               {' '}
-              <span className="inline-flex items-center gap-1.5 text-secondary">
-                {' '}
-                <span className="w-1.5 h-1.5 rounded-[0.75rem] bg-secondary animate-ping"></span>
-                {' Mẻ Mới Ra Lò Hôm Nay • 08:30 Sáng '}
-              </span>{' '}
+              <span className="inline-flex items-center gap-1.5 text-secondary">{product.storeName}</span>
               <span className="text-outline-variant hidden sm:inline">|</span>{' '}
-              <span className="hidden sm:inline text-on-surface-variant">Mã Di Sản: {variant?.sku}</span>{' '}
+              <span className="hidden sm:inline text-on-surface-variant">Mã: {variant?.sku}</span>{' '}
             </div>{' '}
           </div>{' '}
         </div>{' '}
@@ -153,29 +154,16 @@ export function ProductDetailPage() {
                   src={gallery[activeImage]}
                 />{' '}
                 <div className="absolute inset-0 bg-gradient-to-t from-ink-dark/60 via-transparent to-transparent pointer-events-none"></div>{' '}
-                <div className="absolute top-space-md left-space-md bg-surface-container-lowest/95 backdrop-blur-md px-space-md py-space-xs rounded-[0.125rem] shadow-md flex items-center gap-space-xs">
-                  {' '}
-                  <Icon name="verified" className="text-secondary text-[20px]" filled aria-hidden />{' '}
-                  <div className="flex flex-col">
-                    {' '}
-                    <span className="font-label-sm text-[9px] uppercase tracking-wider text-secondary">
-                      Tiêu Chuẩn ATTP Quốc Tế
-                    </span>{' '}
-                    <span className="font-label-md text-label-md text-ink-dark font-bold">HACCP & ISO 22000</span>{' '}
-                  </div>{' '}
-                </div>{' '}
                 <div className="absolute bottom-space-md left-space-md right-space-md flex items-center justify-between text-on-primary">
                   {' '}
                   <div className="flex items-center gap-2">
                     {' '}
                     <Icon name="workspace_premium" className="text-champagne-light text-[18px]" aria-hidden />{' '}
                     <span className="font-label-sm text-champagne-light uppercase tracking-widest text-[11px]">
-                      Nghệ Nhân Đông Phương • Thượng Hạng
+                      {product.storeName}
                     </span>{' '}
                   </div>{' '}
-                  <span className="font-label-sm text-secondary-fixed text-[10px] uppercase bg-ink-dark/80 px-2 py-1 rounded-[0.125rem] backdrop-blur">
-                    Ảnh Chụp Thực Tế 100%
-                  </span>{' '}
+
                 </div>{' '}
               </div>{' '}
               <div className="grid grid-cols-4 gap-space-sm">
@@ -194,36 +182,7 @@ export function ProductDetailPage() {
                   </button>
                 ))}
               </div>{' '}
-              <div className="grid grid-cols-3 gap-space-sm p-space-md bg-surface-container rounded-[0.25rem] mt-space-xs">
-                {' '}
-                <div className="flex items-center gap-space-xs">
-                  {' '}
-                  <Icon name="cloud_download" className="text-secondary text-[22px]" aria-hidden />{' '}
-                  <div className="flex flex-col">
-                    {' '}
-                    <span className="font-label-sm text-label-sm text-ink-dark uppercase">Bảo Quản Chuẩn</span>{' '}
-                    <span className="font-body-sm text-body-sm text-on-surface-variant">Lạnh 18°C – 22°C</span>{' '}
-                  </div>{' '}
-                </div>{' '}
-                <div className="flex items-center gap-space-xs">
-                  {' '}
-                  <Icon name="eco" className="text-secondary text-[22px]" aria-hidden />{' '}
-                  <div className="flex flex-col">
-                    {' '}
-                    <span className="font-label-sm text-label-sm text-ink-dark uppercase">100% Tự Nhiên</span>{' '}
-                    <span className="font-body-sm text-body-sm text-on-surface-variant">Không chất bảo quản</span>{' '}
-                  </div>{' '}
-                </div>{' '}
-                <div className="flex items-center gap-space-xs">
-                  {' '}
-                  <Icon name="local_shipping" className="text-secondary text-[22px]" aria-hidden />{' '}
-                  <div className="flex flex-col">
-                    {' '}
-                    <span className="font-label-sm text-label-sm text-ink-dark uppercase">Giao Lạnh Hỏa Tốc</span>{' '}
-                    <span className="font-body-sm text-body-sm text-on-surface-variant">Đảm bảo dòng lava</span>{' '}
-                  </div>{' '}
-                </div>{' '}
-              </div>{' '}
+
             </div>{' '}
             <div className="lg:col-span-5 flex flex-col gap-space-lg">
               {' '}
@@ -232,10 +191,10 @@ export function ProductDetailPage() {
                 <div className="flex items-center gap-space-sm">
                   {' '}
                   <span className="font-label-sm text-label-sm uppercase tracking-widest text-secondary font-bold bg-secondary-fixed/40 px-2 py-0.5 rounded-[0.125rem]">
-                    {' Tuyển Chọn Hoàng Gia '}
+                    {PRODUCT_TYPE_LABEL[product.productType]}
                   </span>{' '}
                   <span className="font-label-sm text-label-sm text-on-surface-variant tracking-wider uppercase">
-                    {`Nghệ Nhân ${product.storeName} × Nguyệt Viên Đài`}
+                    {product.storeName}
                   </span>{' '}
                 </div>{' '}
                 <h1 className="font-headline-lg text-headline-lg text-ink-dark leading-tight pt-1">
@@ -266,9 +225,7 @@ export function ProductDetailPage() {
                     {' Giá Bán Lẻ Đã Gồm VAT '}
                   </span>{' '}
                 </div>{' '}
-                <p className="font-body-sm text-body-sm text-on-surface-variant">
-                  {' Đã bao gồm hộp sơn mài mạ vàng kim nhũ, dao cắt ngọc giả sứ và thiệp chúc mừng dập nổi thủ công. '}
-                </p>{' '}
+                <SetContents product={product} setPrice={price} />
               </div>{' '}
               <PromotionBox promotions={promotions} />
               <div className="space-y-space-xs">
@@ -303,40 +260,10 @@ export function ProductDetailPage() {
                   })}
                 </div>{' '}
               </div>{' '}
-              <div className="p-space-md rounded-[0.25rem] bg-surface-container-lowest shadow-sm space-y-space-sm">
-                {' '}
-                <div className="flex items-center justify-between">
-                  {' '}
-                  <div className="flex items-center gap-space-xs">
-                    {' '}
-                    <Icon name="stars" className="text-secondary text-[20px]" aria-hidden />{' '}
-                    <span className="font-label-md text-label-md uppercase tracking-wider text-ink-dark font-bold">
-                      2. Tùy Chọn Khắc Kim & Ép Kim Logo
-                    </span>{' '}
-                  </div>{' '}
-                  <span className="font-label-sm text-label-sm text-on-surface-variant">Đơn từ 20 hộp</span>{' '}
-                </div>{' '}
-                <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
-                  {
-                    ' Áp dụng kỹ thuật ép nhũ vàng 24K hoặc khắc nhiệt lazer trên nắp hộp gỗ sơn mài theo nhận diện thương hiệu doanh nghiệp. '
-                  }
-                </p>{' '}
-                <label htmlFor="vectorLogoInput" className="w-full p-space-md rounded-[0.125rem] bg-surface-container-low flex flex-col items-center justify-center text-center cursor-pointer hover:bg-surface-container transition-colors group">
-                  {' '}
-                  <input accept=".ai,.eps,.pdf,.png,.svg" className="hidden" id="vectorLogoInput" type="file" onChange={(e) => setLogoName(e.target.files?.[0]?.name ?? null)} />{' '}
-                  <Icon
-                    name="cloud_upload"
-                    className="text-secondary text-[28px] mb-1 group-hover:-translate-y-0.5 transition-transform"
-                    aria-hidden
-                  />{' '}
-                  <span className="font-label-md text-label-md text-ink-dark font-bold" id="uploadLabelText">
-                    {logoName ? `Đã nhận file: ${logoName}` : 'Nhấp để tải lên Vector Logo (.AI, .PDF, .PNG nét cao)'}
-                  </span>{' '}
-                  <span className="font-body-sm text-body-sm text-on-surface-variant">
-                    Dung lượng tối đa 25MB • Đội ngũ thiết kế sẽ dựng maquette 3D miễn phí
-                  </span>{' '}
-                </label>{' '}
-              </div>{' '}
+              <Link to={ROUTES.rfq} className="block p-space-md rounded-[0.25rem] bg-surface-container-lowest shadow-sm font-body-sm text-body-sm text-on-surface-variant hover:bg-champagne-light/40">
+                <span className="block font-label-md text-label-md uppercase tracking-wider text-ink-dark font-bold">In / khắc logo doanh nghiệp</span>
+                Áp dụng cho đơn sỉ từ 20 hộp: gửi yêu cầu báo giá sỉ, mô tả logo cần in; xưởng sẽ báo giá và liên hệ nhận file.
+              </Link>
               <div className="space-y-space-sm pt-space-xs">
                 {' '}
                 <div className="flex items-center gap-space-md">
@@ -383,7 +310,7 @@ export function ProductDetailPage() {
                   >
                     {' '}
                     <Icon name="add_shopping_cart" className="text-secondary text-[20px]" aria-hidden />{' '}
-                    <span>{added ? 'Đã Thêm Vào Giỏ' : variant?.stockQuantity === 0 && canPreorder
+                    <span>{product.productType === 'BOX_SHELL' ? 'Phối Bánh Vào Hộp Này' : added ? 'Đã Thêm Vào Giỏ' : variant?.stockQuantity === 0 && canPreorder
                       ? 'Đặt Trước Bánh Tươi' : 'Thêm Vào Giỏ Hàng'}</span>{' '}
                   </button>{' '}
                   <button
@@ -478,6 +405,34 @@ function ProductText({ id, text, empty }: { id: string; text?: string | null; em
       {text?.trim()
         ? <p className="max-w-3xl whitespace-pre-line font-body-lg text-body-lg text-on-surface-variant leading-relaxed">{text}</p>
         : <p className="p-space-lg rounded-[0.25rem] bg-surface-container-lowest shadow-sm font-body-md text-body-md text-on-surface-variant">{empty}</p>}
+    </div>
+  )
+}
+
+/** Set quà: liệt kê từng thành phần (vỏ hộp + từng loại bánh) với số lượng và giá; vỏ hộp: ghi chú bán kèm bánh */
+function SetContents({ product, setPrice }: { product: Product; setPrice: number }) {
+  if (product.productType === 'BOX_SHELL') {
+    return (
+      <p className="font-body-sm text-body-sm text-on-surface-variant">
+        Giá trên là giá vỏ hộp. Hộp chỉ bán kèm bánh: bấm “Phối bánh vào hộp này” để chọn bánh cho từng ô (bánh tính tiền riêng).
+      </p>
+    )
+  }
+  if (product.productType !== 'GIFT_SET' || !product.components?.length) return null
+  const list = product.components.reduce((sum, c) => sum + c.price * (c.perSetQuantity ?? 1), 0)
+  return (
+    <div className="font-body-sm text-body-sm">
+      <p className="font-label-md text-label-md uppercase tracking-wider text-secondary">Trong mỗi set gồm</p>
+      <ul className="mt-1 divide-y divide-outline-variant/40">
+        {product.components.map((c) => (
+          <li key={`${c.productName}-${c.variantName}`} className="flex justify-between gap-3 py-1">
+            <span>{c.productType === 'BOX_SHELL' ? 'Vỏ hộp' : 'Bánh'}: {c.productName} · {c.variantName} <b>×{c.perSetQuantity ?? 1}</b></span>
+            <span className="shrink-0 text-on-surface-variant">{vnd(c.price * (c.perSetQuantity ?? 1))}</span>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-1 flex justify-between text-on-surface-variant"><span>Mua lẻ từng món</span><span className="line-through">{vnd(list)}</span></p>
+      {setPrice < list && <p className="flex justify-between font-semibold text-secondary"><span>Giá set (tiết kiệm {vnd(list - setPrice)})</span><span>{vnd(setPrice)}</span></p>}
     </div>
   )
 }

@@ -15,6 +15,7 @@ const NAV = [
   { to: '/seller/promotions', icon: 'sell', label: 'Khuyến Mãi' },
   { to: '/seller/b2b', icon: 'request_quote', label: 'Báo Giá Sỉ B2B' },
   { to: '/seller/orders', icon: 'local_shipping', label: 'Đơn Hàng & Giao Lạnh' },
+  { to: '/seller/complaints', icon: 'report_problem', label: 'Khiếu Nại' },
   { to: '/seller/profile', icon: 'workspace_premium', label: 'Hồ Sơ & Thẩm Định' },
   { to: '/seller/subscription', icon: 'payments', label: 'Gói Bán Hàng' },
   { to: '/seller/settings', icon: 'tune', label: 'Cài Đặt Bán Hàng' },
@@ -22,6 +23,7 @@ const NAV = [
 const ADMIN_NAV = [
   { to: '/admin/kyc', icon: 'biotech', label: 'Thẩm Định Chất Lượng' },
   { to: '/admin/subscriptions', icon: 'receipt_long', label: 'Gói Bán Hàng' },
+  { to: '/admin/complaints', icon: 'report_problem', label: 'Khiếu Nại' },
 ]
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>

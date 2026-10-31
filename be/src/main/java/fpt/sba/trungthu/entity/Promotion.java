@@ -5,7 +5,6 @@ import fpt.sba.trungthu.entity.enumeration.PromotionType;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import org.hibernate.annotations.ColumnDefault;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -55,8 +54,8 @@ public class Promotion extends BaseEntity {
     @Column(name = "end_date", nullable = false)
     private LocalDate endDate;
 
+    // Không dùng @ColumnDefault("1"): PostgreSQL (Heroku) không nhận 1 làm mặc định cho boolean nên không tạo được bảng
     @Builder.Default
-    @ColumnDefault("true")
     @Column(name = "active", nullable = false)
     private Boolean active = true;
 

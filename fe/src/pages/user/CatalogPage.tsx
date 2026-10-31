@@ -12,7 +12,8 @@ import { promotionService } from '../../services/sellerService'
 import { useApi } from '../../hooks/useApi'
 
 const PAGE_SIZE = 6
-const TYPES: ProductType[] = ['LOOSE_CAKE', 'BOX_SHELL', 'GIFT_SET', 'GREETING_CARD', 'ADDON_SERVICE']
+// Vỏ hộp chỉ bán kèm bánh (Tự phối / set quà) nên không có trong bộ lọc
+const TYPES: ProductType[] = ['LOOSE_CAKE', 'GIFT_SET', 'GREETING_CARD', 'ADDON_SERVICE']
 // BE sắp xếp theo trường của Product; giá nằm ở từng phân loại nên chưa sắp theo giá được
 const SORTS = {
   newest: { label: 'Mới nhất', sortBy: 'createdAt', direction: 'desc' },

@@ -30,6 +30,7 @@ interface BeProduct {
   listPrice: number
   assembledQuantity: number
   images: Array<{ imageUrl: string; displayOrder: number }> | null
+  components: Array<{ productName: string; variantName: string; productType: ProductType; perSetQuantity: number | null; price: number }> | null
   variants: Array<{
     id: string
     variantName: string
@@ -60,6 +61,7 @@ const toProduct = (p: BeProduct): Product => {
     imageUrl: p.primaryImageUrl ?? gallery[0] ?? null,
     imageAlt: p.name,
     gallery,
+    components: p.components ?? undefined,
     // Set quà không có variant: dựng 1 "variant" ảo mang id của set, giá bán set và số set đã đóng sẵn
     variants: p.productType === 'GIFT_SET'
       ? [{

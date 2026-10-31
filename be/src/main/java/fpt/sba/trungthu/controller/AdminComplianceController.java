@@ -32,17 +32,18 @@ public class AdminComplianceController {
     @Operation(summary = "Get pending compliance documents")
     public ResponseEntity<ApiResponseDTO<List<ComplianceDocResponse>>> getPendingDocuments() {
         log.info("Admin getting pending compliance documents");
-        
+
         try {
             List<ComplianceDocResponse> documents = complianceService
                     .getDocumentsByStatus(ComplianceDocStatus.PENDING);
-            
+
             return ResponseEntity.ok(ApiResponseDTO.success("Pending documents retrieved successfully", documents));
         } catch (Exception e) {
             log.error("Error getting pending documents", e);
             return ResponseEntity
                     .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponseDTO.error(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to retrieve documents: " + e.getMessage()));
+                    .body(ApiResponseDTO.error(HttpStatus.INTERNAL_SERVER_ERROR,
+                            "Failed to retrieve documents: " + e.getMessage()));
         }
     }
 
@@ -50,18 +51,19 @@ public class AdminComplianceController {
     @Operation(summary = "Get compliance documents by status")
     public ResponseEntity<ApiResponseDTO<List<ComplianceDocResponse>>> getDocumentsByStatus(
             @PathVariable ComplianceDocStatus status) {
-        
+
         log.info("Admin getting documents with status: {}", status);
-        
+
         try {
             List<ComplianceDocResponse> documents = complianceService.getDocumentsByStatus(status);
-            
+
             return ResponseEntity.ok(ApiResponseDTO.success("Documents retrieved successfully", documents));
         } catch (Exception e) {
             log.error("Error getting documents by status", e);
             return ResponseEntity
                     .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponseDTO.error(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to retrieve documents: " + e.getMessage()));
+                    .body(ApiResponseDTO.error(HttpStatus.INTERNAL_SERVER_ERROR,
+                            "Failed to retrieve documents: " + e.getMessage()));
         }
     }
 
@@ -70,12 +72,12 @@ public class AdminComplianceController {
     public ResponseEntity<ApiResponseDTO<ComplianceDocResponse>> reviewDocument(
             @PathVariable UUID docId,
             @Valid @RequestBody ReviewComplianceDocRequest request) {
-        
+
         log.info("Admin reviewing compliance document: {}", docId);
-        
+
         try {
             ComplianceDocResponse response = complianceService.reviewDocument(docId, request);
-            
+
             return ResponseEntity.ok(ApiResponseDTO.success("Document reviewed successfully", response));
         } catch (IllegalArgumentException e) {
             log.error("Invalid request for document review", e);
@@ -86,7 +88,8 @@ public class AdminComplianceController {
             log.error("Error reviewing document", e);
             return ResponseEntity
                     .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponseDTO.error(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to review document: " + e.getMessage()));
+                    .body(ApiResponseDTO.error(HttpStatus.INTERNAL_SERVER_ERROR,
+                            "Failed to review document: " + e.getMessage()));
         }
     }
 
@@ -94,22 +97,23 @@ public class AdminComplianceController {
     @Operation(summary = "Approve compliance document")
     public ResponseEntity<ApiResponseDTO<ComplianceDocResponse>> approveDocument(
             @PathVariable UUID docId) {
-        
+
         log.info("Admin approving compliance document: {}", docId);
-        
+
         try {
             ReviewComplianceDocRequest request = ReviewComplianceDocRequest.builder()
                     .newStatus(ComplianceDocStatus.APPROVED)
                     .build();
-            
+
             ComplianceDocResponse response = complianceService.reviewDocument(docId, request);
-            
+
             return ResponseEntity.ok(ApiResponseDTO.success("Document approved successfully", response));
         } catch (Exception e) {
             log.error("Error approving document", e);
             return ResponseEntity
                     .status(HttpStatus.BAD_REQUEST)
-                    .body(ApiResponseDTO.error(HttpStatus.BAD_REQUEST, "Failed to approve document: " + e.getMessage()));
+                    .body(ApiResponseDTO.error(HttpStatus.BAD_REQUEST,
+                            "Failed to approve document: " + e.getMessage()));
         }
     }
 
@@ -118,17 +122,17 @@ public class AdminComplianceController {
     public ResponseEntity<ApiResponseDTO<ComplianceDocResponse>> rejectDocument(
             @PathVariable UUID docId,
             @RequestParam(required = false) String reason) {
-        
+
         log.info("Admin rejecting compliance document: {}", docId);
-        
+
         try {
             ReviewComplianceDocRequest request = ReviewComplianceDocRequest.builder()
                     .newStatus(ComplianceDocStatus.REJECTED)
                     .rejectionReason(reason)
                     .build();
-            
+
             ComplianceDocResponse response = complianceService.reviewDocument(docId, request);
-            
+
             return ResponseEntity.ok(ApiResponseDTO.success("Document rejected successfully", response));
         } catch (Exception e) {
             log.error("Error rejecting document", e);
