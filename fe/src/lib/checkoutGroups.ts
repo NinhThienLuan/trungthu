@@ -4,8 +4,11 @@ import type { CheckoutGroup } from '../types/order'
 
 export type PayChoice = 'COD' | 'MIN_DEPOSIT' | 'FULL'
 
+// Hộp tự phối = vỏ + bánh từng ô (BE đếm cả hai vào số lượng đơn)
+const unitsOf = (item: CartItem) => item.quantity * (item.kind === 'box' ? 1 + (item.slots?.length ?? 0) : 1)
+
 export const leadDaysForItems = (items: CartItem[]) =>
-  items.reduce((total, item) => total + item.quantity, 0) >= BULK_ORDER_QUANTITY
+  items.reduce((total, item) => total + unitsOf(item), 0) >= BULK_ORDER_QUANTITY
     || items.some((item) => item.canPreorder && item.quantity > item.stock)
     ? BULK_LEAD_DAYS : MIN_LEAD_DAYS
 

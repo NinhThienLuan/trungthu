@@ -14,13 +14,18 @@ import type { Product, ProductVariant } from '../../types/product'
 interface BoxOption { product: Product; variant: ProductVariant }
 
 /**
- * Tự phối hộp: hộp N bánh (BOX_SHELL) của một xưởng + chọn vị cho từng ô từ bánh lẻ của chính xưởng đó.
- * Giá theo hộp (đã gồm bánh); vị được lưu vào dòng đơn để xưởng đóng đúng (BE: Item.boxContents).
+ * Tự phối hộp: vỏ hộp N ô (BOX_SHELL) của một xưởng + một bánh lẻ của chính xưởng đó cho mỗi ô.
+ * Giá 1 hộp = giá vỏ + giá từng bánh (BE tính y như vậy và trừ kho bánh; vị ghi vào dòng đơn — Item.boxContents).
  */
 export function BoxBuilderPage() {
   useDocumentTitle('Tự phối hộp quà')
-  // ponytail: một trang 100 sản phẩm đủ cho catalog hiện tại; cần API lọc theo xưởng khi danh mục lớn hơn
-  const { data, loading, error, reload } = useApi(() => productService.list({ size: 100 }), [])
+  // ponytail: một trang 100 sản phẩm mỗi loại đủ cho catalog hiện tại; cần API lọc theo xưởng khi danh mục lớn hơn
+  // Danh mục chung không có vỏ hộp (chỉ bán kèm bánh) -> tải riêng theo loại
+  const { data, loading, error, reload } = useApi(async () => {
+    const [shells, cakes] = await Promise.all([
+      productService.list({ type: 'BOX_SHELL', size: 100 }), productService.list({ type: 'LOOSE_CAKE', size: 100 })])
+    return [...shells.content, ...cakes.content]
+  }, [])
   const { items, addBox, setQuantity } = useCartStore()
   const [providerId, setProviderId] = useState<string>()
   const [boxId, setBoxId] = useState<string>()
@@ -32,7 +37,7 @@ export function BoxBuilderPage() {
   if (loading && !data) return <Spinner />
   if (error) return <div className="page section"><ErrorState message={error} onRetry={reload} /></div>
 
-  const products = (data?.content ?? []).filter((p) => p.status === 'ACTIVE')
+  const products = (data ?? []).filter((p) => p.status === 'ACTIVE')
   const boxes: BoxOption[] = products.filter((p) => p.productType === 'BOX_SHELL')
     .flatMap((product) => product.variants.filter((v) => (v.boxCapacity ?? 0) > 0 && v.stockQuantity > 0).map((variant) => ({ product, variant })))
   const shops = [...new Map(boxes.map((b) => [b.product.providerId, b.product.storeName])).entries()]
@@ -44,6 +49,9 @@ export function BoxBuilderPage() {
   const capacity = box?.variant.boxCapacity ?? 0
   const filled = slots.slice(0, capacity)
   const isFull = capacity > 0 && filled.length === capacity && filled.every(Boolean)
+  // Giá 1 hộp = vỏ + các bánh đã chọn
+  const cakesTotal = filled.reduce((sum, s) => sum + (s?.unitPrice ?? 0), 0)
+  const boxTotal = (box?.variant.price ?? 0) + cakesTotal
 
   const pickBox = (option: BoxOption) => {
     setBoxId(option.variant.id)
@@ -84,8 +92,10 @@ export function BoxBuilderPage() {
     } else {
       addBox({
         variantId: box.variant.id, productId: box.product.id, providerId: box.product.providerId, storeName: box.product.storeName,
-        productName: `${box.product.name} (tự phối)`, variantName: box.variant.variantName, unitPrice: box.variant.price,
+        productName: `${box.product.name} (tự phối)`, variantName: box.variant.variantName, unitPrice: boxTotal,
         stock: box.variant.stockQuantity, imageUrl: box.product.imageUrl, slots: chosen,
+        priceLines: [{ label: `Vỏ hộp ${box.variant.variantName}`, amount: box.variant.price },
+          { label: `${capacity} bánh trong hộp`, amount: cakesTotal }],
       }, quantity)
     }
     setNotice({ ok: true, text: `Đã thêm ${quantity} hộp vào giỏ.` })
@@ -98,7 +108,7 @@ export function BoxBuilderPage() {
   return (
     <div className="page section flex flex-col gap-6">
       <PageHeader eyebrow="Quà tặng" title="Tự phối hộp quà"
-        description="Chọn xưởng và loại hộp, rồi chọn vị cho từng ô. Giá theo hộp (đã gồm bánh); xưởng đóng đúng các vị bạn chọn." />
+        description="Chọn xưởng và loại hộp, rồi chọn bánh cho từng ô. Giá 1 hộp = giá vỏ hộp + giá từng chiếc bánh." />
 
       <section className="card flex flex-col gap-4 p-5">
         <h2 className="text-h3">1. Xưởng & loại hộp</h2>
@@ -114,7 +124,7 @@ export function BoxBuilderPage() {
               {option.product.imageUrl && <img src={option.product.imageUrl} alt="" className="size-14 rounded-sm object-cover" />}
               <span>
                 <span className="block font-semibold text-navy">{option.product.name} · {option.variant.variantName}</span>
-                <span className="block text-small text-muted">{option.variant.boxCapacity} ô · {formatVnd(option.variant.price)}/hộp</span>
+                <span className="block text-small text-muted">{option.variant.boxCapacity} ô · vỏ hộp {formatVnd(option.variant.price)}</span>
               </span>
             </button>
           ))}
@@ -141,8 +151,15 @@ export function BoxBuilderPage() {
             <div className="flex flex-wrap items-center gap-3">
               <span className="text-small">Số hộp</span>
               <QuantityStepper value={quantity} max={Math.max(1, box.variant.stockQuantity)} onChange={setQty} />
-              <span className="ml-auto font-serif text-h3 text-navy">{formatVnd(box.variant.price * quantity)}</span>
+              <span className="ml-auto font-serif text-h3 text-navy">{formatVnd(boxTotal * quantity)}</span>
             </div>
+            <dl className="flex flex-col gap-0.5 rounded-sm bg-champagne/30 p-3 text-small">
+              <div className="flex justify-between"><dt>Vỏ hộp {box.variant.variantName}</dt><dd>{formatVnd(box.variant.price)}</dd></div>
+              {filled.map((s, i) => s && (
+                <div key={i} className="flex justify-between text-muted"><dt>Ô {i + 1}: {s.productName} · {s.variantName}</dt><dd>{formatVnd(s.unitPrice)}</dd></div>
+              ))}
+              <div className="flex justify-between border-t border-line pt-1 font-semibold"><dt>Giá 1 hộp</dt><dd>{formatVnd(boxTotal)}</dd></div>
+            </dl>
             {notice && <Notice tone={notice.ok ? 'success' : 'danger'}>{notice.text}</Notice>}
             <div className="flex flex-wrap gap-2">
               <button type="button" className="btn btn-primary" disabled={!isFull} onClick={addToCart}>
@@ -162,7 +179,7 @@ export function BoxBuilderPage() {
                     <button type="button" onClick={() => fill(cake)}
                       className="flex w-full items-center gap-3 rounded-sm border border-line p-2 text-left hover:bg-champagne/40">
                       {cake.product.imageUrl && <img src={cake.product.imageUrl} alt="" className="size-12 rounded-sm object-cover" />}
-                      <span className="text-small"><span className="block font-semibold text-navy">{cake.product.name}</span>{cake.variant.variantName}</span>
+                      <span className="text-small"><span className="block font-semibold text-navy">{cake.product.name}</span>{cake.variant.variantName} · {formatVnd(cake.variant.price)}</span>
                     </button>
                   </li>
                 ))}

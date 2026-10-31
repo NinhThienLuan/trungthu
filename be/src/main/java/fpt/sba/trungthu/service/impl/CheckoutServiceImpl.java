@@ -157,6 +157,7 @@ public class CheckoutServiceImpl implements CheckoutService {
                     || item.quantity() <= 0 || item.quantity() > 10_000)) {
                 throw badRequest("Invalid cart item");
             }
+            sortedItems = expandBoxes(sortedItems); // bánh trong hộp cũng tính vào số lượng đơn
             long totalQuantity = sortedItems.stream().mapToLong(CheckoutRequest.Item::quantity).sum();
             int minLeadDays = CheckoutLeadTime.requiredDays(totalQuantity);
             if (group.deliveryDate().isBefore(today.plusDays(minLeadDays))) {
@@ -229,6 +230,9 @@ public class CheckoutServiceImpl implements CheckoutService {
                 }
                 if (personal != null) personalizedBoxes += item.quantity();
                 String contents = boxContents(variant, item.boxContents());
+                if (type == ProductType.BOX_SHELL && contents == null) {
+                    throw badRequest("Hộp quà chỉ bán kèm bánh — hãy dùng Tự phối hộp quà để chọn bánh cho hộp");
+                }
                 long bake = bakeFor(variant, item.quantity());
                 if (bake > Integer.MAX_VALUE - (long) bakeQuantity) throw badRequest("Baking quantity is too large");
                 bakeQuantity += (int) bake;
@@ -307,8 +311,8 @@ public class CheckoutServiceImpl implements CheckoutService {
     private static long bakeFor(ProductVariant variant, int quantity) {
         return switch (variant.getProduct().getProductType()) {
             case LOOSE_CAKE -> quantity;
-            case BOX_SHELL -> (long) quantity * (variant.getBoxCapacity() == null ? 0 : variant.getBoxCapacity());
-            case GREETING_CARD, ADDON_SERVICE, GIFT_SET -> 0;
+            // Vỏ hộp không nướng: bánh trong hộp là các dòng bánh lẻ riêng
+            case BOX_SHELL, GREETING_CARD, ADDON_SERVICE, GIFT_SET -> 0;
         };
     }
 
@@ -425,8 +429,34 @@ public class CheckoutServiceImpl implements CheckoutService {
     }
 
     /**
+     * Hộp tự phối = vỏ hộp (tính giá vỏ) + bánh từng ô (tính giá bánh lẻ, giữ kho và năng lực nướng như bánh lẻ).
+     * Thêm dòng bánh cho mọi ô của các hộp trong nhóm; bánh lẻ cùng loại khách mua thêm được cộng dồn vào một dòng.
+     */
+    private List<CheckoutRequest.Item> expandBoxes(List<CheckoutRequest.Item> items) {
+        Map<UUID, Integer> cakes = new LinkedHashMap<>();
+        for (CheckoutRequest.Item item : items) {
+            if (item.boxContents() == null || item.boxContents().isEmpty()) continue;
+            if (item.variantId() == null) throw badRequest("Chỉ hộp quà mới chọn được bánh cho từng ô");
+            ProductVariant box = variants.findById(item.variantId())
+                    .orElseThrow(() -> conflict("VARIANT_UNAVAILABLE variant=" + item.variantId()));
+            boxContents(box, item.boxContents()); // kiểm tra đủ ô, bánh lẻ đang bán của cùng xưởng
+            for (UUID cake : item.boxContents()) {
+                cakes.merge(cake, item.quantity(), (a, b) -> Math.addExact(a, b));
+            }
+        }
+        if (cakes.isEmpty()) return items;
+        List<CheckoutRequest.Item> result = new ArrayList<>();
+        for (CheckoutRequest.Item item : items) {
+            Integer extra = item.variantId() == null ? null : cakes.remove(item.variantId());
+            result.add(extra == null ? item : new CheckoutRequest.Item(item.variantId(), item.setProductId(),
+                    Math.addExact(item.quantity(), extra), item.personalizationText(), item.boxContents()));
+        }
+        cakes.forEach((cake, quantity) -> result.add(new CheckoutRequest.Item(cake, null, quantity, null, null)));
+        return result;
+    }
+
+    /**
      * Hộp tự phối: mỗi ô một vị bánh lẻ đang bán của cùng xưởng, đủ đúng số ô của hộp.
-     * Giá và số bánh nướng vẫn theo hộp (BOX_SHELL = hộp đã gồm bánh), nên vị không đổi giá.
      * Trả nhãn "Thập cẩm 150 g ×2, Đậu xanh 150 g ×2" hoặc null nếu không phải hộp tự phối.
      */
     private String boxContents(ProductVariant box, List<UUID> slots) {

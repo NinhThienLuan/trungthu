@@ -30,6 +30,8 @@ export interface Product {
   /** Toàn bộ ảnh theo thứ tự hiển thị (BE: images) */
   gallery?: string[]
   variants: ProductVariant[]
+  /** Set quà: thành phần mỗi set (vỏ hộp + từng loại bánh) */
+  components?: SetComponent[]
   /** Thông tin trình bày theo bản Stitch (BE chưa có các trường này) */
   display?: ProductDisplay
 }
@@ -48,4 +50,13 @@ export interface ProductDisplay {
   tiers: string[] // 3 bậc giá sỉ
   /** Nút "Chọn quy cách hộp quà" ở trang chi tiết, mỗi nút ứng với 1 variant */
   configs?: Array<{ variantId: string; label: string; title: string; sub: string }>
+}
+
+/** BE GiftSetComponentResponse (phần FE dùng) */
+export interface SetComponent {
+  productName: string
+  variantName: string
+  productType: ProductType
+  perSetQuantity: number | null
+  price: number
 }

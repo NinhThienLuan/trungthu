@@ -498,8 +498,8 @@ public class InventoryServiceImpl implements InventoryService {
     private int bakeQuantity(ProductType type, ProductVariant variant, int quantity) {
         return switch (type) {
             case LOOSE_CAKE -> quantity;
-            case BOX_SHELL -> Math.multiplyExact(quantity, variant.getBoxCapacity());
-            case GREETING_CARD, ADDON_SERVICE, GIFT_SET -> 0;
+            // Vỏ hộp không nướng; bánh trong hộp/set được tính ở dòng bánh lẻ của chúng
+            case BOX_SHELL, GREETING_CARD, ADDON_SERVICE, GIFT_SET -> 0;
         };
     }
 
