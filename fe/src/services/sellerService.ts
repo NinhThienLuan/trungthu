@@ -88,6 +88,9 @@ export const sellerService = {
     unwrap(http.put<ApiResponse<SellerProduct>>(`${P}/${id}/images`, { images: [{ imageUrl, isPrimary: true, displayOrder: 0 }] })),
   archiveProduct: (id: string) => unwrap(http.post<ApiResponse<SellerProduct>>(`${P}/${id}/archive`)),
   addVariant: (productId: string, body: VariantInput) => unwrap(http.post<ApiResponse<unknown>>(`${P}/${productId}/variants`, body)),
+  /** Sửa phân loại: SKU/khối lượng/sức chứa gửi lại giá trị cũ; tồn chỉ sửa được khi sản phẩm còn nháp */
+  updateVariant: (productId: string, variantId: string, body: VariantInput) =>
+    unwrap(http.put<ApiResponse<unknown>>(`${P}/${productId}/variants/${variantId}`, body)),
   importStock: (productId: string, variantId: string, quantity: number, reason: string) =>
     unwrap(http.post<ApiResponse<unknown>>(`${P}/${productId}/variants/${variantId}/imports`, { quantity, reason })),
   markOutOfStock: (productId: string, variantId: string, reason: string) =>

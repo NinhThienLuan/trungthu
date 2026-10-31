@@ -34,6 +34,15 @@ export function ProductReviews({ product }: { product: Product }) {
   // Phân bố sao suy ra từ điểm trung bình (dữ liệu mẫu — BE sẽ trả số thật)
   const share = rating >= 4.9 ? [88, 9, 2, 1, 0] : rating >= 4.8 ? [80, 14, 4, 1, 1] : [70, 20, 6, 2, 2]
 
+  // Sản phẩm thật (BE chưa có chức năng đánh giá): không hiện số liệu và review mẫu như thật
+  if (!rating) {
+    return (
+      <p className="p-space-lg rounded-[0.25rem] bg-surface-container-lowest shadow-sm font-body-md text-body-md text-on-surface-variant">
+        Chưa có đánh giá cho sản phẩm này.
+      </p>
+    )
+  }
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-xl">
       <div className="lg:col-span-4 space-y-space-md">

@@ -86,7 +86,7 @@ export function BakeBatchPage() {
   )
 }
 
-type Panel = { kind: 'variant' } | { kind: 'import' | 'out'; variantId: string }
+type Panel = { kind: 'variant' } | { kind: 'import' | 'out' | 'edit'; variantId: string }
 
 function ProductCard({ product: p, run }: { product: SellerProduct; run: (action: () => Promise<unknown>, done: string) => Promise<boolean> }) {
   const [panel, setPanel] = useState<Panel>()
@@ -139,6 +139,7 @@ function ProductCard({ product: p, run }: { product: SellerProduct; run: (action
                     <td className="text-right">{formatVnd(v.price)}</td>
                     <td className="text-right">{v.status === 'OUT_OF_STOCK' ? <span className="text-danger">Hết hàng</span> : v.stockQuantity}</td>
                     <td className="py-2 text-right">
+                      <button type="button" className="btn btn-ghost btn-sm" onClick={() => toggle({ kind: 'edit', variantId: v.id })}>Sửa</button>
                       {p.status !== 'DRAFT' && <button type="button" className="btn btn-ghost btn-sm" onClick={() => toggle({ kind: 'import', variantId: v.id })}>Nhập kho</button>}
                       {v.status === 'IN_STOCK' && <button type="button" className="btn btn-ghost btn-sm" onClick={() => toggle({ kind: 'out', variantId: v.id })}>Báo hết</button>}
                     </td>
@@ -162,6 +163,21 @@ function ProductCard({ product: p, run }: { product: SellerProduct; run: (action
           {p.productType === 'BOX_SHELL' && <TextInput label="Sức chứa (số bánh)" name="boxCapacity" type="number" min={1} required />}
         </InlineForm>
       )}
+      {panel?.kind === 'edit' && (() => {
+        const v = p.variants.find((x) => x.id === panel.variantId)
+        if (!v) return null
+        return (
+          <InlineForm key={v.id} submitLabel="Lưu phân loại" onSubmit={async (f) => close(await run(() => sellerService.updateVariant(p.id, v.id, {
+            variantName: f.variantName, sku: v.sku, price: Number(f.price),
+            stockQuantity: p.status === 'DRAFT' ? optionalNumber(f.stockQuantity) : undefined,
+            weightGram: v.weightGram ?? undefined, boxCapacity: v.boxCapacity ?? undefined,
+          }), `Đã cập nhật "${f.variantName}".`))}>
+            <TextInput label="Tên phân loại" name="variantName" defaultValue={v.variantName} required />
+            <TextInput label="Giá (đ)" name="price" type="number" min={0} defaultValue={v.price} required />
+            {p.status === 'DRAFT' && <TextInput label="Tồn ban đầu" name="stockQuantity" type="number" min={0} defaultValue={v.stockQuantity ?? 0} />}
+          </InlineForm>
+        )
+      })()}
       {panel?.kind === 'import' && (
         <InlineForm submitLabel="Nhập kho" onSubmit={async (f) => close(await run(() => sellerService.importStock(p.id, panel.variantId, Number(f.quantity), f.reason), 'Đã nhập kho.'))}>
           <TextInput label="Số lượng nhập" name="quantity" type="number" min={1} required />

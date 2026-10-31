@@ -1,5 +1,6 @@
 package fpt.sba.trungthu.service.impl;
 
+import fpt.sba.trungthu.common.security.SecurityContextService;
 import fpt.sba.trungthu.dto.request.ReviewComplianceDocRequest;
 import fpt.sba.trungthu.dto.request.UploadComplianceDocRequest;
 import fpt.sba.trungthu.dto.response.ComplianceDocResponse;
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -30,6 +32,7 @@ public class ComplianceServiceImpl implements ComplianceService {
     private final StoreComplianceDocRepository complianceDocRepository;
     private final UserRepository userRepository;
     private final StorageService storageService;
+    private final SecurityContextService security;
 
     private static final String[] ALLOWED_DOC_TYPES = {"application/pdf", "image/png", "image/jpeg"};
     private static final int MAX_DOC_SIZE_MB = 10;
@@ -175,9 +178,13 @@ public class ComplianceServiceImpl implements ComplianceService {
             // Update document
             doc.transitionVerificationStatus(request.getNewStatus());
             doc.setVerifiedAt(LocalDateTime.now());
+            doc.setVerifiedBy(security.getCurrentUser());
             doc.setRejectionReason(request.getRejectionReason());
 
             StoreComplianceDoc updatedDoc = complianceDocRepository.save(doc);
+            if (request.getNewStatus() == ComplianceDocStatus.APPROVED) {
+                markApprovedWhenComplete(doc.getProvider());
+            }
             log.info("Document reviewed successfully: {}", docId);
 
             return mapToResponse(updatedDoc);
@@ -202,5 +209,22 @@ public class ComplianceServiceImpl implements ComplianceService {
                 .verifiedAt(doc.getVerifiedAt())
                 .submittedAt(doc.getSubmittedAt())
                 .build();
+    }
+
+    /**
+     * Checkout và đăng bán kiểm tra User.isComplianceApproved: bật cờ khi xưởng đã có đủ
+     * ATTP, giấy phép kinh doanh và KYC được duyệt (mỗi loại ít nhất một bản APPROVED).
+     */
+    private void markApprovedWhenComplete(User provider) {
+        if (Boolean.TRUE.equals(provider.getIsComplianceApproved())) return;
+        EnumSet<ComplianceDocType> approved = EnumSet.noneOf(ComplianceDocType.class);
+        complianceDocRepository.findByProviderIdOrderBySubmittedAtDesc(provider.getId()).stream()
+                .filter(d -> d.getVerificationStatus() == ComplianceDocStatus.APPROVED)
+                .forEach(d -> approved.add(d.getDocumentType()));
+        if (approved.containsAll(EnumSet.allOf(ComplianceDocType.class))) {
+            provider.setIsComplianceApproved(true);
+            userRepository.save(provider);
+            log.info("Provider {} is now compliance approved", provider.getEmail());
+        }
     }
 }
