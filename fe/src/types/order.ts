@@ -213,4 +213,8 @@ export interface QuoteResponse {
   status: QuoteStatus
   note: string | null
   createdAt: string
+  /** Liên hệ xưởng: chỉ có khi báo giá đã được chấp nhận */
+  providerPhone: string | null
+  providerEmail: string | null
+  providerAddress: string | null
 }

@@ -197,10 +197,14 @@ public class RfqServiceImpl implements RfqService {
     }
 
     private QuoteResponse toQuoteResponse(ProviderQuotation quote) {
+        boolean accepted = quote.getStatus() == QuoteStatus.ACCEPTED;
         return new QuoteResponse(quote.getId(), quote.getRequest().getId(), quote.getProvider().getId(),
                 quote.getProvider().getStoreName(), quote.getQuotedPrice(), quote.getOfferedQuantity(),
                 quote.getEstimatedDeliveryDate(), quote.getValidUntil(), quote.getNote(),
-                quote.getStatus(), quote.getCreatedAt());
+                quote.getStatus(), quote.getCreatedAt(),
+                accepted ? quote.getProvider().getPhone() : null,
+                accepted ? quote.getProvider().getEmail() : null,
+                accepted ? quote.getProvider().getAddress() : null);
     }
 
     private ResponseStatusException badRequest(String reason) {

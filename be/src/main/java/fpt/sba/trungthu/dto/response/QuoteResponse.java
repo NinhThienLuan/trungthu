@@ -9,4 +9,6 @@ import java.util.UUID;
 
 public record QuoteResponse(UUID id, UUID requestId, UUID providerId, String providerName,
         BigDecimal unitPrice, int offeredQuantity, LocalDate estimatedDeliveryDate,
-        LocalDate validUntil, String note, QuoteStatus status, LocalDateTime createdAt) {}
+        LocalDate validUntil, String note, QuoteStatus status, LocalDateTime createdAt,
+        /** Liên hệ xưởng: chỉ có khi báo giá đã được khách chấp nhận (để hai bên chốt hợp đồng) */
+        String providerPhone, String providerEmail, String providerAddress) {}

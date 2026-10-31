@@ -7,6 +7,7 @@ import { useApi } from '../../hooks/useApi'
 import { useAuthStore } from '../../stores/authStore'
 import { errorMessage } from '../../apis/http'
 import { formatDate, formatVnd, toIsoDate } from '../../lib/format'
+import { printRfqConfirmation } from '../../lib/printRfqConfirmation'
 import type { RfqResponse } from '../../types/order'
 
 const statusText: Record<RfqResponse['status'], string> = {
@@ -101,6 +102,15 @@ function BuyerRfqDashboard({ created }: { created: RfqResponse | null }) {
                         </div>
                       </div>
                       {quote.note && <p className="mt-2 text-small">{quote.note}</p>}
+                      {quote.status === 'ACCEPTED' && (
+                        <div className="mt-3 rounded-sm border border-secondary bg-champagne-light p-3 text-small">
+                          <p className="font-semibold text-primary">Bạn đã chọn báo giá này — liên hệ xưởng để ký hợp đồng và đặt cọc</p>
+                          <p>{quote.providerPhone ?? '—'} · {quote.providerEmail ?? '—'}{quote.providerAddress && ` · ${quote.providerAddress}`}</p>
+                          {(() => { const rfq = list.data?.find((item) => item.id === requestId); return rfq && (
+                            <button type="button" className="btn btn-outline btn-sm mt-2" onClick={() => printRfqConfirmation(rfq, quote)}>In phiếu xác nhận đơn sỉ</button>
+                          ) })()}
+                        </div>
+                      )}
                       <p className="mt-2 text-small text-on-surface-variant">
                         {quote.validUntil ? `Hiệu lực đến ${formatDate(quote.validUntil)}` : 'Chưa có hạn hiệu lực'} · {quote.status}
                       </p>

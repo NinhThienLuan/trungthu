@@ -86,7 +86,14 @@ class RfqFlowTests {
 
         as(buyer);
         assertThat(rfq.quotes(request.id())).extracting("id").containsExactly(second.id(), first.id());
+        // Chưa chọn: khách chưa thấy liên hệ xưởng
+        assertThat(rfq.quotes(request.id())).extracting("providerEmail").containsOnlyNulls();
         assertThat(rfq.acceptQuote(request.id(), first.id()).status()).isEqualTo(QuoteStatus.ACCEPTED);
+        // Đã chọn: báo giá thắng có liên hệ xưởng, báo giá bị từ chối thì không
+        assertThat(rfq.quotes(request.id())).filteredOn(q -> q.id().equals(first.id()))
+                .extracting("providerEmail").containsExactly(seller.getEmail());
+        assertThat(rfq.quotes(request.id())).filteredOn(q -> q.id().equals(second.id()))
+                .extracting("providerEmail").containsOnlyNulls();
         assertThat(requests.findById(request.id()).orElseThrow().getStatus()).isEqualTo(BulkRequestStatus.WON);
         assertThat(quotations.findById(second.id()).orElseThrow().getStatus()).isEqualTo(QuoteStatus.REJECTED);
         assertThatThrownBy(() -> rfq.acceptQuote(request.id(), second.id())).isInstanceOf(ResponseStatusException.class);

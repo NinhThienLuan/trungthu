@@ -3,6 +3,7 @@ import { rfqService } from '../../services/rfqService'
 import { useApi } from '../../hooks/useApi'
 import { errorMessage } from '../../apis/http'
 import { addDays, formatDate, formatVnd, toIsoDate } from '../../lib/format'
+import { printRfqConfirmation } from '../../lib/printRfqConfirmation'
 
 export function SellerRfqPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -84,6 +85,7 @@ export function SellerRfqPage() {
               <div className="mt-4 rounded-sm border border-secondary p-4 text-small">
                 <p className="font-semibold text-primary">Khách đã chọn báo giá của xưởng</p>
                 <p>Liên hệ: {selected.contactName} · {selected.contactPhone} · {selected.contactEmail}</p>
+                <button type="button" className="btn btn-outline btn-sm mt-2" onClick={() => printRfqConfirmation(selected, ownQuote)}>In phiếu xác nhận đơn sỉ</button>
               </div>
             )}
             {ownQuote ? (
