@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ChevronLeft } from 'lucide-react'
 import { orderService } from '../../services/orderService'
@@ -10,6 +10,8 @@ import { formatDate, formatDateTime, formatVnd } from '../../lib/format'
 import { OrderPaymentPanel } from '../../components/OrderPaymentPanel'
 import { OrderStatusChip } from '../../components/OrderStatusChip'
 import { ErrorState, Notice, Spinner } from '../../components/ui/States'
+import { Field, TextArea, TextInput } from '../../components/ui/Field'
+import { COMPLAINT_STATUS, COMPLAINT_TYPE_LABEL, complaintService, type ComplaintType } from '../../services/complaintService'
 
 /** GET /api/orders/{id} + huỷ đơn (POST /api/orders/{id}/cancel) khi còn được phép */
 export function OrderDetailPage() {
@@ -131,8 +133,68 @@ export function OrderDetailPage() {
               </button>
             </div>
           )}
+          {(order.status === 'DELIVERING' || order.status === 'COMPLETED') && <OrderComplaint orderId={order.id} />}
         </aside>
       </div>
     </div>
+  )
+}
+
+/** Khiếu nại / đổi trả cho đơn đang giao hoặc đã hoàn tất; mỗi đơn một khiếu nại đang mở */
+function OrderComplaint({ orderId }: { orderId: string }) {
+  const { data, reload } = useApi(() => complaintService.mine(), [])
+  const [open, setOpen] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState<{ ok: boolean; text: string }>()
+  const mine = (data ?? []).filter((c) => c.orderId === orderId)
+  const active = mine.some((c) => c.status === 'OPEN' || c.status === 'IN_PROGRESS')
+
+  const submit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const f = Object.fromEntries(new FormData(e.currentTarget)) as Record<string, string>
+    if (!f.subject?.trim()) return setMessage({ ok: false, text: 'Vui lòng nhập tiêu đề khiếu nại.' })
+    setBusy(true)
+    setMessage(undefined)
+    try {
+      await complaintService.create({ orderId, type: f.type as ComplaintType, subject: f.subject, description: f.description || undefined })
+      setMessage({ ok: true, text: 'Đã gửi khiếu nại. Xưởng sẽ liên hệ xử lý.' })
+      setOpen(false)
+      reload()
+    } catch (err) {
+      setMessage({ ok: false, text: errorMessage(err) })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <section className="card flex flex-col gap-3 p-5">
+      <h2 className="text-h3">Khiếu nại / đổi trả</h2>
+      {mine.map((c) => (
+        <div key={c.id} className="rounded-sm border border-line p-3 text-small">
+          <p className="font-semibold">{c.subject} · <span className={COMPLAINT_STATUS[c.status].tone}>{COMPLAINT_STATUS[c.status].text}</span></p>
+          <p className="text-muted">{COMPLAINT_TYPE_LABEL[c.type]} · gửi {formatDateTime(c.createdAt)}</p>
+          {c.resolution && <p className="mt-1">Xưởng phản hồi: {c.resolution}</p>}
+        </div>
+      ))}
+      {message && <Notice tone={message.ok ? 'success' : 'danger'}>{message.text}</Notice>}
+      {!active && (open ? (
+        <form noValidate onSubmit={submit} className="flex flex-col gap-3">
+          <Field label="Vấn đề" name="type">
+            <select id="type" name="type" className="input" defaultValue="DAMAGED">
+              {(Object.keys(COMPLAINT_TYPE_LABEL) as ComplaintType[]).map((t) => <option key={t} value={t}>{COMPLAINT_TYPE_LABEL[t]}</option>)}
+            </select>
+          </Field>
+          <TextInput label="Tiêu đề" name="subject" maxLength={255} placeholder="2 bánh bị vỡ khi nhận" />
+          <TextArea label="Mô tả (nên kèm thời điểm nhận, tình trạng hộp)" name="description" rows={3} maxLength={5000} />
+          <div className="flex gap-2">
+            <button type="submit" className="btn btn-primary btn-sm" disabled={busy}>{busy ? 'Đang gửi...' : 'Gửi khiếu nại'}</button>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setOpen(false)}>Thôi</button>
+          </div>
+        </form>
+      ) : (
+        <button type="button" className="btn btn-outline btn-sm self-start" onClick={() => setOpen(true)}>Gửi khiếu nại</button>
+      ))}
+    </section>
   )
 }

@@ -51,6 +51,10 @@ public class Complaint extends CreatedEntity {
     @Column(name = "resolved_at")
     private LocalDateTime resolvedAt;
 
+    /** Cách xử lý (hoàn tiền, đổi bánh...) hoặc lý do từ chối, do xưởng/admin ghi */
+    @Column(name = "resolution", length = 2000)
+    private String resolution;
+
     // Chuyển trạng thái khiếu nại với validation
     public void transitionStatus(ComplaintStatus newStatus) {
         this.status.validateTransition(newStatus);
