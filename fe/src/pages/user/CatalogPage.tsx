@@ -63,7 +63,9 @@ export function CatalogPage() {
         {' '}
         <section className="relative w-full bg-primary overflow-hidden">
           {' '}
-          <div className="absolute inset-0 opacity-15 bg-[radial-gradient(#d6a75c_1px,transparent_1px)] [background-size:24px_24px] pointer-events-none"></div>{' '}
+          <img src="/catalog-mooncake-hero.png" alt="" aria-hidden="true"
+            className="absolute inset-0 h-full w-full object-cover object-center pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-r from-primary/95 via-primary/80 to-primary/35 pointer-events-none" />
           <div className="relative max-w-[1320px] mx-auto px-margin-mobile lg:px-margin py-space-xl lg:py-20 flex flex-col md:flex-row md:items-end justify-between gap-space-lg">
             {' '}
             <div className="space-y-space-sm max-w-2xl">
@@ -83,31 +85,6 @@ export function CatalogPage() {
                   ' Quy tụ tinh hoa đúc kết từ những lò bánh di sản trăm năm khắp ba miền: Hải Phòng, Hà Nội, Hội An và Gia Định. Cam kết nướng tươi mới trong ngày và bảo quản chuỗi lạnh ngặt nghèo. '
                 }
               </p>{' '}
-            </div>{' '}
-            <div className="flex flex-wrap items-center gap-space-md">
-              {' '}
-              <div className="px-space-md py-space-sm rounded-[0.125rem] bg-primary-container text-champagne-light shadow-sm">
-                {' '}
-                <div className="flex items-center gap-2 text-secondary-fixed mb-1">
-                  {' '}
-                  <Icon name="ac_unit" className="text-[18px]" aria-hidden />{' '}
-                  <span className="font-label-sm text-label-sm uppercase tracking-wider">Chuỗi Lạnh Tiêu Chuẩn</span>{' '}
-                </div>{' '}
-                <span className="font-headline-sm text-headline-sm block">18°C – 22°C</span>{' '}
-                <span className="font-body-sm text-body-sm text-on-primary-container">Độ ẩm tương đối 55%</span>{' '}
-              </div>{' '}
-              <div className="px-space-md py-space-sm rounded-[0.125rem] bg-primary-container text-champagne-light shadow-sm">
-                {' '}
-                <div className="flex items-center gap-2 text-secondary-fixed mb-1">
-                  {' '}
-                  <Icon name="workspace_premium" className="text-[18px]" aria-hidden />{' '}
-                  <span className="font-label-sm text-label-sm uppercase tracking-wider">Chứng Nhận Hoàng Triều</span>{' '}
-                </div>{' '}
-                <span className="font-headline-sm text-headline-sm block">100% VSATTP</span>{' '}
-                <span className="font-body-sm text-body-sm text-on-primary-container">
-                  Kiểm định lô hàng số 2025-QG
-                </span>{' '}
-              </div>{' '}
             </div>{' '}
           </div>{' '}
         </section>{' '}

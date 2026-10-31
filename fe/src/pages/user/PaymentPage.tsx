@@ -5,6 +5,7 @@ import { useApi } from '../../hooks/useApi'
 import { useDocumentTitle } from '../../hooks/useDocumentTitle'
 import { PAYMENT_METHOD_LABEL, ROUTES } from '../../constants'
 import { formatDate, formatVnd } from '../../lib/format'
+import { displayOrderLines } from '../../lib/orderDisplay'
 import { cn } from '../../lib/format'
 import { OrderPaymentPanel } from '../../components/OrderPaymentPanel'
 import { PageHeader } from '../../components/ui/PageHeader'
@@ -87,24 +88,42 @@ export function PaymentPage() {
 
 /** Món trong đơn + tạm tính, khuyến mãi, tổng (số liệu của BE) */
 function OrderSummary({ order }: { order: OrderDetail }) {
+  const lines = displayOrderLines(order.lines)
+  const discount = order.discountAmount ?? 0
+  const setOnly = order.lines.length > 0 && order.lines.every((line) => !!line.sourceSetId)
+  const hasDeposit = order.paymentMethod === 'VIETQR' && order.status === 'PENDING_DEPOSIT' && order.depositAmount > 0
   return (
     <div className="rounded-sm border border-line p-4 text-small">
       <h3 className="font-semibold text-navy">Chi tiết đơn hàng</h3>
       <ul className="mt-3 flex flex-col gap-2">
-        {order.lines.map((line, i) => (
-          <li key={`${line.variantId}-${i}`} className="flex justify-between gap-3">
+        {lines.map((line) => (
+          <li key={line.key} className="flex justify-between gap-3">
             <span>
-              {line.productName} <span className="text-muted">· {line.variantName} × {line.quantity}</span>
+              {line.name}{line.quantity && <span className="text-muted"> × {line.quantity}</span>}
+              {line.components && <span className="mt-1 block text-muted">
+                Gồm: {line.components.map((item) => `${item.productName} · ${item.variantName} × ${item.quantity}`).join('; ')}
+              </span>}
             </span>
             <span className="shrink-0">{formatVnd(line.subtotal)}</span>
           </li>
         ))}
       </ul>
       <dl className="mt-3 flex flex-col gap-1 border-t border-line pt-3">
-        <div className="flex justify-between text-muted"><dt>Tạm tính</dt><dd>{formatVnd(order.subtotalAmount)}</dd></div>
-        {!!order.discountAmount && <div className="flex justify-between text-success"><dt>Đã giảm (khuyến mãi)</dt><dd>{formatVnd(order.discountAmount)}</dd></div>}
+        <div className="flex justify-between text-muted"><dt>{discount > 0 ? 'Giá gốc' : 'Tạm tính'}</dt>
+          <dd>{formatVnd(order.subtotalAmount + discount)}</dd></div>
+        {discount > 0 && <div className="flex justify-between text-success">
+          <dt>{setOnly ? 'Ưu đãi set quà' : 'Giảm giá'}</dt><dd>−{formatVnd(discount)}</dd>
+        </div>}
         <div className="flex justify-between text-muted"><dt>Giao hàng</dt><dd>Miễn phí</dd></div>
         <div className="flex justify-between font-semibold text-navy"><dt>Tổng cộng</dt><dd>{formatVnd(order.totalAmount)}</dd></div>
+        {hasDeposit && <>
+          <div className="flex justify-between gap-2 text-navy"><dt>{order.depositAmount < order.totalAmount
+            ? 'Cọc VietQR (50%, làm tròn lên nghìn)' : 'Chuyển khoản toàn bộ'}</dt>
+            <dd className="shrink-0 font-semibold">{formatVnd(order.depositAmount)}</dd></div>
+          {order.depositAmount < order.totalAmount && <div className="flex justify-between text-muted">
+            <dt>Còn lại khi nhận</dt><dd>{formatVnd(order.totalAmount - order.depositAmount)}</dd>
+          </div>}
+        </>}
       </dl>
       <p className="mt-3 text-muted">Giao tới: {order.receiverName} · {order.receiverPhone}<br />{order.shippingAddress}</p>
     </div>
