@@ -82,7 +82,7 @@ function VietQrPanel({ order, seconds, expired }: { order: OrderDetail; seconds:
       </div>
       <div>
         <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-small">
-          <dt className="text-muted">Số tiền cần chuyển</dt>
+          <dt className="text-muted">{order.depositAmount < order.totalAmount ? 'Cọc cần chuyển (tối thiểu 50%)' : 'Số tiền cần chuyển'}</dt>
           <dd className="font-sans text-h3 text-navy">{formatVnd(pay.amount)}</dd>
           {order.depositAmount < order.totalAmount && (
             <>

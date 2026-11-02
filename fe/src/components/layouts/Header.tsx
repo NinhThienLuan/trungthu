@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect, type FormEvent } from 'react'
+// import { useState, useRef, useEffect, type FormEvent } from 'react'
+import { useState, useRef, useEffect} from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { Menu, X } from 'lucide-react'
 import { Icon } from '../Icon'
@@ -41,10 +42,10 @@ export function Header() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const handleSearch = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    navigate(ROUTES.products)
-  }
+  // const handleSearch = (e: FormEvent<HTMLFormElement>) => {
+  //   e.preventDefault()
+  //   navigate(ROUTES.products)
+  // }
 
   const handleLogout = async () => {
     setProfilePopupOpen(false)
@@ -63,17 +64,17 @@ export function Header() {
           </Link>
         </div>
 
-        <form className="hidden 2xl:flex items-center flex-1 max-w-xs mx-space-md" role="search" onSubmit={handleSearch}>
-          <div className="relative w-full">
-            <Icon name="search" className="absolute left-space-sm top-1/2 -translate-y-1/2 text-on-primary-container text-[18px]" aria-hidden />
-            <input
-              className="w-full bg-primary pl-9 pr-space-sm py-1.5 rounded-[0.125rem] text-champagne-light font-body-sm text-body-sm placeholder:text-on-primary-container focus:outline-none focus:ring-1 focus:ring-secondary-fixed"
-              placeholder="Tìm bộ sưu tập, hương vị hoàng gia..."
-              type="search"
-              aria-label="Tìm kiếm"
-            />
-          </div>
-        </form>
+        {/*<form className="hidden 2xl:flex items-center flex-1 max-w-xs mx-space-md" role="search" onSubmit={handleSearch}>*/}
+        {/*  <div className="relative w-full">*/}
+        {/*    <Icon name="search" className="absolute left-space-sm top-1/2 -translate-y-1/2 text-on-primary-container text-[18px]" aria-hidden />*/}
+        {/*    <input*/}
+        {/*      className="w-full bg-primary pl-9 pr-space-sm py-1.5 rounded-[0.125rem] text-champagne-light font-body-sm text-body-sm placeholder:text-on-primary-container focus:outline-none focus:ring-1 focus:ring-secondary-fixed"*/}
+        {/*      placeholder="Tìm bộ sưu tập, hương vị hoàng gia..."*/}
+        {/*      type="search"*/}
+        {/*      aria-label="Tìm kiếm"*/}
+        {/*    />*/}
+        {/*  </div>*/}
+        {/*</form>*/}
 
         <nav className="hidden xl:flex items-center gap-5" aria-label="Điều hướng chính">
           {BASE_NAV.map((item) => (

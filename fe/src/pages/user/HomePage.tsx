@@ -75,10 +75,10 @@ export function HomePage() {
                   ' Hội tụ các thương hiệu & xưởng bánh trung thu truyền thống danh tiếng nhất Việt Nam. Dịch vụ đặt sỉ B2B Doanh nghiệp, khắc logo mạ vàng gia truyền và bảo quản chuỗi lạnh tươi ngon vẹn tròn tới từng bàn tiệc gia bảo. '
                 }
               </p>{' '}
-              <div className="flex flex-wrap items-center gap-space-md pt-space-sm">
+              <div className="grid w-full max-w-3xl grid-cols-1 gap-space-md pt-space-sm sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
                 {' '}
                 <a
-                  className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-[0.125rem] bg-primary-container border border-secondary-fixed-dim/40 text-champagne-light font-label-lg text-label-lg shadow-xl hover:bg-secondary-fixed-dim hover:text-ink-dark transition-all"
+                  className="inline-flex w-full items-center justify-center gap-2 px-6 py-3.5 rounded-[0.125rem] bg-primary-container border border-secondary-fixed-dim/40 text-champagne-light font-label-lg text-label-lg shadow-xl hover:bg-secondary-fixed-dim hover:text-ink-dark transition-all"
                   href="#b2b-rfq"
                 >
                   {' '}
@@ -86,15 +86,15 @@ export function HomePage() {
                   <span>Đặt Sỉ B2B & Nhận Báo Giá Doanh Nghiệp</span>{' '}
                 </a>{' '}
                 <a
-                  className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-[0.125rem] bg-surface-container-lowest/15 border border-white/20 backdrop-blur-md text-surface-container-lowest font-label-lg text-label-lg hover:bg-surface-container-lowest hover:text-primary transition-all"
+                  className="inline-flex w-full items-center justify-center gap-2 px-6 py-3.5 rounded-[0.125rem] bg-surface-container-lowest/15 border border-white/20 backdrop-blur-md text-surface-container-lowest font-label-lg text-label-lg hover:bg-surface-container-lowest hover:text-primary transition-all"
                   href="#artisan-guild"
                 >
                   {' '}
                   <Icon name="palette" className="text-[19px] text-secondary-fixed-dim" aria-hidden />{' '}
-                  <span>Khám Phá Gian Hàng Nghệ Nhân</span>{' '}
+                  <span>Khám Phá Gian Hàng</span>{' '}
                 </a>{' '}
               </div>{' '}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-space-sm pt-space-md max-w-2xl">
+              <div className="grid w-full max-w-3xl grid-cols-1 gap-space-sm pt-space-md sm:grid-cols-3">
                 {' '}
                 <div className="flex items-center gap-3 bg-primary-container/60 border border-border-gold-subtle/50 backdrop-blur-md p-3.5 rounded-[0.125rem]">
                   {' '}

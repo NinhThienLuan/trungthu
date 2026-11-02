@@ -108,6 +108,9 @@ export interface OrderSummary {
 
 export interface OrderLine {
   variantId: string
+  /** Các thành phần cùng sourceSetId thuộc một set quà đã mua */
+  sourceSetId?: string | null
+  sourceSetName?: string | null
   productName: string
   variantName: string
   quantity: number
@@ -142,6 +145,8 @@ export interface OrderDetail extends OrderSummary {
   receiverPhone: string
   shippingAddress: string
   subtotalAmount: number
+  /** Tổng giá gốc tiền hàng trước ưu đãi của set và khuyến mãi */
+  listAmount?: number
   shippingFee: number
   /** Số tiền khuyến mãi của xưởng đã trừ (BE: discountAmount) */
   discountAmount?: number

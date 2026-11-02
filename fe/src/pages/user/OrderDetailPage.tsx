@@ -7,6 +7,7 @@ import { useApi } from '../../hooks/useApi'
 import { useDocumentTitle } from '../../hooks/useDocumentTitle'
 import { CANCELLABLE_STATUSES, PAYMENT_METHOD_LABEL, PAYMENT_STATUS_LABEL, ROUTES } from '../../constants'
 import { formatDate, formatDateTime, formatVnd } from '../../lib/format'
+import { displayOrderLines } from '../../lib/orderDisplay'
 import { OrderPaymentPanel } from '../../components/OrderPaymentPanel'
 import { OrderStatusChip } from '../../components/OrderStatusChip'
 import { ErrorState, Notice, Spinner } from '../../components/ui/States'
@@ -44,6 +45,10 @@ export function OrderDetailPage() {
     }
   }
 
+  const displayLines = displayOrderLines(order.lines)
+  const discount = order.discountAmount ?? 0
+  const setOnly = order.lines.length > 0 && order.lines.every((line) => !!line.sourceSetId)
+
   return (
     <div className="page section">
       <Link to={ROUTES.orders} className="mb-6 inline-flex items-center gap-1 text-small text-muted hover:text-navy">
@@ -76,14 +81,15 @@ export function OrderDetailPage() {
           <section className="card p-5 md:p-6">
             <h2 className="text-h3">Sản phẩm</h2>
             <ul className="mt-4 flex flex-col gap-3">
-              {order.lines.map((line, i) => (
-                <li key={`${line.variantId}-${i}`} className="flex justify-between gap-4 text-small">
+              {displayLines.map((line) => (
+                <li key={line.key} className="flex justify-between gap-4 text-small">
                   <span>
-                    <span className="font-semibold text-navy">{line.productName}</span>
-                    <span className="text-muted"> · {line.variantName}</span>
-                    <span className="block text-muted">
-                      {line.quantity} × {formatVnd(line.unitPrice)}
-                    </span>
+                    <span className="font-semibold text-navy">{line.name}{line.components && ` × ${line.quantity}`}</span>
+                    {line.components ? <span className="block text-muted">
+                      Gồm: {line.components.map((item) => `${item.productName} · ${item.variantName} × ${item.quantity}`).join('; ')}
+                    </span> : <span className="block text-muted">
+                      {line.quantity} × {formatVnd(line.unitPrice ?? line.subtotal / (line.quantity ?? 1))}
+                    </span>}
                     {line.boxContents && <span className="block text-muted">Gồm: {line.boxContents.join(', ')}</span>}
                   </span>
                   <span className="shrink-0 font-semibold text-navy">{formatVnd(line.subtotal)}</span>
@@ -97,11 +103,11 @@ export function OrderDetailPage() {
           <section className="card p-5">
             <h2 className="text-h3">Số tiền</h2>
             <dl className="mt-4 grid grid-cols-[1fr_auto] gap-y-1.5 text-small">
-              <dt className="text-muted">Tiền hàng</dt>
-              <dd>{formatVnd(order.subtotalAmount)}</dd>
-              {!!order.discountAmount && <>
-                <dt className="text-success">Đã giảm (khuyến mãi)</dt>
-                <dd className="text-success">{formatVnd(order.discountAmount)}</dd>
+              <dt className="text-muted">{discount > 0 ? 'Giá gốc' : 'Tiền hàng'}</dt>
+              <dd>{formatVnd(order.subtotalAmount + discount)}</dd>
+              {discount > 0 && <>
+                <dt className="text-success">{setOnly ? 'Ưu đãi set quà' : 'Giảm giá'}</dt>
+                <dd className="text-success">−{formatVnd(discount)}</dd>
               </>}
               <dt className="text-muted">Giao hàng</dt>
               <dd>Miễn phí</dd>
