@@ -240,7 +240,7 @@ Nền tảng đóng vai trò là phần mềm trung gian dịch vụ (Pure SaaS 
 ## 5. Ràng Buộc Kỹ Thuật & Kiến Trúc (Architectural Constraints)
 
 1. **Công nghệ Backend**: Java 21+, Spring Boot 3.x, Spring Data JPA, Spring Security, Hibernate Validator.
-2. **Cơ sở dữ liệu**: Cấu hình dev hiện dùng SQL Server, kiểm thử dùng H2; UUID id trong BaseEntity. Dev sửa entity trực tiếp bằng Hibernate ddl-auto=update, không thêm Flyway/migration. PostgreSQL là phương án hỗ trợ, không tự chuyển DB trong BE4.
+2. **Cơ sở dữ liệu**: Hỗ trợ PostgreSQL (Production / Heroku qua Flyway migration `V1__initial_schema.sql`), SQL Server cho local development và H2 in-memory cho kiểm thử tự động; UUID id trong BaseEntity. Quản lý schema production chặt chẽ qua migration scripts trong `src/main/resources/db/migration`.
 3. **Mô hình tính toán thời gian (Solar-First Architecture)**: Toàn bộ lưu trữ và tính toán sử dụng `java.time.LocalDate` Dương Lịch.
 4. **Kiến trúc phân tầng chuẩn**: `Controller` $\rightarrow$ `Service` / `ServiceImpl` $\rightarrow$ `Repository` $\rightarrow$ `Entity`.
 5. **In ấn tinh gọn**: Sử dụng CSS `@media print` cho Phiếu Ra Lò, không dùng thư viện xuất PDF nặng nề tại máy chủ.

@@ -1,6 +1,6 @@
 # Hợp đồng Backend: ownership, Checkout và đơn hàng
 
-Cập nhật **2026-10-16** theo bảng phân việc và yêu cầu tinh gọn khi triển khai BE4. Giai đoạn dev sửa entity/repository trực tiếp, không thêm Flyway hoặc migration. Đây là đặc tả đích, không xác nhận code hiện tại đã hoàn thành. Giới hạn gia hạn hold là mặc định MVP được bổ sung trong lần cập nhật này.
+Cập nhật **2026-10-16** theo bảng phân việc và yêu cầu tinh gọn khi triển khai BE4. Production PostgreSQL quản lý schema qua Flyway migration (V1__initial_schema.sql); môi trường test tự động dùng H2. Đây là đặc tả đích, không xác nhận code hiện tại đã hoàn thành. Giới hạn gia hạn hold là mặc định MVP được bổ sung trong lần cập nhật này.
 
 ## 1. Ownership và tài liệu áp dụng
 
@@ -117,7 +117,7 @@ BE4 tạo view chỉ đọc **`v_bake_lines`**, một dòng/OrderItem: `order_it
 ## 8. Khởi tạo và sử dụng view (2026-10-17)
 
 - [BakeViewInitializer](../../../be/src/main/java/fpt/sba/trungthu/common/data/BakeViewInitializer.java) chạy sau khi Hibernate tạo/cập nhật bảng, trước khi seed user. SQL nguồn tại [v_bake_lines.sql](../../../be/src/main/resources/db/views/v_bake_lines.sql).
-- SQL Server dùng CREATE OR ALTER VIEW, H2 dùng CREATE OR REPLACE VIEW; có thể chạy lại khi view đã tồn tại. Hiện initializer hỗ trợ hai hệ DB này; không thêm Flyway/migration và không xóa dữ liệu đơn hàng.
+- SQL Server dùng CREATE OR ALTER VIEW, H2 dùng CREATE OR REPLACE VIEW; có thể chạy lại khi view đã tồn tại. Trên PostgreSQL production, view và toàn bộ schema được quản lý tự động qua Flyway migration (db/migration/V1__initial_schema.sql).
 - order_item_id xác định duy nhất một dòng nguồn. View dùng snapshot tên, quantity và bake_quantity; không join Catalog, PaymentTransaction hoặc tính lại số bánh/set. Dữ liệu thay đổi ngay khi Order/Item/Batch thay đổi, không cần chạy job refresh.
 - View là nguồn đọc nội bộ chứa các Provider; không tự phân quyền theo JWT. BE2 phải lấy providerId hiện tại từ JWT và lọc cả provider_id lẫn bake_date khi xuất phiếu; không mở truy vấn toàn view cho client. Chưa thêm API xuất/in trong bước 3.
 

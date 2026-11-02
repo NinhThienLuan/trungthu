@@ -56,4 +56,4 @@ git subtree push --prefix be heroku main
 heroku logs --tail -a TEN_APP
 ```
 
-Với GitHub Integration, Heroku đọc `system.properties` và `Procfile` ở root. Với `git subtree push`, Heroku đọc các file tương ứng trong `be/`. Lệnh `git subtree push` chỉ lấy dữ liệu đã commit. Không đặt profile `h2` trên Heroku. Hiện schema được Hibernate cập nhật bằng `ddl-auto=update`; trước khi phục vụ dữ liệu thật, nên thay bằng migration có phiên bản và kiểm tra luồng chuyển dữ liệu SQL Server sang PostgreSQL.
+Với GitHub Integration, Heroku đọc `system.properties` và `Procfile` ở root. Với `git subtree push`, Heroku đọc các file tương ứng trong `be/`. Lệnh `git subtree push` chỉ lấy dữ liệu đã commit. Không đặt profile `h2` trên Heroku. Schema cơ sở dữ liệu trên PostgreSQL được quản lý tự động qua Flyway migration (`db/migration/V1__initial_schema.sql`) khi ứng dụng khởi chạy với profile `postgres`.

@@ -17,13 +17,12 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/orders")
 @RequiredArgsConstructor
 @Tag(name = "Orders", description = "Buyer and seller read their own orders")
 public class OrderController {
     private final OrderService orderService;
 
-    @GetMapping("/me")
+    @GetMapping("/api/orders/me")
     @PreAuthorize("hasRole('CUSTOMER')")
     @Operation(summary = "List my orders, filtered by status and inclusive delivery dates")
     public ResponseEntity<ApiResponseDTO<PageResponse<OrderSummaryResponse>>> getMyOrders(
@@ -31,7 +30,15 @@ public class OrderController {
         return ResponseEntity.ok(ApiResponseDTO.success(orderService.getMyOrders(query)));
     }
 
-    @GetMapping("/{id}")
+    @GetMapping({"/api/provider/orders", "/api/orders/provider"})
+    @PreAuthorize("hasRole('PROVIDER')")
+    @Operation(summary = "List my store orders, filtered by status and inclusive delivery dates")
+    public ResponseEntity<ApiResponseDTO<PageResponse<OrderSummaryResponse>>> getProviderOrders(
+            @Valid @ModelAttribute OrderQueryRequest query) {
+        return ResponseEntity.ok(ApiResponseDTO.success(orderService.getProviderOrders(query)));
+    }
+
+    @GetMapping("/api/orders/{id}")
     @PreAuthorize("hasAnyRole('CUSTOMER', 'PROVIDER')")
     @Operation(summary = "Get an order owned by the current buyer or provider")
     public ResponseEntity<ApiResponseDTO<OrderDetailResponse>> getOrderDetail(@PathVariable UUID id) {

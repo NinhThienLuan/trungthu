@@ -238,7 +238,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public PageResponse<OrderSummaryResponse> getMyOrders(OrderQueryRequest query) {
         try {
-            User buyer = requireUser(UserRole.CUSTOMER);
+            User buyer = requireActiveUser();
             log.info("Fetching orders for customer {}", buyer.getId());
             return mapPage(orderRepository.findCustomerOrders(buyer.getId(), query.getStatus(), query.getFrom(),
                     query.getTo(), pageable(query)));
@@ -255,7 +255,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public PageResponse<OrderSummaryResponse> getProviderOrders(OrderQueryRequest query) {
         try {
-            User provider = requireUser(UserRole.PROVIDER);
+            User provider = requireActiveUser();
             log.info("Fetching orders for provider {}", provider.getId());
             return mapPage(orderRepository.findProviderOrders(provider.getId(), query.getStatus(), query.getFrom(),
                     query.getTo(), pageable(query)));
@@ -272,7 +272,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public OrderDetailResponse getOrderDetail(UUID orderId) {
         try {
-            User user = requireUser(UserRole.CUSTOMER, UserRole.PROVIDER);
+            User user = requireActiveUser();
             log.info("Fetching order {} for user {}", orderId, user.getId());
             Order order = orderRepository.findOwnedOrder(orderId, user.getId())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
@@ -291,13 +291,10 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
-    private User requireUser(UserRole... allowedRoles) {
+    private User requireActiveUser() {
         User user = securityContextService.getCurrentUser();
         if (user.getStatus() != UserStatus.ACTIVE) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User is not active");
-        }
-        if (Arrays.stream(allowedRoles).noneMatch(role -> role == user.getRole())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access is denied");
         }
         return user;
     }
