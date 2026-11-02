@@ -1,4 +1,4 @@
-# 📜 Business Rule: BR-04 - Dashboard Quản Lý Lịch Sản Xuất & Lịch Ra Lò (Admin Production Calendar - Streamlined MVP)
+# Business Rule: BR-04 - Dashboard Quản Lý Lịch Sản Xuất & Lịch Ra Lò (Admin Production Calendar - Streamlined MVP)
 
 > Cập nhật 2026-10-16: BE4 sở hữu `v_bake_lines`, BE2 sở hữu API xuất, FE2 in; lifecycle do BE3 theo [hợp đồng Backend](../04-agent-and-dev-guidelines/backend-ownership-and-order-contract.md).
 

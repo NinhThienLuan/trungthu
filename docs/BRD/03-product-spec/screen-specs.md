@@ -1,4 +1,4 @@
-# 📱 Screen Specification Document (Chi Tiết Giao Diện & UI States)
+# Screen Specification Document (Chi Tiết Giao Diện & UI States)
 
 > Cập nhật 2026-10-16: Checkout/đơn hàng MVP theo [hợp đồng Backend](../04-agent-and-dev-guidelines/backend-ownership-and-order-contract.md); các màn đấu thầu/custom/khiếu nại là Phase 2 theo SRS. SaaS chỉ nạp phí/kích hoạt, không phân hạng quảng cáo trong MVP.
 
@@ -10,7 +10,7 @@
 
 ---
 
-## 📑 Danh Mục Màn Hình Được Đặc Tả (100% Sitemap Coverage)
+## Danh Mục Màn Hình Được Đặc Tả (100% Sitemap Coverage)
 
 ### Nhóm 1: Giao Diện Người Mua (Buyer & Public Screens)
 1. [`/` - Trang Chủ & Mùa Vụ](#1---trang-chủ--mùa-vụ)

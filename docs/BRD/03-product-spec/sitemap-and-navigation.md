@@ -1,4 +1,4 @@
-# 🗺️ Sitemap & Navigation Design Specification
+# Sitemap & Navigation Design Specification
 
 > Cập nhật 2026-10-16: MVP cho phép giỏ đa Provider, mỗi Provider một Order. Các route thiết kế mở rộng theo phạm vi SRS; [hợp đồng Backend](../04-agent-and-dev-guidelines/backend-ownership-and-order-contract.md) quyết định API/ownership/lifecycle.
 

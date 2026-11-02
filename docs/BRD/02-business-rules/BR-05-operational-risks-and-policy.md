@@ -1,4 +1,4 @@
-# 📜 Business Rule: BR-05 - Quản Lý Rủi Ro Vận Hành, Pháp Lý & Chính Sách Bán Hàng (Operational Risks & E-commerce Policies)
+# Business Rule: BR-05 - Quản Lý Rủi Ro Vận Hành, Pháp Lý & Chính Sách Bán Hàng (Operational Risks & E-commerce Policies)
 
 > Cập nhật 2026-10-16: Ngưỡng cọc/COD tính trên từng Order sau tách; transaction và hold theo [hợp đồng Backend](../04-agent-and-dev-guidelines/backend-ownership-and-order-contract.md).
 

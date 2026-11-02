@@ -1,4 +1,4 @@
-# 📜 Business Rule: BR-02 - Yêu Cầu Báo Giá Đặt Hàng Số Lượng Lớn Đa Provider (Multi-Provider B2B Bulk RFQ)
+# Business Rule: BR-02 - Yêu Cầu Báo Giá Đặt Hàng Số Lượng Lớn Đa Provider (Multi-Provider B2B Bulk RFQ)
 
 ## 1. Goal (Mục tiêu)
 Cho phép các doanh nghiệp, tổ chức có nhu cầu mua bánh Trung Thu số lượng lớn ($\ge 20$ hộp hoặc $\ge 10.000.000$ VNĐ) gửi Yêu cầu báo giá (B2B RFQ), đính kèm logo in ấn, ngân sách dự kiến và mốc ngày nhận bánh tươi mong muốn. Hệ thống tự động phân phối RFQ tới các Provider có đủ năng lực trên sàn (đã duyệt ATTP và có gói SaaS hoạt động).

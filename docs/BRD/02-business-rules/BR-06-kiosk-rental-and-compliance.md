@@ -1,4 +1,4 @@
-# 📜 Business Rule: BR-06 - Đăng Ký Gói Dịch Vụ SaaS Provider & Quản Lý Hồ Sơ Pháp Lý (Provider SaaS Subscription & Compliance - Streamlined MVP)
+# Business Rule: BR-06 - Đăng Ký Gói Dịch Vụ SaaS Provider & Quản Lý Hồ Sơ Pháp Lý (Provider SaaS Subscription & Compliance - Streamlined MVP)
 
 > Cập nhật 2026-10-16: SaaS được tinh gọn thành nạp phí/kích hoạt quyền bán theo bảng phân việc. [BE1](../04-agent-and-dev-guidelines/backend-ownership-and-order-contract.md) sở hữu nghiệp vụ và ProviderPolicy; BE4 phối hợp schema giao dịch dùng chung.
 

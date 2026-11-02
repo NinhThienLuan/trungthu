@@ -1,4 +1,4 @@
-# 📚 System Data Dictionary Specification (Từ Điển Dữ Liệu Kỹ Thuật - Toàn Diện)
+# System Data Dictionary Specification (Từ Điển Dữ Liệu Kỹ Thuật - Toàn Diện)
 
 > Cập nhật 2026-10-16: Schema đích theo [hợp đồng Backend](backend-ownership-and-order-contract.md); không phản ánh đầy đủ entity hiện tại. BE4 sửa entity/repository trực tiếp trong dev, không thêm Flyway/migration, BE3 triển khai lifecycle. SaaS MVP chỉ nạp phí/kích hoạt quyền bán.
 
@@ -14,7 +14,7 @@
 
 Toàn bộ các thực thể trong cơ sở dữ liệu được giữ nguyên vẹn trong cấu trúc hệ thống và được phân định phạm vi rõ ràng:
 
-### 🟢 Nhóm Thực Thể Cốt Lõi Vận Hành MVP (In-Scope MVP)
+### [MVP] Nhóm Thực Thể Cốt Lõi Vận Hành MVP (In-Scope MVP)
 1. **`User` (`USER`)**: Quản lý tài khoản toàn hệ thống (`CUSTOMER`, `PROVIDER`, `PLATFORM_ADMIN`), trạng thái duyệt hồ sơ ATTP (`is_compliance_approved`), công tắc nhận đơn (`is_season_active`) và **thông tin ngân hàng Provider** (`bank_code`, `bank_account_number`, `bank_account_name`) để sinh mã VietQR.
 2. **`StoreComplianceDoc` (`STORE_COMPLIANCE_DOC`)**: Hồ sơ pháp lý ATTP và ĐKKD của nhà sản xuất.
 3. **`Subscription` (`SUBSCRIPTION`)**: Quyền bán SaaS của Provider sau khi nạp phí và được Admin kích hoạt; không bắt buộc phân hạng gói trong MVP.
@@ -32,7 +32,7 @@ Toàn bộ các thực thể trong cơ sở dữ liệu được giữ nguyên v
 
 ---
 
-### 🟡 Nhóm Thực Thể Mở Rộng Giai Đoạn 2 (Phase 2 Entities - Retained in Codebase)
+### [Phase 2] Nhóm Thực Thể Mở Rộng Giai Đoạn 2 (Phase 2 Entities - Retained in Codebase)
 *Các thực thể này đã có sẵn trong cấu trúc Entity của Backend, được giữ nguyên vẹn để bảo đảm tính mở rộng của đồ án, nhưng không bắt buộc phải hoàn thiện toàn bộ luồng nghiệp vụ trong 4 tuần MVP:*
 
 14. **`CustomBox` (`CUSTOM_BOX`) `[Phase 2]`**: Hộp quà tùy chỉnh ghép từng vị bánh lẻ theo ô slot + In tên riêng lên vỏ hộp bằng CSS Overlay.

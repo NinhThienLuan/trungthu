@@ -4,7 +4,7 @@
 
 > Lưu ý BE4 2026-10-16: OrderPaymentStatus/TransactionStatus đã tách; bỏ OrderBatchStatus trong MVP, không thêm SKU vào OrderItem; giữ paidAt là thời điểm nghiệp vụ. Production PostgreSQL sử dụng Flyway migration (V1__initial_schema.sql), H2 in-memory dùng cho test tự động. Phần dưới là lịch sử trước thay đổi này.
 
-> Last updated: 2026-10-14 | Tests: **24/24 PASS** ✅ | Note: Đã xóa hoàn toàn Hạn Sử Dụng (`shelfLifeDays`) khỏi Product module theo quyết định tinh gọn scope.
+> Last updated: 2026-10-14 | Tests: **24/24 PASS** [OK] | Note: Đã xóa hoàn toàn Hạn Sử Dụng (`shelfLifeDays`) khỏi Product module theo quyết định tinh gọn scope.
 
 ---
 
@@ -42,28 +42,28 @@
 
 ---
 
-## Enum Status (COMPLETE ✅)
+## Enum Status (COMPLETE [OK])
 
 All entity status/state/type fields are now proper Java enums with `@Enumerated(EnumType.STRING)`.
 
 ### Enum Files (`entity/enumeration/`)
 | Enum | Used By | Has `validateTransition()` |
 |------|---------|--------------------------|
-| `UserStatus` | `User.status` | ✅ |
+| `UserStatus` | `User.status` | [OK] |
 | `UserRole` | `User.role` | — |
-| `ProductStatus` | `Product.status`, `ProductVariant.status` | ✅ |
-| `OrderStatus` | `Order.orderStatus` | ✅ |
-| `PaymentStatus` | `Order.paymentStatus`, `PaymentTransaction.paymentStatus` | ✅ |
+| `ProductStatus` | `Product.status`, `ProductVariant.status` | [OK] |
+| `OrderStatus` | `Order.orderStatus` | [OK] |
+| `PaymentStatus` | `Order.paymentStatus`, `PaymentTransaction.paymentStatus` | [OK] |
 | `PaymentMethod` | `PaymentTransaction.paymentMethod` | — |
-| `OrderBatchStatus` | `OrderBatch.batchStatus` | ✅ |
-| `ProductionBatchStatus` | `ProductionBatch.status` | ✅ |
-| `SubscriptionStatus` | `Subscription.status` | ✅ |
-| `BulkRequestStatus` | `BulkRequest.status` | ✅ |
-| `QuoteStatus` | `ProviderQuotation.status` | ✅ |
+| `OrderBatchStatus` | `OrderBatch.batchStatus` | [OK] |
+| `ProductionBatchStatus` | `ProductionBatch.status` | [OK] |
+| `SubscriptionStatus` | `Subscription.status` | [OK] |
+| `BulkRequestStatus` | `BulkRequest.status` | [OK] |
+| `QuoteStatus` | `ProviderQuotation.status` | [OK] |
 | `ComplianceDocType` | `StoreComplianceDoc.documentType` | — |
-| `ComplianceDocStatus` | `StoreComplianceDoc.verificationStatus` | ✅ |
+| `ComplianceDocStatus` | `StoreComplianceDoc.verificationStatus` | [OK] |
 | `ComplaintType` | `Complaint.complaintType` | — |
-| `ComplaintStatus` | `Complaint.status` | ✅ |
+| `ComplaintStatus` | `Complaint.status` | [OK] |
 | `AuthProviderType` | `UserSocialAccount.provider` | — |
 | `ProductType` | `Product.productType` | — |
 

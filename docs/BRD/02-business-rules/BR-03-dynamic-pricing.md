@@ -1,4 +1,4 @@
-# 📜 Business Rule: BR-03 - Chính Sách Giá Biến Động & Phí Phụ Thu Theo Thời Gian (Dynamic Pricing & Surcharges)
+# Business Rule: BR-03 - Chính Sách Giá Biến Động & Phí Phụ Thu Theo Thời Gian (Dynamic Pricing & Surcharges)
 
 ## 1. Goal (Mục tiêu)
 Định nghĩa cơ chế tính toán giá bán, các loại phụ phí in ấn tùy chỉnh, phí vận chuyển theo khu vực, và cấu hình chiến dịch giá linh hoạt (Dynamic Pricing).

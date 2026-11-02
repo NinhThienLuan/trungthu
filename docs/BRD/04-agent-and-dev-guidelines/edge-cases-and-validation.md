@@ -1,4 +1,4 @@
-# ⚠️ Ma Trận Xử Lý Trường Hợp Ngoại Lệ & Điều Kiện Biên (Edge Cases & Exception Matrix - Streamlined MVP)
+# [Lưu ý] Ma Trận Xử Lý Trường Hợp Ngoại Lệ & Điều Kiện Biên (Edge Cases & Exception Matrix - Streamlined MVP)
 
 > Cập nhật 2026-10-16: Áp dụng [hợp đồng Backend](backend-ownership-and-order-contract.md); giỏ đa Provider được phép, rollback toàn Checkout khi một nhóm thất bại.
 
@@ -6,7 +6,7 @@ Tài liệu này hướng dẫn cách xử lý các kịch bản lỗi, sự c�
 
 ---
 
-## 1. 🌐 Ngoại Lệ Kết Nối Mạng & Giao Dịch (Network & Transaction Exceptions)
+## 1.  Ngoại Lệ Kết Nối Mạng & Giao Dịch (Network & Transaction Exceptions)
 
 | Kịch Bản Ngoại Lệ (Edge Case) | Nguyên Nhân | Cách Xử Lý Hệ Thống (Handling Strategy) | Phản Hồi Cho Người Dùng (UI Response) |
 | :--- | :--- | :--- | :--- |
@@ -17,7 +17,7 @@ Tài liệu này hướng dẫn cách xử lý các kịch bản lỗi, sự c�
 
 ---
 
-## 2. 🎂 Ngoại Lệ Tồn Kho & Ra Lò Bánh Tươi (Inventory & Baking Exceptions)
+## 2.  Ngoại Lệ Tồn Kho & Ra Lò Bánh Tươi (Inventory & Baking Exceptions)
 
 | Kịch Bản Ngoại Lệ (Edge Case) | Nguyên Nhân | Cách Xử Lý Hệ Thống (Handling Strategy) | Phản Hồi Cho Người Dùng (UI Response) |
 | :--- | :--- | :--- | :--- |
@@ -27,7 +27,7 @@ Tài liệu này hướng dẫn cách xử lý các kịch bản lỗi, sự c�
 
 ---
 
-## 3. 📝 Ngoại Lệ In Ấn & Customize Tên/Logo (Personalization Exceptions)
+## 3.  Ngoại Lệ In Ấn & Customize Tên/Logo (Personalization Exceptions)
 
 | Kịch Bản Ngoại Lệ (Edge Case) | Nguyên Nhân | Cách Xử Lý Hệ Thống (Handling Strategy) | Phản Hồi Cho Người Dùng (UI Response) |
 | :--- | :--- | :--- | :--- |
@@ -36,7 +36,7 @@ Tài liệu này hướng dẫn cách xử lý các kịch bản lỗi, sự c�
 
 ---
 
-## 4. 📆 Ngoại Lệ Thời Gian Nhận Hàng (Delivery Scheduling Exceptions)
+## 4.  Ngoại Lệ Thời Gian Nhận Hàng (Delivery Scheduling Exceptions)
 
 | Kịch Bản Ngoại Lệ (Edge Case) | Nguyên Nhân | Cách Xử Lý Hệ Thống (Handling Strategy) | Phản Hồi Cho Người Dùng (UI Response) |
 | :--- | :--- | :--- | :--- |

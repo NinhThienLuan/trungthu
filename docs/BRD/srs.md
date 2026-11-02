@@ -1,4 +1,4 @@
-# 📋 Software Requirements Specification (SRS) - Streamlined MVP
+# Software Requirements Specification (SRS) - Streamlined MVP
 
 > Cập nhật 2026-10-16: [Hợp đồng Backend](04-agent-and-dev-guidelines/backend-ownership-and-order-contract.md) quy định ownership/API và chi tiết Checkout/lifecycle; schema đích tại [Data Dictionary](04-agent-and-dev-guidelines/system-data-dictionary.md). Các quy định này chưa đồng nghĩa code đã triển khai.
 
@@ -43,7 +43,7 @@ Nền tảng đóng vai trò là phần mềm trung gian dịch vụ (Pure SaaS 
 
 ### 2.3 Phân Định Phạm Vi MVP vs Giai Đoạn 2 (MVP Scope vs Phase 2)
 
-- **🟢 Giai Đoạn MVP (Must-Have / Core MVP cho 6 người x 4 tuần)**:
+- **[MVP] Giai Đoạn MVP (Must-Have / Core MVP cho 6 người x 4 tuần)**:
   - Xác thực người dùng Local JWT (`CUSTOMER`, `PROVIDER`, `PLATFORM_ADMIN`) với mật khẩu băm BCrypt. Bắt buộc đăng nhập trước khi checkout.
   - Tải lên hồ sơ pháp lý ATTP/GPKD qua 1 flow chung (`store_compliance_docs`) và Admin xét duyệt để kích hoạt mở bán (`is_compliance_approved`).
   - SaaS tinh gọn: Provider nạp/chuyển khoản phí, Admin đối soát kích hoạt quyền bán; phí/thời hạn/giới hạn SKU cấu hình bởi BE1, không bắt buộc phân hạng gói hoặc ví số dư.
@@ -60,7 +60,7 @@ Nền tảng đóng vai trò là phần mềm trung gian dịch vụ (Pure SaaS 
   - Tiếp nhận thông tin xuất hóa đơn VAT (lưu tên công ty/MST/địa chỉ/email và cờ yêu cầu hóa đơn vào Order).
   - UI tĩnh hiển thị Chính sách Keep-the-Item Refund & Miễn trừ đổi ý bánh tươi.
 
-- **🟡 Giai Đoạn 2 (Post-MVP / Phase 2 - Advanced Expansion & Retained Entities)**:
+- **[Phase 2] Giai Đoạn 2 (Post-MVP / Phase 2 - Advanced Expansion & Retained Entities)**:
   - **Tự phối Hộp quà B2C Custom Box (`custom_boxes`, `custom_box_items`)**: Lắp ghép bánh vào từng slot và Live Preview in tên vỏ hộp 60fps bằng CSS Absolute Overlay.
   - Đăng nhập Social (Google OAuth2 - `user_social_accounts`).
   - Phụ phí giao gấp lead-time 24h - 48h ($50.000$ VNĐ/hộp).

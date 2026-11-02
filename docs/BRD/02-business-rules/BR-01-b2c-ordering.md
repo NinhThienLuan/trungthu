@@ -1,4 +1,4 @@
-# 📜 Business Rule: BR-01 - Đặt Hàng B2C & Giỏ Hàng Tách Đơn Theo Provider (B2C Ordering & Split Orders)
+# Business Rule: BR-01 - Đặt Hàng B2C & Giỏ Hàng Tách Đơn Theo Provider (B2C Ordering & Split Orders)
 
 > Cập nhật 2026-10-16: Cho phép giỏ đa Provider. Transaction, COD và gia hạn hold tuân theo [hợp đồng Backend](../04-agent-and-dev-guidelines/backend-ownership-and-order-contract.md).
 

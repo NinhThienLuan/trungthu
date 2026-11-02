@@ -1,4 +1,4 @@
-# 📖 Từ Điển Thuật Ngữ Nghiệp Vụ (Domain Glossary)
+# Từ Điển Thuật Ngữ Nghiệp Vụ (Domain Glossary)
 
 > Cập nhật 2026-10-16: Thuật ngữ Order/COD/hold theo [hợp đồng Backend](../04-agent-and-dev-guidelines/backend-ownership-and-order-contract.md).
 
