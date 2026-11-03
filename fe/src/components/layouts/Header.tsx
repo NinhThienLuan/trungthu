@@ -1,7 +1,7 @@
 // import { useState, useRef, useEffect, type FormEvent } from 'react'
 import { useState, useRef, useEffect} from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
-import { Menu, X } from 'lucide-react'
+import { Menu, ShieldCheck, Store, User, X } from 'lucide-react'
 import { Icon } from '../Icon'
 import { HOME_BY_ROLE, ROUTES } from '../../constants'
 import { cartCount, useCartStore } from '../../stores/cartStore'
@@ -29,6 +29,9 @@ export function Header() {
   const popupRef = useRef<HTMLDivElement>(null)
   const count = useCartStore((s) => cartCount(s.items))
   const { user, logout } = useAuthStore()
+  const visibleNav = BASE_NAV.filter((item) =>
+    item.to !== '/seller/profile' || !user || user.role === 'PROVIDER',
+  )
   const navigate = useNavigate()
 
   // Đóng popup khi click ra ngoài
@@ -77,7 +80,7 @@ export function Header() {
         {/*</form>*/}
 
         <nav className="hidden xl:flex items-center gap-5" aria-label="Điều hướng chính">
-          {BASE_NAV.map((item) => (
+          {visibleNav.map((item) => (
             <NavLink key={item.to} to={item.to} end={item.end} className={navClass}>
               {item.label}
             </NavLink>
@@ -173,12 +176,17 @@ export function Header() {
                           </span>
                           <span className="text-small text-muted truncate">{user.email}</span>
                           <div className="mt-1">
-                            <span className="inline-block px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider bg-gold/20 text-gold-ink border border-gold/40">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider bg-gold/20 text-gold-ink border border-gold/40">
                               {user.role === 'PLATFORM_ADMIN'
-                                ? '👑 Quản Trị Viên Sàn'
+                                ? <ShieldCheck size={12} className="shrink-0" aria-hidden="true" />
                                 : user.role === 'PROVIDER'
-                                  ? '🏮 Chủ Gian Hàng'
-                                  : '✨ Khách Hàng Thân Thiết'}
+                                  ? <Store size={12} className="shrink-0" aria-hidden="true" />
+                                  : <User size={12} className="shrink-0" aria-hidden="true" />}
+                              {user.role === 'PLATFORM_ADMIN'
+                                ? 'Quản Trị Viên Sàn'
+                                : user.role === 'PROVIDER'
+                                  ? 'Chủ Gian Hàng'
+                                  : 'Khách Hàng Thân Thiết'}
                             </span>
                           </div>
                         </div>
@@ -321,7 +329,7 @@ export function Header() {
       {/* Menu di động */}
       {mobileMenuOpen && (
         <nav className="xl:hidden flex flex-col gap-space-md px-margin-mobile pb-space-lg pt-space-sm border-t border-white/10" aria-label="Menu di động">
-          {BASE_NAV.map((item) => (
+          {visibleNav.map((item) => (
             <NavLink key={item.to} to={item.to} end={item.end} className={navClass} onClick={() => setMobileMenuOpen(false)}>
               {item.label}
             </NavLink>
