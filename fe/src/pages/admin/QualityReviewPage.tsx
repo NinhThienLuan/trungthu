@@ -6,6 +6,7 @@ import { cn, formatDateTime } from '../../lib/format'
 import { adminService, type AdminComplianceDoc, type ComplianceStatus } from '../../services/adminService'
 import type { ComplianceDocType } from '../../services/sellerService'
 import { TextInput } from '../../components/ui/Field'
+import { DocumentPreview } from '../../components/DocumentPreview'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { EmptyState, ErrorState, Notice, Spinner } from '../../components/ui/States'
 
@@ -67,12 +68,16 @@ export function QualityReviewPage() {
 
 function DocRow({ doc, run }: { doc: AdminComplianceDoc; run: (action: () => Promise<unknown>, done: string) => Promise<void> }) {
   const [rejecting, setRejecting] = useState(false)
+  const [previewing, setPreviewing] = useState(false)
+  const [reasonError, setReasonError] = useState<string>()
+  const reasonName = `reason-${doc.id}`
   const who = doc.providerName ?? doc.providerEmail
 
   const reject = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    const reason = String(new FormData(e.currentTarget).get('reason') ?? '').trim()
-    if (!reason) return
+    const reason = String(new FormData(e.currentTarget).get(reasonName) ?? '').trim()
+    if (!reason) return setReasonError('Vui lòng nhập lý do từ chối hồ sơ.')
+    setReasonError(undefined)
     run(() => adminService.reject(doc.id, reason), `Đã từ chối ${DOC_LABEL[doc.documentType]} của ${who}.`)
   }
 
@@ -85,15 +90,15 @@ function DocRow({ doc, run }: { doc: AdminComplianceDoc; run: (action: () => Pro
           <p className="text-small text-muted">Nộp {formatDateTime(doc.submittedAt)}
             {doc.verifiedAt && ` · Xử lý ${formatDateTime(doc.verifiedAt)}${doc.verifiedByEmail ? ` bởi ${doc.verifiedByEmail}` : ''}`}</p>
         </div>
-        <a href={doc.documentUrl} target="_blank" rel="noreferrer" className="btn btn-outline btn-sm">Xem tệp</a>
+        <button type="button" onClick={() => setPreviewing(true)} className="btn btn-outline btn-sm">Xem tài liệu</button>
       </div>
       {doc.rejectionReason && <Notice tone="danger">Lý do từ chối: {doc.rejectionReason}</Notice>}
       {doc.verificationStatus === 'PENDING' && (
         rejecting ? (
           <form noValidate onSubmit={reject} className="flex flex-wrap items-end gap-3 border-t border-line pt-3">
-            <TextInput label="Lý do từ chối" name="reason" className="min-w-64 flex-1" placeholder="Ảnh mờ, giấy phép hết hạn..." maxLength={500} required />
+            <TextInput label="Lý do từ chối" name={reasonName} error={reasonError} onChange={() => setReasonError(undefined)} className="min-w-0 basis-64 flex-1" placeholder="Ảnh mờ, giấy phép hết hạn..." maxLength={500} required />
             <button type="submit" className="btn btn-primary btn-sm">Xác nhận từ chối</button>
-            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setRejecting(false)}>Thôi</button>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setRejecting(false); setReasonError(undefined) }}>Thôi</button>
           </form>
         ) : (
           <div className="flex gap-2 border-t border-line pt-3">
@@ -102,6 +107,7 @@ function DocRow({ doc, run }: { doc: AdminComplianceDoc; run: (action: () => Pro
           </div>
         )
       )}
+      {previewing && <DocumentPreview url={doc.documentUrl} title={`${DOC_LABEL[doc.documentType]} · ${who}`} onClose={() => setPreviewing(false)} />}
     </article>
   )
 }

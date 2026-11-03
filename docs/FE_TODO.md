@@ -46,6 +46,7 @@
 ---
 
 ### Nhiệm vụ 3: Hoàn thiện luồng KYC & Gói Bán Hàng SaaS — [ƯU TIÊN 3]
+* **Cập nhật 2026-11-03:** Đã triển khai FE trên nhánh `feat/fe2-kyc-saas`: banner KYC/gói tại layout Seller, kiểm tra đủ 3 loại giấy tờ được duyệt và ngày hiệu lực gói, modal xem ảnh/PDF có phóng to ảnh, báo lỗi khi thiếu lý do từ chối. Giữ các luồng đã có: hiển thị lý do, nộp lại giấy tờ, mã giao dịch và kích hoạt gói. Build/lint đạt; đã kiểm tra giao diện với API giả lập, chưa kiểm thử tích hợp backend thực tế.
 * **Giao diện Seller ([`ProfilePage.tsx`](file:///d:/GitHub/trungthu/fe/src/pages/admin/ProfilePage.tsx) & [`SubscriptionPage.tsx`](file:///d:/GitHub/trungthu/fe/src/pages/admin/SubscriptionPage.tsx)):**
   1. Hiển thị rõ lý do từ chối duyệt: Nếu chứng từ nào bị `REJECTED`, hiển thị `rejectionReason` từ Backend để Seller biết nguyên nhân và bấm nút tải lại file mới.
   2. Bổ sung **Banner cảnh báo quyền bán** ở đầu trang Seller:
@@ -121,7 +122,7 @@ Dưới đây là 4 hiệu ứng animation được đúc kết từ concept thi
 | :--- | :--- | :---: | :---: |
 | **Thạch (FE2)** | Xây dựng màn hình & In phiếu nướng bánh (`bake-sheet`) | **Cao nhất (P1)** | Chưa bắt đầu |
 | **Thạch (FE2)** | Dọn dẹp các nút Set quà ngoài scope trong `BakeBatchPage` | **Cao (P2)** | Chưa bắt đầu |
-| **Thạch (FE2)** | Hoàn thiện luồng KYC & Gói SaaS (Banner, Modal duyệt) | **Trung bình (P3)** | Chưa bắt đầu |
+| **Thạch (FE2)** | Hoàn thiện luồng KYC & Gói SaaS (Banner, Modal duyệt) | **Trung bình (P3)** | Đã triển khai FE; chờ kiểm thử tích hợp BE |
 | **Thạch (FE2)** | Xóa raw emoji trong `Header.tsx` | **Trung bình (P4)** | Chưa bắt đầu |
 | **Tuấn (FE1)** | Xử lý lỗi tồn kho Checkout (bỏ hardcode 99) | **Cao (P1)** | Chưa bắt đầu |
 | **Tuấn (FE1)** | Thêm Guest Guard cho trang Auth (`/login`, `/register`) | **Trung bình (P2)** | Chưa bắt đầu |

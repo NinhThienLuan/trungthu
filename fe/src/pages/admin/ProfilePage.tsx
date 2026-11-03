@@ -1,11 +1,14 @@
 import { useState, type FormEvent } from 'react'
+import { Loader2, Send } from 'lucide-react'
 import { errorMessage } from '../../apis/http'
 import { useApi } from '../../hooks/useApi'
 import { useDocumentTitle } from '../../hooks/useDocumentTitle'
 import { formatDateTime } from '../../lib/format'
+import { hasApprovedCompliance, notifySellerStatusChanged } from '../../lib/sellerEligibility'
 import { useAuthStore } from '../../stores/authStore'
 import { sellerService, type ComplianceDoc, type ComplianceDocType } from '../../services/sellerService'
 import { PageHeader } from '../../components/ui/PageHeader'
+import { DocumentUploadField } from '../../components/DocumentUploadField'
 import { ErrorState, Notice, Spinner } from '../../components/ui/States'
 
 const DOC_TYPES: Array<{ type: ComplianceDocType; label: string; hint: string }> = [
@@ -30,7 +33,7 @@ export function ProfilePage() {
   // Bản nộp mới nhất của từng loại
   const latest = new Map<ComplianceDocType, ComplianceDoc>()
   for (const doc of [...(data ?? [])].sort((a, b) => a.submittedAt.localeCompare(b.submittedAt))) latest.set(doc.documentType, doc)
-  const approved = [...latest.values()].some((d) => d.verificationStatus === 'APPROVED')
+  const approved = hasApprovedCompliance(data ?? [])
 
   return (
     <div className="page section flex flex-col gap-6">
@@ -47,7 +50,7 @@ export function ProfilePage() {
       {loading && !data ? <Spinner /> : error ? <ErrorState message={error} onRetry={reload} /> : (
         <>
           <Notice tone={approved ? 'success' : 'info'}>
-            {approved ? 'Gian hàng đã có giấy tờ được duyệt.' : 'Chưa có giấy tờ nào được duyệt. Hãy nộp đủ 3 loại bên dưới.'}
+            {approved ? 'Gian hàng đã có đủ 3 loại giấy tờ được duyệt.' : 'Hồ sơ chưa được duyệt đủ. Hãy nộp đủ giấy ATTP, giấy phép kinh doanh và CCCD bên dưới.'}
           </Notice>
           <div className="grid gap-4 lg:grid-cols-3">
             {DOC_TYPES.map((d) => <DocCard key={d.type} {...d} doc={latest.get(d.type)} onUploaded={reload} />)}
@@ -60,18 +63,20 @@ export function ProfilePage() {
 
 function DocCard({ type, label, hint, doc, onUploaded }: { type: ComplianceDocType; label: string; hint: string; doc?: ComplianceDoc; onUploaded: () => void }) {
   const [busy, setBusy] = useState(false)
+  const [file, setFile] = useState<File | null>(null)
   const [result, setResult] = useState<{ ok: boolean; text: string }>()
   const canUpload = !doc || doc.verificationStatus !== 'PENDING'
 
   const upload = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    const file = new FormData(e.currentTarget).get('file')
-    if (!(file instanceof File) || file.size === 0) return setResult({ ok: false, text: 'Chọn một tệp để nộp.' })
+    if (busy || !file) return
     setBusy(true)
     setResult(undefined)
     try {
       await sellerService.uploadDocument(type, file)
+      notifySellerStatusChanged()
       setResult({ ok: true, text: 'Đã nộp, đang chờ admin duyệt.' })
+      setFile(null)
       onUploaded()
     } catch (err) {
       setResult({ ok: false, text: errorMessage(err) })
@@ -96,10 +101,13 @@ function DocCard({ type, label, hint, doc, onUploaded }: { type: ComplianceDocTy
       ) : <p className="text-small text-muted">Chưa nộp.</p>}
       {result && <Notice tone={result.ok ? 'success' : 'danger'}>{result.text}</Notice>}
       {canUpload && (
-        <form noValidate onSubmit={upload} className="mt-auto flex flex-col gap-2">
-          <label htmlFor={`file-${type}`} className="field-label">{doc ? 'Nộp bản mới' : 'Tệp giấy tờ (ảnh hoặc PDF)'}</label>
-          <input id={`file-${type}`} name="file" type="file" accept="image/*,application/pdf" className="text-small" />
-          <button type="submit" className="btn btn-primary btn-sm self-start" disabled={busy}>{busy ? 'Đang nộp...' : 'Nộp giấy tờ'}</button>
+        <form noValidate onSubmit={upload} className="mt-auto flex flex-col gap-3 pt-2">
+          <DocumentUploadField id={`file-${type}`} label={doc ? 'Chọn bản giấy tờ mới' : 'Chọn ảnh hoặc tài liệu'} file={file} disabled={busy}
+            onChange={(next) => { setFile(next); setResult(undefined) }} />
+          <button type="submit" className="btn btn-primary w-full" disabled={busy || !file}>
+            {busy ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : <Send size={16} aria-hidden="true" />}
+            {busy ? 'Đang nộp...' : doc ? 'Nộp bản mới' : 'Nộp giấy tờ'}
+          </button>
         </form>
       )}
     </section>

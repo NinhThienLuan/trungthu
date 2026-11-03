@@ -3,6 +3,7 @@ import { errorMessage } from '../../apis/http'
 import { useApi } from '../../hooks/useApi'
 import { useDocumentTitle } from '../../hooks/useDocumentTitle'
 import { cn, formatDate, formatVnd } from '../../lib/format'
+import { isSubscriptionActive, notifySellerStatusChanged } from '../../lib/sellerEligibility'
 import { SUBSCRIPTION_STATUS, subscriptionService, type SubscriptionPlanCode } from '../../services/sellerService'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { ErrorState, Notice, Spinner } from '../../components/ui/States'
@@ -22,6 +23,7 @@ export function SubscriptionPage() {
     setNotice(undefined)
     try {
       await action()
+      notifySellerStatusChanged()
       setNotice({ ok: true, text: done })
       setPicked(undefined)
       setNote('')
@@ -36,7 +38,7 @@ export function SubscriptionPage() {
   if ((plans.loading && !plans.data) || (mine.loading && !mine.data)) return <Spinner />
   if (plans.error || mine.error) return <div className="page section"><ErrorState message={plans.error ?? mine.error ?? ''} onRetry={() => { plans.reload(); mine.reload() }} /></div>
 
-  const active = mine.data?.find((s) => s.status === 'ACTIVE')
+  const active = mine.data?.find((s) => isSubscriptionActive(s))
   const pending = mine.data?.find((s) => s.status === 'PENDING_PAYMENT')
 
   return (
