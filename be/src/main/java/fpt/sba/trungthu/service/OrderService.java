@@ -2,12 +2,14 @@ package fpt.sba.trungthu.service;
 
 import fpt.sba.trungthu.dto.request.CreateOrdersCommand;
 import fpt.sba.trungthu.dto.request.OrderQueryRequest;
+import fpt.sba.trungthu.dto.response.BakeSheetResponse;
 import fpt.sba.trungthu.dto.response.OrderDetailResponse;
 import fpt.sba.trungthu.dto.response.OrderSummaryResponse;
 import fpt.sba.trungthu.dto.response.PageResponse;
 import fpt.sba.trungthu.entity.Order;
 import org.springframework.security.access.prepost.PreAuthorize;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -22,4 +24,7 @@ public interface OrderService {
 
     @PreAuthorize("hasAnyRole('CUSTOMER', 'PROVIDER')")
     OrderDetailResponse getOrderDetail(UUID orderId);
+
+    @PreAuthorize("hasRole('PROVIDER')")
+    List<BakeSheetResponse> getBakeSheet(LocalDate date);
 }

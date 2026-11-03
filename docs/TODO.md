@@ -122,7 +122,7 @@ pie title Phân loại Scope API Backend
 | | `POST /.../variants/{id}/imports` | Nhập kho tăng số lượng tồn `stock_quantity` |
 | **Capacity** | `GET /api/providers/{providerId}/available-dates` | Khách xem ngày nhận hàng còn slot nướng |
 | | `GET /api/provider/capacities`, `PUT /api/provider/capacities` | Seller xem và cài đặt công suất lò nướng theo ngày |
-| | `GET /api/provider/bake-sheet?date=YYYY-MM-DD` | Seller xuất và in phiếu nướng bánh theo ngày từ `v_bake_lines` (BE4 Luân phụ trách) |
+| | `GET /api/provider/bake-sheet?date=YYYY-MM-DD` | Seller xuất và in phiếu nướng bánh theo ngày từ `v_bake_lines` (BE4 Luân phụ trách - Đã hoàn thành [OK]) |
 | **Checkout & Order** | `POST /api/checkout/preview` | Tính toán tiền hàng, ship, cọc (không chiếm giữ kho) |
 | | `POST /api/checkout` | Submit đặt hàng, trừ tồn/capacity, tách đơn đa Provider |
 | | `GET /api/orders/me` | Buyer xem đơn hàng của mình |

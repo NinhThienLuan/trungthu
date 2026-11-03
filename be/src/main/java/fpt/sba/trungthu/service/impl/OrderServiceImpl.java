@@ -5,6 +5,7 @@ import fpt.sba.trungthu.common.security.SecurityContextService;
 import fpt.sba.trungthu.dto.request.CreateOrdersCommand;
 import fpt.sba.trungthu.dto.request.CreateOrdersCommand.ProviderOrder;
 import fpt.sba.trungthu.dto.request.OrderQueryRequest;
+import fpt.sba.trungthu.dto.response.BakeSheetResponse;
 import fpt.sba.trungthu.dto.response.OrderDetailResponse;
 import fpt.sba.trungthu.dto.response.OrderSummaryResponse;
 import fpt.sba.trungthu.dto.response.PageResponse;
@@ -38,6 +39,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.IllegalTransactionStateException;
 import org.springframework.transaction.annotation.Propagation;
@@ -50,8 +52,11 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -71,6 +76,7 @@ public class OrderServiceImpl implements OrderService {
     private final ProductRepository productRepository;
     private final DailyCapacityRepository capacityRepository;
     private final Validator validator;
+    private final JdbcTemplate jdbcTemplate;
 
     @Override
     @Transactional(propagation = Propagation.MANDATORY, readOnly = false, rollbackFor = Exception.class)
@@ -288,6 +294,73 @@ public class OrderServiceImpl implements OrderService {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Cannot retrieve order", ex);
         } finally {
             log.debug("Completed getOrderDetail for {}", orderId);
+        }
+    }
+
+    @Override
+    public List<BakeSheetResponse> getBakeSheet(LocalDate date) {
+        try {
+            User provider = requireActiveUser();
+            log.info("Fetching bake sheet for provider {} on bake date {}", provider.getId(), date);
+            if (date == null) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Date is required");
+            }
+            String sql = """
+                    SELECT variant_id, product_name, variant_name, order_code, bake_quantity
+                    FROM v_bake_lines
+                    WHERE provider_id = ? AND (bake_date = ? OR delivery_date = ?)
+                    ORDER BY product_name ASC, variant_name ASC, order_code ASC
+                    """;
+            List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, provider.getId(), date, date.plusDays(1));
+
+            Map<UUID, VariantAccumulator> accumulatorMap = new LinkedHashMap<>();
+            for (Map<String, Object> row : rows) {
+                UUID variantId = row.get("variant_id") instanceof UUID u
+                        ? u
+                        : UUID.fromString(row.get("variant_id").toString());
+                String productName = (String) row.get("product_name");
+                String variantName = (String) row.get("variant_name");
+                String orderCode = (String) row.get("order_code");
+                int bakeQty = row.get("bake_quantity") instanceof Number n ? n.intValue() : 0;
+
+                VariantAccumulator acc = accumulatorMap.computeIfAbsent(variantId,
+                        id -> new VariantAccumulator(id, productName, variantName));
+                acc.bakeQuantity += bakeQty;
+                if (orderCode != null && !orderCode.isBlank()) {
+                    acc.orderCodes.add(orderCode);
+                }
+            }
+
+            return accumulatorMap.values().stream()
+                    .map(acc -> BakeSheetResponse.builder()
+                            .variantId(acc.variantId)
+                            .productName(acc.productName)
+                            .variantName(acc.variantName)
+                            .bakeQuantity(acc.bakeQuantity)
+                            .orderCodes(new ArrayList<>(acc.orderCodes))
+                            .build())
+                    .toList();
+        } catch (ResponseStatusException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            log.error("Cannot fetch bake sheet for date {}", date, ex);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Cannot retrieve bake sheet", ex);
+        } finally {
+            log.debug("Completed getBakeSheet for date {}", date);
+        }
+    }
+
+    private static class VariantAccumulator {
+        private final UUID variantId;
+        private final String productName;
+        private final String variantName;
+        private int bakeQuantity = 0;
+        private final Set<String> orderCodes = new LinkedHashSet<>();
+
+        private VariantAccumulator(UUID variantId, String productName, String variantName) {
+            this.variantId = variantId;
+            this.productName = productName;
+            this.variantName = variantName;
         }
     }
 

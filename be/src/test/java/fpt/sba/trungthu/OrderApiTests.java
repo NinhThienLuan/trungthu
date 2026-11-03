@@ -288,6 +288,71 @@ class OrderApiTests {
                 .isEqualTo(OrderStatus.PENDING_DEPOSIT);
     }
 
+    @Test
+    void providerCanGetBakeSheetForGivenDate() throws Exception {
+        mvc.perform(get("/api/provider/bake-sheet")
+                        .header("Authorization", token(seller))
+                        .param("date", "2026-10-19"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.data.length()").value(1))
+                .andExpect(jsonPath("$.data[0].variantId").value(variant.getId().toString()))
+                .andExpect(jsonPath("$.data[0].productName").value("Original cake"))
+                .andExpect(jsonPath("$.data[0].variantName").value("150g"))
+                .andExpect(jsonPath("$.data[0].bakeQuantity").value(2))
+                .andExpect(jsonPath("$.data[0].orderCodes[0]").value(deposited.getOrderCode()));
+    }
+
+    @Test
+    void providerGetsEmptyBakeSheetWhenNoOrdersForDate() throws Exception {
+        mvc.perform(get("/api/provider/bake-sheet")
+                        .header("Authorization", token(seller))
+                        .param("date", "2026-10-18"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.data.length()").value(0));
+    }
+
+    @Test
+    void buyerAndAdminCannotAccessBakeSheet() throws Exception {
+        mvc.perform(get("/api/provider/bake-sheet")
+                        .header("Authorization", token(buyer))
+                        .param("date", "2026-10-19"))
+                .andExpect(status().isForbidden());
+
+        mvc.perform(get("/api/provider/bake-sheet")
+                        .header("Authorization", token(admin))
+                        .param("date", "2026-10-19"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void bakeSheetRejectsUnauthenticatedAndInvalidDate() throws Exception {
+        mvc.perform(get("/api/provider/bake-sheet").param("date", "2026-10-19"))
+                .andExpect(status().isUnauthorized());
+
+        mvc.perform(get("/api/provider/bake-sheet")
+                        .header("Authorization", token(seller))
+                        .param("date", "invalid-date"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void bakeSheetAggregatesBakeQuantitiesAndOrderCodesForSameVariant() throws Exception {
+        Order secondOrder = order(buyer, seller, UUID.randomUUID(), OrderStatus.CONFIRMED, 20, 11);
+        entityManager.flush();
+
+        mvc.perform(get("/api/provider/bake-sheet")
+                        .header("Authorization", token(seller))
+                        .param("date", "2026-10-19"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(1))
+                .andExpect(jsonPath("$.data[0].variantId").value(variant.getId().toString()))
+                .andExpect(jsonPath("$.data[0].bakeQuantity").value(4))
+                .andExpect(jsonPath("$.data[0].orderCodes",
+                        containsInAnyOrder(deposited.getOrderCode(), secondOrder.getOrderCode())));
+    }
+
     private User user(UserRole role) {
         return users.saveAndFlush(User.builder().email(UUID.randomUUID() + "@test.local").password("test-hash")
                 .fullName("Test user").storeName(role == UserRole.PROVIDER ? "Test bakery" : null)

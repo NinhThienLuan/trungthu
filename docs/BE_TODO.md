@@ -12,9 +12,9 @@
 
 ## 1. BE4 – LUÂN: ĐƠN HÀNG, VIEW NƯỚNG & API PHIẾU RA LÒ (TRỌNG TÂM TRIỂN KHAI)
 
-### Nhiệm vụ 1: Viết API "Phiếu ra lò" (`GET /api/provider/bake-sheet`) — [ƯU TIÊN CAO NHẤT]
-* **Bối cảnh:** Luân đã trực tiếp tạo database view `v_bake_lines`, file khởi tạo `BakeViewInitializer` và viết test `BakeLinesViewTests`. Để đẩy nhanh tiến độ và không cần phụ thuộc Đạt, **Luân sẽ trực tiếp phụ trách viết endpoint này** cho Frontend (Thạch) tích hợp tính năng in phiếu nướng.
-* **Yêu cầu triển khai:**
+### Nhiệm vụ 1: Viết API "Phiếu ra lò" (`GET /api/provider/bake-sheet`) — [ĐÃ HOÀN THÀNH]
+* **Bối cảnh:** Luân đã trực tiếp tạo database view `v_bake_lines`, file khởi tạo `BakeViewInitializer` và viết test `BakeLinesViewTests`. Để đẩy nhanh tiến độ và không cần phụ thuộc Đạt, **Luân đã trực tiếp hoàn thành viết endpoint này** cho Frontend (Thạch) tích hợp tính năng in phiếu nướng.
+* **Đã triển khai:**
   1. Thêm endpoint trực tiếp vào `OrderController.java`:
      ```java
      @GetMapping("/api/provider/bake-sheet")
@@ -23,13 +23,13 @@
              @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date)
      ```
   2. Truy vấn trực tiếp từ view `v_bake_lines` theo `provider_id` của Seller hiện tại và `delivery_date = date.plusDays(1)` (ngày nướng = ngày giao - 1).
-  3. Trả về DTO: `variantId`, `productName`, `variantName`, `bakeQuantity`, `orderCodes` (danh sách các mã đơn hàng có bánh cần nướng).
-  4. Viết integration test trong `OrderApiTests` bảo đảm trả đúng mã `200 OK` cho Provider và `403 Forbidden` cho Buyer/Admin.
+  3. Trả về DTO `BakeSheetResponse`: `variantId`, `productName`, `variantName`, `bakeQuantity`, `orderCodes` (danh sách các mã đơn hàng có bánh cần nướng).
+  4. Viết integration test trong `OrderApiTests` bảo đảm trả đúng mã `200 OK` cho Provider, `403 Forbidden` cho Buyer/Admin, `401 Unauthorized` cho khách chưa đăng nhập, `400 Bad Request` cho date không hợp lệ, gom nhóm đúng biến thể và tổng số bánh: **30/30 PASS [OK]**.
 
 ### Nhiệm vụ 2: Duy trì chuẩn hóa `@PreAuthorize` của Order — [ĐÃ HOÀN THÀNH]
 * Đã gộp `ProviderOrderController` vào duy nhất `OrderController.java`.
 * Đã chuyển toàn bộ phân quyền sang `@PreAuthorize` ở Controller và Service Interface, loại bỏ hoàn toàn code kiểm tra role thủ công trong `OrderServiceImpl`.
-* Đã kiểm thử `OrderApiTests`: **25/25 PASS [OK]**.
+* Đã kiểm thử `OrderApiTests`: **30/30 PASS [OK]**.
 
 ---
 
@@ -100,7 +100,7 @@ Tiến cần rà soát các Controller của mình và xóa bỏ các route th�
 
 | Thành viên | Hạng mục công việc | Mức độ ưu tiên | Trạng thái |
 | :--- | :--- | :---: | :---: |
-| **BE4 (Luân)** | Viết API Phiếu ra lò `GET /api/provider/bake-sheet` | **P1 (Khẩn cấp)** | Chưa bắt đầu |
+| **BE4 (Luân)** | Viết API Phiếu ra lò `GET /api/provider/bake-sheet` | **P1 (Khẩn cấp)** | **Hoàn thành [OK]** |
 | **BE4 (Luân)** | Chuẩn hóa `@PreAuthorize` module Order | **P1** | **Hoàn thành [OK]** |
 | **BE2 (Đạt)** | Xóa `DummyPaymentController.java` | **P1 (Dọn dẹp)** | Chưa bắt đầu |
 | **BE2 (Đạt)** | Tạm ẩn/đóng API Set quà động & Sổ kho over-engineering | **P2** | Chưa bắt đầu |

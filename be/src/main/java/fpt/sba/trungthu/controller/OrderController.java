@@ -2,6 +2,7 @@ package fpt.sba.trungthu.controller;
 
 import fpt.sba.trungthu.dto.request.OrderQueryRequest;
 import fpt.sba.trungthu.dto.response.ApiResponseDTO;
+import fpt.sba.trungthu.dto.response.BakeSheetResponse;
 import fpt.sba.trungthu.dto.response.OrderDetailResponse;
 import fpt.sba.trungthu.dto.response.OrderSummaryResponse;
 import fpt.sba.trungthu.dto.response.PageResponse;
@@ -10,10 +11,13 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -43,5 +47,13 @@ public class OrderController {
     @Operation(summary = "Get an order owned by the current buyer or provider")
     public ResponseEntity<ApiResponseDTO<OrderDetailResponse>> getOrderDetail(@PathVariable UUID id) {
         return ResponseEntity.ok(ApiResponseDTO.success(orderService.getOrderDetail(id)));
+    }
+
+    @GetMapping("/api/provider/bake-sheet")
+    @PreAuthorize("hasRole('PROVIDER')")
+    @Operation(summary = "Get daily bake sheet for provider")
+    public ResponseEntity<ApiResponseDTO<List<BakeSheetResponse>>> getBakeSheet(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return ResponseEntity.ok(ApiResponseDTO.success(orderService.getBakeSheet(date)));
     }
 }
