@@ -1,5 +1,6 @@
 package fpt.sba.trungthu.common.config;
 
+import fpt.sba.trungthu.common.exception.InventoryConflictException;
 import fpt.sba.trungthu.dto.response.ApiResponseDTO;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
@@ -22,6 +23,14 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
+
+    @ExceptionHandler(InventoryConflictException.class)
+    public ResponseEntity<ApiResponseDTO<InventoryConflictException.Details>> handleInventoryConflict(
+            InventoryConflictException ex) {
+        log.warn("Inventory conflict: {}", ex.details());
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ApiResponseDTO.error(HttpStatus.CONFLICT.value(), ex.getReason(), ex.details()));
+    }
 
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<ApiResponseDTO<Object>> handleResponseStatusException(ResponseStatusException ex) {

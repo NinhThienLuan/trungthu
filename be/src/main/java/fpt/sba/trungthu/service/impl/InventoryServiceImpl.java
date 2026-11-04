@@ -235,11 +235,15 @@ public class InventoryServiceImpl implements InventoryService {
                     .setParameter("bakeDate", key.bakeDate())
                     .executeUpdate();
             if (updated == 0) {
-                throw new InventoryConflictException("INSUFFICIENT_CAPACITY", key.providerId(), null, key.bakeDate());
+                int remaining = capacityRepository.findByProviderIdAndCapacityDate(key.providerId(), key.bakeDate())
+                        .map(capacity -> Math.max(0, capacity.getMaxQuantity() - capacity.getReservedQuantity()))
+                        .orElse(0);
+                throw InventoryConflictException.capacity(key.providerId(), key.bakeDate(), remaining,
+                        bakeDemand.get(key));
             }
             capacityIds.put(key, capacityRepository.lockByProviderAndDate(key.providerId(), key.bakeDate())
-                    .orElseThrow(() -> new InventoryConflictException("INSUFFICIENT_CAPACITY", key.providerId(), null,
-                            key.bakeDate()))
+                    .orElseThrow(() -> InventoryConflictException.capacity(key.providerId(), key.bakeDate(), 0,
+                            bakeDemand.get(key)))
                     .getId());
         }
         List<UUID> variantOrder = stockDemand.keySet().stream().sorted().toList();
@@ -257,7 +261,13 @@ public class InventoryServiceImpl implements InventoryService {
                         .setParameter("active", ProductStatus.ACTIVE)
                         .executeUpdate();
                 if (updated == 0) {
-                    ProductVariant variant = preview.get(variantId);
+                    ProductVariant current = variantRepository.findById(variantId).orElse(null);
+                    if (current != null && current.getStockQuantity() < stockDemand.get(variantId)) {
+                        throw InventoryConflictException.stock(current.getProduct().getProvider().getId(), variantId,
+                                current.getProduct().getName(), current.getStockQuantity(), stockDemand.get(variantId),
+                                current.getProduct().getProductType() == ProductType.LOOSE_CAKE);
+                    }
+                    ProductVariant variant = current != null ? current : preview.get(variantId);
                     throw new InventoryConflictException("INSUFFICIENT_STOCK",
                             variant.getProduct().getProvider().getId(), variantId, null);
                 }
@@ -388,7 +398,8 @@ public class InventoryServiceImpl implements InventoryService {
         int selling = line.quantity();
         int setsBefore = box.getQuantity();
         if (setsBefore < selling) {
-            throw new InventoryConflictException("INSUFFICIENT_STOCK", set.getProvider().getId(), null, null);
+            throw InventoryConflictException.stock(set.getProvider().getId(), box.getComponentVariant().getId(),
+                    set.getName(), setsBefore, selling, false);
         }
         java.math.BigDecimal list = java.math.BigDecimal.ZERO;
         for (GiftSetComponent row : rows) {
@@ -421,8 +432,8 @@ public class InventoryServiceImpl implements InventoryService {
             }
             int take = perSet * selling;
             if (row.getQuantity() < take) {
-                throw new InventoryConflictException("INSUFFICIENT_STOCK", set.getProvider().getId(),
-                        row.getComponentVariant().getId(), null);
+                throw InventoryConflictException.stock(set.getProvider().getId(), row.getComponentVariant().getId(),
+                        row.getComponentVariant().getProduct().getName(), row.getQuantity(), take, false);
             }
             if (take <= 0) {
                 continue;

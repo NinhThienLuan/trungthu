@@ -1,6 +1,7 @@
 package fpt.sba.trungthu.service.impl;
 
 import fpt.sba.trungthu.common.policy.CheckoutLeadTime;
+import fpt.sba.trungthu.common.exception.InventoryConflictException;
 import fpt.sba.trungthu.common.security.SecurityContextService;
 import fpt.sba.trungthu.dto.request.CheckoutRequest;
 import fpt.sba.trungthu.dto.request.CreateOrdersCommand;
@@ -210,11 +211,10 @@ public class CheckoutServiceImpl implements CheckoutService {
                         && (variant.getStatus() == VariantStatus.IN_STOCK
                             || variant.getStatus() == VariantStatus.OUT_OF_STOCK);
                 if (!stockReady && !futureBake) {
-                    if (variant.getProduct().getProductType() == ProductType.LOOSE_CAKE
-                            && variant.getStockQuantity() < item.quantity()) {
-                        throw conflict("Xưởng " + owner.getStoreName() + " chưa đủ " + variant.getVariantName()
-                                + ". Chọn ngày nhận cách ít nhất " + CheckoutLeadTime.EXTENDED_DAYS
-                                + " ngày để xưởng nướng theo đơn, hoặc giảm số lượng.");
+                    if (variant.getStockQuantity() < item.quantity()) {
+                        throw InventoryConflictException.stock(owner.getId(), variant.getId(),
+                                variant.getProduct().getName(), variant.getStockQuantity(), item.quantity(),
+                                variant.getProduct().getProductType() == ProductType.LOOSE_CAKE);
                     }
                     throw conflict("Sản phẩm " + variant.getProduct().getName()
                             + " không đủ số lượng hoặc không còn nhận đặt. Vui lòng giảm số lượng hoặc chọn sản phẩm khác.");
@@ -294,12 +294,13 @@ public class CheckoutServiceImpl implements CheckoutService {
             DailyCapacity capacity = null;
             if (bakeQuantity > 0) {
                 LocalDate bakeDate = group.deliveryDate().minusDays(1);
+                int requestedBake = bakeQuantity;
                 capacity = (lock ? capacities.findForUpdateByProviderIdAndCapacityDate(providerId, bakeDate)
                         : capacities.findByProviderIdAndCapacityDate(providerId, bakeDate))
-                        .orElseThrow(() -> conflict("Xưởng chưa mở lịch nướng cho ngày nhận " + group.deliveryDate()));
+                        .orElseThrow(() -> InventoryConflictException.capacity(providerId, bakeDate, 0, requestedBake));
                 if (capacity.getReservedQuantity() > capacity.getMaxQuantity() - bakeQuantity) {
-                    throw conflict("Xưởng không đủ suất nướng cho số lượng đã chọn vào ngày nhận "
-                            + group.deliveryDate() + ". Vui lòng giảm số lượng hoặc chọn ngày khác.");
+                    throw InventoryConflictException.capacity(providerId, bakeDate,
+                            capacity.getMaxQuantity() - capacity.getReservedQuantity(), bakeQuantity);
                 }
             }
             result.add(new Plan(provider, receiver, group.deliveryDate(), group.paymentMethod(), pricedLines,
