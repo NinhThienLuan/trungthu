@@ -33,6 +33,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @SpringBootTest(properties = "spring.datasource.url=jdbc:h2:mem:${random.uuid};DB_CLOSE_DELAY=-1")
+// getOrderDetail (gọi trong checkout) có @PreAuthorize CUSTOMER/PROVIDER
+@WithMockUser(roles = {"CUSTOMER", "PROVIDER"})
 class CheckoutFlowTests {
     @Autowired private CheckoutService checkout;
     @Autowired private OrderLifecycleService lifecycle;

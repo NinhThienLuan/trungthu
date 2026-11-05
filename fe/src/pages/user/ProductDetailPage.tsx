@@ -2,16 +2,15 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Icon } from '../../components/Icon'
-import { ProductReviews, RatingSummary } from '../../components/ProductReviews'
+import { ProductReviews } from '../../components/ProductReviews'
 import { ErrorState, Spinner } from '../../components/ui/States'
 import { productService } from '../../services/productService'
 import { promotionService, type Promotion } from '../../services/sellerService'
-import { DETAIL_GALLERY } from '../../apis/mockData'
 import { useApi } from '../../hooks/useApi'
 import { useDocumentTitle } from '../../hooks/useDocumentTitle'
 import { useCartStore } from '../../stores/cartStore'
 import type { Product } from '../../types/product'
-import { PRODUCT_TYPE_LABEL, ROUTES } from '../../constants'
+import { MAX_RETAIL_QUANTITY, PRODUCT_TYPE_LABEL, ROUTES } from '../../constants'
 
 const DETAIL_TABS = [
   { id: 'story', label: 'Câu Chuyện Sản Phẩm' },
@@ -54,19 +53,12 @@ export function ProductDetailPage() {
   const variant = product.variants.find((v) => v.id === variantId) ?? product.variants[0]
   const promotions = (running ?? []).filter((p) => !p.productId || p.productId === product.id)
   const price = variant?.price ?? 0
-  // Giá gốc giữ cùng tỉ lệ giảm như quy cách chuẩn trong danh mục
-  const ratio = product.display ? product.display.oldPrice / product.variants[0].price : 1
-  const oldPrice = Math.round((price * ratio) / 1000) * 1000
-  const discountPct = oldPrice > price ? Math.round((1 - price / oldPrice) * 100) : 0
   const canPreorder = product.productType === 'LOOSE_CAKE'
-  const maxQty = canPreorder ? 10_000 : Math.max(1, variant?.stockQuantity ?? 1)
+  // Đơn lẻ tối đa MAX_RETAIL_QUANTITY mỗi loại (bánh nướng theo đơn cũng vậy); mua nhiều hơn -> báo giá sỉ
+  const maxQty = Math.min(MAX_RETAIL_QUANTITY, canPreorder ? MAX_RETAIL_QUANTITY : Math.max(1, variant?.stockQuantity ?? 1))
   const inStock = !!variant && (variant.stockQuantity > 0 || canPreorder)
-  const gallery = product.gallery?.length
-    ? product.gallery
-    : [product.imageUrl ?? DETAIL_GALLERY[0], ...DETAIL_GALLERY.slice(2, 5)]
-  const configs =
-    product.display?.configs ??
-    product.variants.map((v) => ({ variantId: v.id, label: 'Quy Cách', title: v.variantName, sub: '' }))
+  const gallery = product.gallery?.length ? product.gallery : product.imageUrl ? [product.imageUrl] : []
+  const configs = product.variants.map((v) => ({ variantId: v.id, label: 'Quy Cách', title: v.variantName, sub: '' }))
 
   const selectVariant = (vid: string) => {
     setVariantId(vid)
@@ -100,10 +92,6 @@ export function ProductDetailPage() {
     setAdded(true)
   }
 
-  const showReviews = () => {
-    setTab('reviews')
-    document.getElementById('product-tabs')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }
 
   const buyNow = () => {
     addToCart()
@@ -200,7 +188,6 @@ export function ProductDetailPage() {
                 <h1 className="font-headline-lg text-headline-lg text-ink-dark leading-tight pt-1">
                   {product.name}
                 </h1>
-                <RatingSummary product={product} onClick={showReviews} />{' '}
                 <p className="font-body-md text-body-md text-on-surface-variant">
                   {product.description}
                 </p>{' '}
@@ -212,14 +199,6 @@ export function ProductDetailPage() {
                   <div className="flex items-baseline gap-space-xs">
                     {' '}
                     <span className="font-headline-lg text-headline-lg text-secondary font-bold">{vnd(price)}</span>{' '}
-                    {discountPct > 0 && (
-                      <>
-                        <span className="font-body-sm text-body-sm text-outline line-through">{vnd(oldPrice)}</span>
-                        <span className="font-label-sm text-label-sm text-on-secondary-container bg-secondary-container px-1.5 py-0.5 rounded-[0.125rem] font-semibold">
-                          -{discountPct}%
-                        </span>
-                      </>
-                    )}
                   </div>{' '}
                   <span className="font-label-sm text-label-sm text-secondary-fixed-dim uppercase tracking-wider text-right">
                     {' Giá Bán Lẻ Đã Gồm VAT '}
@@ -345,7 +324,7 @@ export function ProductDetailPage() {
                   onClick={() => setTab(t.id)}
                   className={`detail-tab pb-space-xs font-headline-sm text-headline-sm relative shrink-0 transition-colors ${tab === t.id ? 'text-ink-dark font-bold' : 'text-on-surface-variant font-medium hover:text-ink-dark'}`}
                 >
-                  {t.id === 'reviews' && product.display ? `${t.label} ${product.display.reviews}` : t.label}
+                  {t.label}
                   <span className={`absolute bottom-0 left-0 right-0 h-0.5 bg-secondary tab-indicator ${tab === t.id ? '' : 'hidden'}`}></span>
                 </button>
               ))}
@@ -358,7 +337,7 @@ export function ProductDetailPage() {
             )}
             {tab === 'reviews' && (
               <div className="tab-panel py-space-lg" id="tab-reviews">
-                <ProductReviews product={product} />
+                <ProductReviews />
               </div>
             )}{' '}
           </div>{' '}

@@ -1,6 +1,5 @@
 import { http, unwrap } from '../apis/http'
-import { USE_MOCK, delay } from '../apis/mock'
-import { MOCK_PRODUCTS } from '../apis/mockData'
+import { MAX_RETAIL_QUANTITY } from '../constants'
 import type { ApiResponse, Page } from '../types/api'
 import type { Product, ProductType } from '../types/product'
 
@@ -42,8 +41,6 @@ interface BeProduct {
   }>
 }
 
-// ponytail: BE không trả số tồn, chỉ `purchasable` -> giới hạn tạm số lượng trong giỏ; BE vẫn chặn khi checkout nếu thiếu hàng
-const STOCK_WHEN_PURCHASABLE = 99
 
 const toProduct = (p: BeProduct): Product => {
   const gallery = [...(p.images ?? [])].sort((a, b) => a.displayOrder - b.displayOrder).map((i) => i.imageUrl)
@@ -81,7 +78,8 @@ const toProduct = (p: BeProduct): Product => {
       price: v.price,
       weightGram: v.weightGram,
       boxCapacity: v.boxCapacity,
-      stockQuantity: v.purchasable ? STOCK_WHEN_PURCHASABLE : 0,
+      // BE công khai không trả số tồn, chỉ `purchasable`: giới hạn mỗi loại theo đơn lẻ; BE vẫn chặn khi thiếu hàng
+      stockQuantity: v.purchasable ? MAX_RETAIL_QUANTITY : 0,
       status: v.purchasable ? 'ACTIVE' : 'OUT_OF_STOCK',
     })),
   }
@@ -89,31 +87,10 @@ const toProduct = (p: BeProduct): Product => {
 
 export const productService = {
   list: async ({ type, page = 0, size = 12, sortBy, direction }: ProductQuery = {}): Promise<Page<Product>> => {
-    if (!USE_MOCK.products) {
-      const res = await unwrap(http.get<ApiResponse<Page<BeProduct>>>('/products', { params: { type, page, size, sortBy, direction } }))
-      return { ...res, content: res.content.map(toProduct) }
-    }
-    await delay(300)
-    const all = MOCK_PRODUCTS.filter((p) => !type || p.productType === type)
-    const totalPages = Math.max(1, Math.ceil(all.length / size))
-    return {
-      content: all.slice(page * size, page * size + size),
-      page,
-      size,
-      totalElements: all.length,
-      totalPages,
-      first: page === 0,
-      last: page >= totalPages - 1,
-    }
+    const res = await unwrap(http.get<ApiResponse<Page<BeProduct>>>('/products', { params: { type, page, size, sortBy, direction } }))
+    return { ...res, content: res.content.map(toProduct) }
   },
 
-  detail: async (id: string): Promise<Product> => {
-    if (!USE_MOCK.products) {
-      return toProduct(await unwrap(http.get<ApiResponse<BeProduct>>(`/products/${id}`)))
-    }
-    await delay(200)
-    const product = MOCK_PRODUCTS.find((p) => p.id === id)
-    if (!product) throw new Error('Không tìm thấy sản phẩm')
-    return product
-  },
+  detail: async (id: string): Promise<Product> =>
+    toProduct(await unwrap(http.get<ApiResponse<BeProduct>>(`/products/${id}`))),
 }

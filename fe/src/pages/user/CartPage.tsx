@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { CalendarDays, Store, Trash2 } from 'lucide-react'
-import { groupByProvider, useCartStore } from '../../stores/cartStore'
+import { groupByProvider, maxOrderQuantity, useCartStore } from '../../stores/cartStore'
 import { useDocumentTitle } from '../../hooks/useDocumentTitle'
 import { useAuthStore } from '../../stores/authStore'
 import { orderService } from '../../services/orderService'
@@ -47,7 +47,7 @@ export function CartPage() {
       if (date < toIsoDate(addDays(new Date(), leadDaysForItems(group.items)))) return null
       try {
         await orderService.preview({ receiverName: '', receiverPhone: '', shippingAddress: '',
-          groups: toCheckoutGroups(group.items, { [group.providerId]: date }, {}) }, group.items)
+          groups: toCheckoutGroups(group.items, { [group.providerId]: date }, {}) })
         return null
       } catch (error) {
         return { providerId: group.providerId, message: errorMessage(error) }
@@ -102,7 +102,7 @@ export function CartPage() {
                           {item.quantity} × {formatVnd(item.unitPrice)}
                         </p>
                       </div>
-                      <QuantityStepper size="sm" value={item.quantity} max={item.canPreorder ? 10_000 : item.stock}
+                      <QuantityStepper size="sm" value={item.quantity} max={maxOrderQuantity(item)}
                         onChange={(q) => setQuantity(item.lineId, q)} />
                       <p className="w-28 text-right font-semibold text-navy">{formatVnd(item.unitPrice * item.quantity)}</p>
                       <button

@@ -4,7 +4,7 @@ import { errorMessage } from '../../apis/http'
 import { useAuthStore } from '../../stores/authStore'
 import { useDocumentTitle } from '../../hooks/useDocumentTitle'
 import { fieldErrors, loginSchema } from '../../schemas'
-import { HOME_BY_ROLE, ROUTES } from '../../constants'
+import { homeAfterLogin, ROUTES } from '../../constants'
 import { TextInput } from '../../components/ui/Field'
 import { Notice } from '../../components/ui/States'
 import { GoogleLoginButton } from '../../components/GoogleLoginButton'
@@ -23,15 +23,8 @@ export function LoginPage() {
   const [submitting, setSubmitting] = useState(false)
   const submittingRef = useRef(false)
 
-  // Chỉ cho quay về đường dẫn nội bộ (chặn open redirect)
-  const next = params.get('next')
-  const target = next && next.startsWith('/') && !next.startsWith('//') ? next : ROUTES.home
-
-  // Mật khẩu tạm -> bắt đổi trước; còn lại về `next` hoặc trang theo vai trò
-  const goAfterLogin = (user: User) => {
-    if (user.requirePasswordChange) return navigate(ROUTES.changePassword, { replace: true })
-    navigate(next ? target : HOME_BY_ROLE[user.role], { replace: true })
-  }
+  // Cùng quy tắc với GuestRoute: mật khẩu tạm -> đổi mật khẩu; `next` nội bộ; còn lại theo vai trò
+  const goAfterLogin = (user: User) => navigate(homeAfterLogin(user, params.get('next')), { replace: true })
 
   const run = async (action: () => Promise<User>, fallbackError: string) => {
     if (submittingRef.current) return
@@ -64,6 +57,11 @@ export function LoginPage() {
   return (
     <>
       <h1 className="text-h2">Đăng nhập</h1>
+      {params.get('expired') && (
+        <div className="mt-4">
+          <Notice tone="info">Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.</Notice>
+        </div>
+      )}
       {params.get('reset') && (
         <div className="mt-4">
           <Notice tone="success">Đặt lại mật khẩu thành công. Đăng nhập bằng mật khẩu mới.</Notice>

@@ -1,5 +1,6 @@
 import { useRef, useState, type FormEvent } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
+import axios from 'axios'
 import { Plus, Trash2 } from 'lucide-react'
 import { orderService } from '../../services/orderService'
 import { errorMessage } from '../../apis/http'
@@ -17,6 +18,7 @@ import { OrderItemsSummary } from '../../components/OrderItemsSummary'
 import { SearchableSelect, type SelectGroup } from '../../components/ui/SearchableSelect'
 import administrativeUnits from '../../data/vietnamAdministrativeUnits.json'
 import { PageHeader } from '../../components/ui/PageHeader'
+import { StockConflictDialog } from '../../components/StockConflictDialog'
 import { Notice, Spinner } from '../../components/ui/States'
 import type { CheckoutPreview, OrderDetail } from '../../types/order'
 
@@ -76,6 +78,7 @@ export function CheckoutPage() {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitError, setSubmitError] = useState<string>()
   const [submitting, setSubmitting] = useState(false)
+  const [conflict, setConflict] = useState<string>()
   const placed = useRef(false)
 
   const groups = groupByProvider(items)
@@ -92,7 +95,7 @@ export function CheckoutPage() {
   const { data: previews, loading: previewLoading, error: previewError } = useApi(
     (): Promise<CheckoutPreview[] | null> => ready && overAllocated.length === 0
       ? Promise.all(active.map(({ cart }) => orderService.preview(
-          { receiverName: '', receiverPhone: '', shippingAddress: '', groups: toCheckoutGroups(cart, deliveryDates, {}) }, cart)))
+          { receiverName: '', receiverPhone: '', shippingAddress: '', groups: toCheckoutGroups(cart, deliveryDates, {}) })))
       : Promise.resolve(null),
     [items, deliveryDates, allocationKey],
   )
@@ -154,10 +157,12 @@ export function CheckoutPage() {
         groups: active.flatMap(({ r, cart }) => toCheckoutGroups(cart, deliveryDates, effectiveChoices).map((g) => ({
           ...g, receiverName: r.name.trim(), receiverPhone: r.phone.trim(), shippingAddress: fullAddress(r),
         }))),
-      }, items)
+      })
     } catch (err) {
       // Không đơn nào được tạo -> giữ nguyên giỏ để khách sửa lại
-      setSubmitError(errorMessage(err))
+      // 409: hết tồn kho / hết suất nướng -> hộp thoại nêu rõ món hoặc ngày bị thiếu
+      if (axios.isAxiosError(err) && err.response?.status === 409) setConflict(errorMessage(err))
+      else setSubmitError(errorMessage(err))
       setSubmitting(false)
       return
     }
@@ -169,6 +174,7 @@ export function CheckoutPage() {
 
   return (
     <div className="page section">
+      {conflict && <StockConflictDialog message={conflict} onClose={() => setConflict(undefined)} />}
       <PageHeader title="Thông tin đặt hàng" description="Có thể gửi bánh tới nhiều người: thêm người nhận rồi chia số lượng cho từng người." />
 
       <form noValidate onSubmit={handleSubmit} className="grid gap-8 lg:grid-cols-[1fr_26rem]">

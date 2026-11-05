@@ -1,5 +1,6 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios'
 import type { ApiResponse } from '../types/api'
+import { useAuthStore } from '../stores/authStore'
 
 /**
  * Axios dùng chung. Đăng nhập dựa trên cookie HttpOnly do BE đặt
@@ -24,9 +25,26 @@ http.interceptors.response.use(undefined, async (error: AxiosError) => {
   }
   original._retried = true
   refreshing ??= http.post('/auth/refresh').then(() => undefined).finally(() => (refreshing = null))
-  await refreshing
+  try {
+    await refreshing
+  } catch (refreshError) {
+    if ((refreshError as AxiosError).response?.status === 401) await expireSession()
+    throw error
+  }
   return http(original)
 })
+
+/**
+ * Refresh token hết hạn: đăng xuất rồi về trang đăng nhập kèm `next` để quay lại sau khi đăng nhập.
+ * Chỉ khi đang có phiên (khách chưa đăng nhập gọi /auth/me bị 401 là bình thường, không chuyển trang).
+ */
+async function expireSession() {
+  if (!useAuthStore.getState().user) return
+  // Lấy trang hiện tại trước khi logout (logout làm ProtectedRoute tự chuyển sang /login)
+  const next = window.location.pathname + window.location.search
+  await useAuthStore.getState().logout().catch(() => undefined)
+  window.location.assign(`/login?expired=1&next=${encodeURIComponent(next)}`)
+}
 
 /** Bóc `data` khỏi ApiResponseDTO */
 export async function unwrap<T>(request: Promise<{ data: ApiResponse<T> }>): Promise<T> {

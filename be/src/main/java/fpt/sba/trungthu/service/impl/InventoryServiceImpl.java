@@ -259,7 +259,8 @@ public class InventoryServiceImpl implements InventoryService {
                 if (updated == 0) {
                     ProductVariant variant = preview.get(variantId);
                     throw new InventoryConflictException("INSUFFICIENT_STOCK",
-                            variant.getProduct().getProvider().getId(), variantId, null);
+                            variant.getProduct().getProvider().getId(), variantId, null,
+                            variant.getProduct().getName() + " " + variant.getVariantName());
                 }
             }
             entityManager.createQuery("""
@@ -388,7 +389,7 @@ public class InventoryServiceImpl implements InventoryService {
         int selling = line.quantity();
         int setsBefore = box.getQuantity();
         if (setsBefore < selling) {
-            throw new InventoryConflictException("INSUFFICIENT_STOCK", set.getProvider().getId(), null, null);
+            throw new InventoryConflictException("INSUFFICIENT_STOCK", set.getProvider().getId(), null, null, set.getName());
         }
         java.math.BigDecimal list = java.math.BigDecimal.ZERO;
         for (GiftSetComponent row : rows) {
@@ -422,7 +423,7 @@ public class InventoryServiceImpl implements InventoryService {
             int take = perSet * selling;
             if (row.getQuantity() < take) {
                 throw new InventoryConflictException("INSUFFICIENT_STOCK", set.getProvider().getId(),
-                        row.getComponentVariant().getId(), null);
+                        row.getComponentVariant().getId(), null, set.getName());
             }
             if (take <= 0) {
                 continue;

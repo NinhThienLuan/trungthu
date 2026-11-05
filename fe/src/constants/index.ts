@@ -1,12 +1,14 @@
 import type { ProductType } from '../types/product'
 import type { OrderPaymentStatus, OrderStatus, PaymentMethod } from '../types/order'
-import type { UserRole } from '../types/user'
+import type { User, UserRole } from '../types/user'
 
 export const BRAND = 'Nguyệt Viên Đài'
 
 // Quy tắc nghiệp vụ (SRS) — đổi ở đây, không viết số cứng trong component
 export const MIN_LEAD_DAYS = 3 // ngày nhận >= hôm nay + 3
 export const BULK_ORDER_QUANTITY = 20 // từ 20 sản phẩm/xưởng cần chuẩn bị lâu hơn
+/** Số lượng tối đa mỗi loại bánh trong một đơn lẻ (mua nhiều hơn: đặt trước bánh tươi hoặc báo giá sỉ) */
+export const MAX_RETAIL_QUANTITY = 20
 export const BULK_LEAD_DAYS = 7
 export const RFQ_MIN_QUANTITY = 20 // RFQ sỉ từ 20 hộp
 export const DEPOSIT_RATE = 0.5 // cọc tối thiểu 50%
@@ -83,3 +85,11 @@ export const PAYMENT_STATUS_LABEL: Record<OrderPaymentStatus, string> = {
 
 /** Đơn chỉ được huỷ khi chưa cọc / COD chưa vào sản xuất (mục 4 hợp đồng) */
 export const CANCELLABLE_STATUSES: OrderStatus[] = ['PENDING_DEPOSIT', 'CONFIRMED']
+
+/** Trang đích sau đăng nhập: mật khẩu tạm -> đổi mật khẩu; `next` nội bộ hợp lệ -> về đó; còn lại theo vai trò */
+export function homeAfterLogin(user: User, next: string | null): string {
+  if (user.requirePasswordChange) return ROUTES.changePassword
+  // Chỉ cho quay về đường dẫn nội bộ (chặn open redirect)
+  if (next && next.startsWith('/') && !next.startsWith('//')) return next
+  return HOME_BY_ROLE[user.role]
+}

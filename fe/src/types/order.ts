@@ -120,15 +120,6 @@ export interface OrderLine {
   boxContents?: string[]
 }
 
-/** [FE đề xuất cho BE3] Thông tin chuyển khoản VietQR — chưa có trong API đọc hiện tại */
-export interface VietQrPayment {
-  qrImageUrl: string | null
-  bankName: string
-  bankAccount: string
-  accountName?: string
-  transferNote: string
-}
-
 /** GET /api/orders/{id}/vietqr */
 export interface VietQrInstruction {
   imageUrl: string
@@ -153,7 +144,6 @@ export interface OrderDetail extends OrderSummary {
   depositAmount: number
   holdExpiresAt: string | null
   lines: OrderLine[]
-  payment?: VietQrPayment
 }
 
 /** Bộ lọc GET /api/orders/me: from/to là ngày nhận, gồm cả hai đầu */

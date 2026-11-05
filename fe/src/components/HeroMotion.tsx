@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { DETAIL_GALLERY, MOCK_PRODUCTS } from '../apis/mockData'
+import { HERO_IMAGES } from '../constants/images'
 
 /**
  * Video nền hero: "Breaking open traditional mooncake, close-up" — Thái Trường Giang (Pexels, giấy phép miễn phí).
@@ -19,12 +19,12 @@ function shouldLoadVideo() {
  * slideshow ảnh chuyển cảnh + zoom chậm bằng CSS làm phương án dự phòng.
  */
 // Ảnh Stitch cũ (lh3 .../aida/...) đã hết hạn (400/403): slide đầu dùng ảnh hộp quà trong bộ ảnh chi tiết
-export function HeroMotion({ firstSrc = DETAIL_GALLERY[3] }: { firstSrc?: string }) {
+export function HeroMotion({ firstSrc = HERO_IMAGES[0] }: { firstSrc?: string }) {
   const [useVideo, setUseVideo] = useState(false)
   const [playing, setPlaying] = useState(false)
   useEffect(() => setUseVideo(shouldLoadVideo()), [])
 
-  const slides = [firstSrc, DETAIL_GALLERY[0], MOCK_PRODUCTS[2]?.imageUrl, MOCK_PRODUCTS[1]?.imageUrl].filter(Boolean) as string[]
+  const slides = [firstSrc, ...HERO_IMAGES.slice(1)]
 
   return (
     <div className="hero-motion absolute inset-0" aria-hidden>

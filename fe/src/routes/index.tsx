@@ -5,6 +5,7 @@ import { ROUTES } from '../constants'
 import { AuthLayout } from '../components/layouts/AuthLayout'
 import { AdminLayout } from '../components/layouts/AdminLayout'
 import { ProtectedRoute } from './ProtectedRoute'
+import { GuestRoute } from './GuestRoute'
 import { CartPage } from '../pages/user/CartPage'
 import { CheckoutPage } from '../pages/user/CheckoutPage'
 import { PaymentPage } from '../pages/user/PaymentPage'
@@ -100,12 +101,18 @@ export const router = createBrowserRouter([
   {
     element: <AuthLayout />,
     children: [
-      { path: '/login', element: <LoginPage /> },
-      { path: '/register', element: <RegisterPage /> },
-      // Quên mật khẩu: email -> OTP -> mật khẩu mới (README 3.2)
-      { path: ROUTES.forgotPassword, element: <ForgotPasswordPage /> },
-      { path: ROUTES.verifyCode, element: <VerifyCodePage /> },
-      { path: ROUTES.resetPassword, element: <ResetPasswordPage /> },
+      {
+        // Đã đăng nhập thì không xem lại form: chuyển về trang theo vai trò (GuestRoute)
+        element: <GuestRoute />,
+        children: [
+          { path: '/login', element: <LoginPage /> },
+          { path: '/register', element: <RegisterPage /> },
+          // Quên mật khẩu: email -> OTP -> mật khẩu mới (README 3.2)
+          { path: ROUTES.forgotPassword, element: <ForgotPasswordPage /> },
+          { path: ROUTES.verifyCode, element: <VerifyCodePage /> },
+          { path: ROUTES.resetPassword, element: <ResetPasswordPage /> },
+        ],
+      },
     ],
   },
 ])
