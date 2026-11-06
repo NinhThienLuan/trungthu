@@ -80,8 +80,19 @@ export interface ComplianceDoc {
 
 const P = '/provider/products'
 
+/** GET /provider/bake-sheet: date is the bake date, one day before delivery. */
+export interface BakeLineItem {
+  variantId: string | null
+  productName: string
+  variantName: string | null
+  bakeQuantity: number
+  orderCodes: string[]
+}
+
 /** API khu vực seller: BE2 sản phẩm/kho, BE4 đơn, BE3 vòng đời đơn, BE1 hồ sơ thẩm định */
 export const sellerService = {
+  getBakeSheet: (date: string) =>
+    unwrap(http.get<ApiResponse<BakeLineItem[]>>('/provider/bake-sheet', { params: { date } })),
   dashboard: () => unwrap(http.get<ApiResponse<SellerDashboard>>('/provider/dashboard')),
 
   orders: (query: OrderQuery = {}) =>
