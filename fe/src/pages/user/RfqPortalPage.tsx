@@ -77,7 +77,10 @@ function BuyerRfqDashboard({ created }: { created: RfqResponse | null }) {
                   className={`w-full rounded-sm border p-space-md text-left shadow-sm ${requestId === rfq.id ? 'border-secondary bg-champagne-light' : 'border-line bg-white'}`}>
                   <span className="block font-semibold text-primary">{rfq.code}</span>
                   <span className="block text-small text-on-surface-variant">
-                    {rfq.requestedQuantity} hộp · nhận {formatDate(rfq.expectedDeliveryDate)}
+                    {rfq.requestedQuantity} hộp{rfq.productName && ` ${rfq.productName}`} · nhận {formatDate(rfq.expectedDeliveryDate)}
+                  </span>
+                  <span className="block text-small text-on-surface-variant">
+                    Gửi tới: {rfq.providerName ?? 'Tất cả xưởng'}
                   </span>
                   <span className="mt-1 block text-small font-medium text-secondary">{statusText[rfq.status]}</span>
                 </button>

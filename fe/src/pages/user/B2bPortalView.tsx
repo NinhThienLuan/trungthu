@@ -1,9 +1,37 @@
 // Tự sinh từ bản thiết kế Stitch — giữ nguyên nội dung. Sửa logic ở trang bọc ngoài.
+import { useState } from 'react'
 import { Icon } from '../../components/Icon'
-import { MIN_LEAD_DAYS } from '../../constants'
+import { MIN_LEAD_DAYS, RFQ_MIN_QUANTITY } from '../../constants'
 import { addDays, toIsoDate } from '../../lib/format'
+import { useApi } from '../../hooks/useApi'
+import { productService } from '../../services/productService'
+import { BudgetCalculator, ProviderProductPicker, type B2bCatalog, type RfqDraft } from './B2bRfqTools'
+
+/** Bánh lẻ và set quà đang bán (BE đã bỏ vỏ hộp khỏi danh sách); danh sách xưởng lấy từ chính sản phẩm */
+function useB2bCatalog(): B2bCatalog {
+  const { data, loading } = useApi(() => productService.list({ size: 200 }), [])
+  const products = (data?.content ?? []).filter((p) => p.productType === 'LOOSE_CAKE' || p.productType === 'GIFT_SET')
+  const providers = [...new Map(products.map((p) => [p.providerId, p.storeName])).entries()]
+    .map(([id, name]) => ({ id, name }))
+    .sort((a, b) => a.name.localeCompare(b.name, 'vi'))
+  return { products, providers, loading }
+}
 
 export function B2bPortalView() {
+  const catalog = useB2bCatalog()
+  // Bảng tính và form RFQ dùng chung lựa chọn xưởng / bánh / số lượng
+  const [draft, setDraft] = useState<RfqDraft>({ providerId: '', productId: '', quantity: 100 })
+  /** "Điền vào yêu cầu báo giá": ghi ngân sách + dịch vụ thêm vào form rồi cuộn tới form */
+  const applyEstimate = (budget: number | undefined, addons: string[]) => {
+    const budgetInput = document.getElementById('rfq-budget') as HTMLInputElement | null
+    if (budgetInput && budget) budgetInput.value = String(budget)
+    const description = document.getElementById('rfq-description') as HTMLTextAreaElement | null
+    if (description) {
+      const missing = addons.filter((a) => !description.value.includes(a))
+      if (missing.length) description.value = [description.value.trim(), ...missing.map((a) => `- ${a}`)].filter(Boolean).join('\n')
+    }
+    document.getElementById('rfq-section')?.scrollIntoView({ behavior: 'smooth' })
+  }
   return (
     <>
       <div className="flex flex-col w-full">
@@ -398,262 +426,11 @@ export function B2bPortalView() {
               </h2>{' '}
               <p className="font-body-md text-body-md text-on-surface-variant">
                 {
-                  ' Điều chỉnh quy mô số lượng và tùy chọn dòng bánh hoàng gia để nhận ngay mức giá chiết khấu dự kiến kèm quyền lợi đi kèm. '
+                  ' Chọn xưởng, dòng bánh và số lượng để ước tính ngân sách theo giá niêm yết, rồi gửi yêu cầu để các xưởng báo giá sỉ. '
                 }
               </p>{' '}
             </div>{' '}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-xl items-start">
-              {' '}
-              <div className="lg:col-span-7 bg-surface-container-lowest p-space-lg lg:p-space-xl rounded-[0.125rem] shadow-md space-y-space-lg">
-                {' '}
-                <div className="space-y-space-sm">
-                  {' '}
-                  <div className="flex items-center justify-between">
-                    {' '}
-                    <label className="font-label-lg text-label-lg text-primary" htmlFor="quantity-slider">
-                      {' 1. Số lượng hộp quà dự kiến: '}
-                    </label>{' '}
-                    <div className="flex items-center gap-2">
-                      {' '}
-                      <input
-                        className="w-24 text-right px-2 py-1 bg-surface-container-low text-primary font-headline-sm text-headline-sm rounded-[0.125rem] focus:outline-none focus:ring-1 focus:ring-secondary"
-                        id="quantity-number"
-                        max={5000}
-                        min={50}
-                        step={10}
-                        type="number"
-                        defaultValue="350"
-                      />{' '}
-                      <span className="font-label-md text-label-md text-on-surface-variant">hộp</span>{' '}
-                    </div>{' '}
-                  </div>{' '}
-                  <input
-                    className="w-full h-2 bg-surface-container-high rounded-[0.25rem] appearance-none cursor-pointer accent-secondary"
-                    id="quantity-slider"
-                    max={5000}
-                    min={50}
-                    step={25}
-                    type="range"
-                    defaultValue="350"
-                  />{' '}
-                  <div className="flex justify-between font-label-sm text-label-sm text-on-surface-variant">
-                    {' '}
-                    <span>50 hộp (-15%)</span> <span>200 hộp (-22%)</span> <span>500 hộp (-30%)</span>{' '}
-                    <span>1.000+ hộp (-38%)</span>{' '}
-                  </div>{' '}
-                </div>{' '}
-                <div className="space-y-space-sm">
-                  {' '}
-                  <label className="font-label-lg text-label-lg text-primary block">
-                    2. Chọn dòng bảo hộp mục tiêu:
-                  </label>{' '}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-space-sm" id="product-selector-group">
-                    {' '}
-                    <label className="relative p-space-md bg-surface-container-low rounded-[0.125rem] cursor-pointer transition-all hover:bg-champagne-light/30 flex flex-col justify-between">
-                      {' '}
-                      <input
-                        defaultChecked
-                        className="sr-only product-radio"
-                        name="box-tier"
-                        type="radio"
-                        value="850000"
-                        readOnly
-                      />{' '}
-                      <div className="space-y-1">
-                        {' '}
-                        <span className="font-label-sm text-[10px] text-secondary uppercase tracking-widest block">
-                          4 Bánh Cao Cấp
-                        </span>{' '}
-                        <h4 className="font-headline-sm text-[16px] text-primary">Ngự Viên Hoàng Kim</h4>{' '}
-                        <p className="font-body-sm text-[12px] text-on-surface-variant">
-                          Nhân sen nhuyễn, xá xíu sò điệp, lạp xưởng ngũ hạt.
-                        </p>{' '}
-                      </div>{' '}
-                      <div className="mt-space-md pt-space-xs flex items-baseline justify-between">
-                        {' '}
-                        <span className="font-label-md text-label-md text-primary font-bold">850.000 đ</span>{' '}
-                        <Icon name="check_circle" className="text-secondary text-[18px] check-icon" aria-hidden />{' '}
-                      </div>{' '}
-                    </label>{' '}
-                    <label className="relative p-space-md bg-surface-container-low rounded-[0.125rem] cursor-pointer transition-all hover:bg-champagne-light/30 flex flex-col justify-between">
-                      {' '}
-                      <input
-                        className="sr-only product-radio"
-                        name="box-tier"
-                        type="radio"
-                        value="1350000"
-                        readOnly
-                      />{' '}
-                      <div className="space-y-1">
-                        {' '}
-                        <span className="font-label-sm text-[10px] text-secondary uppercase tracking-widest block">
-                          6 Bánh & Trà Cung Đình
-                        </span>{' '}
-                        <h4 className="font-headline-sm text-[16px] text-primary">Bát Bửu Cung Đình</h4>{' '}
-                        <p className="font-body-sm text-[12px] text-on-surface-variant">
-                          Bào ngư sốt cay, vi cá, đông trùng hạ thảo kèm trà Shan Tuyết.
-                        </p>{' '}
-                      </div>{' '}
-                      <div className="mt-space-md pt-space-xs flex items-baseline justify-between">
-                        {' '}
-                        <span className="font-label-md text-label-md text-primary font-bold">1.350.000 đ</span>{' '}
-                        <Icon
-                          name="radio_button_unchecked"
-                          className="text-secondary text-[18px] check-icon opacity-30"
-                          aria-hidden
-                        />{' '}
-                      </div>{' '}
-                    </label>{' '}
-                    <label className="relative p-space-md bg-surface-container-low rounded-[0.125rem] cursor-pointer transition-all hover:bg-champagne-light/30 flex flex-col justify-between">
-                      {' '}
-                      <input
-                        className="sr-only product-radio"
-                        name="box-tier"
-                        type="radio"
-                        value="2150000"
-                        readOnly
-                      />{' '}
-                      <div className="space-y-1">
-                        {' '}
-                        <span className="font-label-sm text-[10px] text-secondary uppercase tracking-widest block">
-                          Gỗ Khảm Trai Bespoke
-                        </span>{' '}
-                        <h4 className="font-headline-sm text-[16px] text-primary">Tự Phối Mix & Match</h4>{' '}
-                        <p className="font-body-sm text-[12px] text-on-surface-variant">
-                          Hộp gỗ sơn mài, tuyển chọn 8 bánh yến sào thượng hạng.
-                        </p>{' '}
-                      </div>{' '}
-                      <div className="mt-space-md pt-space-xs flex items-baseline justify-between">
-                        {' '}
-                        <span className="font-label-md text-label-md text-primary font-bold">2.150.000 đ</span>{' '}
-                        <Icon
-                          name="radio_button_unchecked"
-                          className="text-secondary text-[18px] check-icon opacity-30"
-                          aria-hidden
-                        />{' '}
-                      </div>{' '}
-                    </label>{' '}
-                  </div>{' '}
-                </div>{' '}
-                <div className="space-y-space-sm">
-                  {' '}
-                  <label className="font-label-lg text-label-lg text-primary block">
-                    3. Dịch vụ gia tăng nhận diện:
-                  </label>{' '}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-space-sm">
-                    {' '}
-                    <label className="flex items-center gap-space-xs p-space-sm bg-surface-container-low rounded-[0.125rem] cursor-pointer hover:bg-surface-container">
-                      {' '}
-                      <input
-                        className="rounded-[0.125rem] accent-secondary w-4 h-4"
-                        id="addon-laser"
-                        type="checkbox"
-                      />{' '}
-                      <span className="font-body-sm text-body-sm text-on-surface">Khắc kim nhũ logo</span>{' '}
-                    </label>{' '}
-                    <label className="flex items-center gap-space-xs p-space-sm bg-surface-container-low rounded-[0.125rem] cursor-pointer hover:bg-surface-container">
-                      {' '}
-                      <input
-                        className="rounded-[0.125rem] accent-secondary w-4 h-4"
-                        id="addon-multidrop"
-                        type="checkbox"
-                      />{' '}
-                      <span className="font-body-sm text-body-sm text-on-surface">Tách nhiều chi nhánh</span>{' '}
-                    </label>{' '}
-                    <label className="flex items-center gap-space-xs p-space-sm bg-surface-container-low rounded-[0.125rem] cursor-pointer hover:bg-surface-container">
-                      {' '}
-                      <input
-                        className="rounded-[0.125rem] accent-secondary w-4 h-4"
-                        id="addon-luxurybag"
-                        type="checkbox"
-                      />{' '}
-                      <span className="font-body-sm text-body-sm text-on-surface">Túi quà ngoại giao</span>{' '}
-                    </label>{' '}
-                  </div>{' '}
-                </div>{' '}
-              </div>{' '}
-              <div className="lg:col-span-5 bg-primary-container text-surface p-space-lg lg:p-space-xl rounded-[0.125rem] shadow-xl space-y-space-lg relative overflow-hidden">
-                {' '}
-                <div className="absolute right-0 top-0 w-48 h-48 bg-secondary-container/10 rounded-[0.75rem] blur-2xl pointer-events-none"></div>{' '}
-                <div className="space-y-1">
-                  {' '}
-                  <span className="font-label-sm text-label-sm text-secondary-fixed uppercase tracking-widest block">
-                    Bảng Tổng Hợp Dự Toán B2B
-                  </span>{' '}
-                  <h3 className="font-headline-md text-headline-md text-champagne-light">Bản Tính Khái Toán Nhanh</h3>{' '}
-                </div>{' '}
-                <div className="space-y-space-sm pt-space-xs font-body-md text-body-md">
-                  {' '}
-                  <div className="flex justify-between items-center py-2 text-on-primary-container">
-                    {' '}
-                    <span>Đơn giá niêm yết:</span>{' '}
-                    <span className="font-label-md text-label-md text-champagne-light" id="display-unit-price">
-                      850.000 đ
-                    </span>{' '}
-                  </div>{' '}
-                  <div className="flex justify-between items-center py-2 text-on-primary-container">
-                    {' '}
-                    <span>Mức chiết khấu áp dụng:</span>{' '}
-                    <span
-                      className="font-label-md text-label-md text-secondary-fixed font-bold"
-                      id="display-discount-percent"
-                    >
-                      -22%
-                    </span>{' '}
-                  </div>{' '}
-                  <div className="flex justify-between items-center py-2 text-on-primary-container">
-                    {' '}
-                    <span>Tổng giá niêm yết:</span>{' '}
-                    <span className="font-body-md text-body-md text-surface" id="display-subtotal">
-                      297.500.000 đ
-                    </span>{' '}
-                  </div>{' '}
-                  <div className="flex justify-between items-center py-2 text-on-primary-container">
-                    {' '}
-                    <span>Ngân sách tiết kiệm được:</span>{' '}
-                    <span className="font-label-md text-label-md text-secondary-fixed font-bold" id="display-saved">
-                      -65.450.000 đ
-                    </span>{' '}
-                  </div>{' '}
-                </div>{' '}
-                <div className="bg-primary/70 p-space-md rounded-[0.125rem] space-y-1">
-                  {' '}
-                  <span className="font-label-sm text-label-sm text-on-primary-container uppercase tracking-wider block">
-                    Tổng Ngân Sách Thanh Toán Dự Kiến:
-                  </span>{' '}
-                  <div className="flex items-baseline justify-between">
-                    {' '}
-                    <span
-                      className="font-headline-lg text-headline-lg text-champagne-light font-bold"
-                      id="display-final-total"
-                    >
-                      232.050.000 đ
-                    </span>{' '}
-                  </div>{' '}
-                  <p className="font-body-sm text-[11px] text-on-primary-container pt-1">
-                    {' Đơn giá trung bình: '}
-                    <span className="text-secondary-fixed font-semibold" id="display-avg-unit">
-                      663.000 đ / hộp
-                    </span>
-                    {' (Đã bao gồm VAT & Vận chuyển) '}
-                  </p>{' '}
-                </div>{' '}
-                <div className="pt-space-xs space-y-space-sm">
-                  {' '}
-                  <a
-                    className="w-full inline-flex items-center justify-center gap-space-xs py-3.5 bg-secondary text-on-secondary rounded-[0.125rem] font-label-md text-label-md tracking-wider uppercase hover:bg-secondary-fixed hover:text-on-secondary-fixed transition-colors shadow-md"
-                    href="#rfq-section"
-                  >
-                    {' '}
-                    <Icon name="send" className="text-[18px]" aria-hidden />{' '}
-                    <span>Xuất Báo Giá Kèm File Dự Toán Này</span>{' '}
-                  </a>{' '}
-                  <p className="font-body-sm text-[11px] text-center text-on-primary-container">
-                    {' Báo giá chính thức đóng dấu đỏ sẽ được gửi qua Email/Zalo trong 2h. '}
-                  </p>{' '}
-                </div>{' '}
-              </div>{' '}
-            </div>{' '}
+            <BudgetCalculator catalog={catalog} draft={draft} onChange={setDraft} onApply={applyEstimate} />
           </div>{' '}
         </section>{' '}
         <section
@@ -815,6 +592,7 @@ export function B2bPortalView() {
                     />{' '}
                   </div>{' '}
                 </div>{' '}
+                <ProviderProductPicker catalog={catalog} draft={draft} onChange={setDraft} named />
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-space-md">
                   {' '}
                   <div className="space-y-1">
@@ -836,7 +614,8 @@ export function B2bPortalView() {
                       Số lượng hộp cần báo giá *
                     </label>{' '}
                     <input className="w-full px-space-md py-2.5 bg-surface-container-low text-primary rounded-[0.125rem] font-body-md text-body-md focus:outline-none focus:ring-1 focus:ring-secondary aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-error"
-                      name="requestedQuantity" type="number" min="20" defaultValue="20" required />{' '}
+                      name="requestedQuantity" type="number" min={RFQ_MIN_QUANTITY} required
+                      value={draft.quantity} onChange={(e) => setDraft({ ...draft, quantity: Number(e.target.value) })} />{' '}
                   </div>{' '}
                 </div>{' '}
                 <div className="space-y-space-sm pt-space-xs">

@@ -6,15 +6,19 @@ import fpt.sba.trungthu.dto.request.SubmitQuoteRequest;
 import fpt.sba.trungthu.dto.response.QuoteResponse;
 import fpt.sba.trungthu.dto.response.RfqResponse;
 import fpt.sba.trungthu.entity.BulkRequest;
+import fpt.sba.trungthu.entity.Product;
 import fpt.sba.trungthu.entity.ProviderQuotation;
 import fpt.sba.trungthu.entity.User;
 import fpt.sba.trungthu.entity.enumeration.BulkRequestStatus;
 import fpt.sba.trungthu.entity.enumeration.QuoteStatus;
 import fpt.sba.trungthu.entity.enumeration.SubscriptionStatus;
+import fpt.sba.trungthu.entity.enumeration.UserRole;
 import fpt.sba.trungthu.entity.enumeration.UserStatus;
 import fpt.sba.trungthu.repository.BulkRequestRepository;
+import fpt.sba.trungthu.repository.ProductRepository;
 import fpt.sba.trungthu.repository.ProviderQuotationRepository;
 import fpt.sba.trungthu.repository.SubscriptionRepository;
+import fpt.sba.trungthu.repository.UserRepository;
 import fpt.sba.trungthu.service.RfqService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -40,6 +44,8 @@ public class RfqServiceImpl implements RfqService {
     private final BulkRequestRepository requests;
     private final ProviderQuotationRepository quotations;
     private final SubscriptionRepository subscriptions;
+    private final UserRepository users;
+    private final ProductRepository products;
 
     @Override
     @Transactional
@@ -52,6 +58,19 @@ public class RfqServiceImpl implements RfqService {
         }
         if (input.expectedDeliveryDate().isBefore(today.plusDays(3))) {
             throw badRequest("Ngày nhận hàng phải cách ít nhất 3 ngày");
+        }
+        // Chọn sản phẩm thì gửi cho xưởng của sản phẩm đó; chọn cả hai thì sản phẩm phải thuộc xưởng đã chọn
+        // Hàng sỉ xưởng nướng theo đơn: sản phẩm đang hiện công khai (kể cả hết tồn bán lẻ) đều nhận RFQ
+        Product product = input.productId() == null ? null : products.findPublicById(input.productId())
+                .orElseThrow(() -> badRequest("Sản phẩm không tồn tại hoặc đã ngừng bán"));
+        User target = input.providerId() == null ? null : users.findById(input.providerId())
+                .filter(user -> user.getRole() == UserRole.PROVIDER && user.getStatus() == UserStatus.ACTIVE)
+                .orElseThrow(() -> badRequest("Xưởng không tồn tại hoặc đã ngừng hoạt động"));
+        if (product != null) {
+            if (target != null && !target.getId().equals(product.getProvider().getId())) {
+                throw badRequest("Sản phẩm không thuộc xưởng đã chọn");
+            }
+            target = product.getProvider();
         }
         String prefix = "RFQ-" + today.format(DateTimeFormatter.BASIC_ISO_DATE) + "-";
         String code = null;
@@ -66,6 +85,7 @@ public class RfqServiceImpl implements RfqService {
                 .contactPhone(input.contactPhone().trim()).contactEmail(input.contactEmail().trim())
                 .requestedQuantity(input.requestedQuantity()).expectedDate(input.expectedDeliveryDate())
                 .expectedBudget(input.expectedBudget()).description(input.description()).logoUrl(input.logoUrl())
+                .targetProvider(target).product(product)
                 .status(BulkRequestStatus.DISTRIBUTED).build());
         return toRfqResponse(request);
     }
@@ -84,6 +104,7 @@ public class RfqServiceImpl implements RfqService {
         Map<UUID, RfqResponse> feed = new LinkedHashMap<>();
         requests.findTop100ByStatusInOrderByCreatedAtDesc(
                 List.of(BulkRequestStatus.DISTRIBUTED, BulkRequestStatus.QUOTES_RECEIVED))
+                .stream().filter(request -> visibleTo(request, provider))
                 .forEach(request -> feed.put(request.getId(), toProviderRfqResponse(request)));
         quotations.findTop100ByProviderIdOrderByCreatedAtDesc(provider.getId()).stream()
                 .filter(quote -> quote.getStatus() == QuoteStatus.ACCEPTED)
@@ -108,6 +129,9 @@ public class RfqServiceImpl implements RfqService {
         if (request.getStatus() != BulkRequestStatus.DISTRIBUTED
                 && request.getStatus() != BulkRequestStatus.QUOTES_RECEIVED) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "RFQ đã đóng");
+        }
+        if (!visibleTo(request, provider)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy RFQ");
         }
         if (quotations.existsByRequestIdAndProviderId(requestId, provider.getId())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Xưởng đã gửi báo giá cho RFQ này");
@@ -181,19 +205,32 @@ public class RfqServiceImpl implements RfqService {
         return provider;
     }
 
+    /** RFQ gửi riêng chỉ xưởng được chọn thấy và báo giá */
+    private static boolean visibleTo(BulkRequest request, User provider) {
+        return request.getTargetProvider() == null || request.getTargetProvider().getId().equals(provider.getId());
+    }
+
     private RfqResponse toRfqResponse(BulkRequest request) {
         return new RfqResponse(request.getId(), request.getRequestCode(), request.getCompanyName(),
                 request.getTaxCode(), request.getContactName(), request.getContactPosition(),
                 request.getContactPhone(), request.getContactEmail(), request.getRequestedQuantity(),
                 request.getExpectedDate(), request.getExpectedBudget(), request.getDescription(),
-                request.getLogoUrl(), request.getStatus());
+                request.getLogoUrl(), request.getStatus(),
+                request.getTargetProvider() == null ? null : request.getTargetProvider().getId(),
+                request.getTargetProvider() == null ? null : request.getTargetProvider().getStoreName(),
+                request.getProduct() == null ? null : request.getProduct().getId(),
+                request.getProduct() == null ? null : request.getProduct().getName());
     }
 
     private RfqResponse toProviderRfqResponse(BulkRequest request) {
         return new RfqResponse(request.getId(), request.getRequestCode(), "Khách doanh nghiệp",
                 null, null, null, null, null, request.getRequestedQuantity(),
                 request.getExpectedDate(), request.getExpectedBudget(), request.getDescription(),
-                request.getLogoUrl(), request.getStatus());
+                request.getLogoUrl(), request.getStatus(),
+                request.getTargetProvider() == null ? null : request.getTargetProvider().getId(),
+                request.getTargetProvider() == null ? null : request.getTargetProvider().getStoreName(),
+                request.getProduct() == null ? null : request.getProduct().getId(),
+                request.getProduct() == null ? null : request.getProduct().getName());
     }
 
     private QuoteResponse toQuoteResponse(ProviderQuotation quote) {

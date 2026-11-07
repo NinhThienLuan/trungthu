@@ -65,7 +65,10 @@ export function SellerRfqPage() {
                 className={`w-full rounded-sm border p-4 text-left ${currentId === rfq.id ? 'border-secondary bg-champagne-light' : 'border-line bg-white'}`}>
                 <span className="block font-semibold text-primary">{rfq.code}</span>
                 <span className="block text-small text-on-surface-variant">
-                  {rfq.requestedQuantity} hộp · cần nhận {formatDate(rfq.expectedDeliveryDate)}
+                  {rfq.requestedQuantity} hộp{rfq.productName && ` ${rfq.productName}`} · cần nhận {formatDate(rfq.expectedDeliveryDate)}
+                </span>
+                <span className="block text-small text-on-surface-variant">
+                  {rfq.providerId ? 'Khách gửi riêng xưởng bạn' : 'Gửi mọi xưởng'}
                 </span>
                 {ownQuotes.data?.some((quote) => quote.requestId === rfq.id) &&
                   <span className="mt-1 block text-small font-medium text-secondary">Đã nộp báo giá</span>}
@@ -77,6 +80,7 @@ export function SellerRfqPage() {
             <dl className="mt-3 grid gap-2 text-small sm:grid-cols-2">
               <div><dt className="text-muted">Doanh nghiệp</dt><dd>{selected.companyName}</dd></div>
               <div><dt className="text-muted">Số lượng</dt><dd>{selected.requestedQuantity} hộp</dd></div>
+              <div><dt className="text-muted">Sản phẩm</dt><dd>{selected.productName ?? 'Theo mô tả của khách'}</dd></div>
               <div><dt className="text-muted">Ngày nhận mong muốn</dt><dd>{formatDate(selected.expectedDeliveryDate)}</dd></div>
               <div><dt className="text-muted">Ngân sách</dt><dd>{selected.expectedBudget == null ? 'Chưa cung cấp' : formatVnd(selected.expectedBudget)}</dd></div>
             </dl>
