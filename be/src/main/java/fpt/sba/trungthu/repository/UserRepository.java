@@ -10,6 +10,9 @@ import java.util.UUID;
 @Repository
 public interface UserRepository extends JpaRepository<User, UUID> {
 
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    Optional<User> findForUpdateByEmailAndStatus(String email, fpt.sba.trungthu.entity.enumeration.UserStatus status);
+
     Optional<User> findByEmail(String email);
 
     Optional<User> findByEmailAndStatus(String email, fpt.sba.trungthu.entity.enumeration.UserStatus status);

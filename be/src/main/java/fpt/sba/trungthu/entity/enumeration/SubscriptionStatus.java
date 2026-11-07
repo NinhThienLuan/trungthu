@@ -17,7 +17,9 @@ public enum SubscriptionStatus {
     SUSPENDED,
 
     // Hết thời hạn thuê gian hàng mùa vụ
-    EXPIRED;
+    EXPIRED,
+
+    CANCELLED;
 
     public boolean canTransitionTo(SubscriptionStatus target) {
         if (target == null) {
@@ -27,10 +29,11 @@ public enum SubscriptionStatus {
             return true;
         }
         return switch (this) {
-            case PENDING_PAYMENT -> target == ACTIVE || target == EXPIRED;
+            case PENDING_PAYMENT -> target == ACTIVE || target == EXPIRED || target == CANCELLED;
             case ACTIVE -> target == SUSPENDED || target == EXPIRED;
             case SUSPENDED -> target == ACTIVE || target == EXPIRED;
             case EXPIRED -> target == PENDING_PAYMENT; // Đăng ký gia hạn mới
+            case CANCELLED -> false;
         };
     }
 

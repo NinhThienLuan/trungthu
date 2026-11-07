@@ -61,6 +61,12 @@ public class PaymentTransaction extends CreatedEntity {
     @Column(name = "paid_at")
     private Instant paidAt;
 
+    @Column(name = "checkout_url", length = 512)
+    private String checkoutUrl;
+
+    @Column(name = "qr_payload", length = 1024)
+    private String qrPayload;
+
     public void transitionPaymentStatus(TransactionStatus targetStatus) {
         paymentStatus.validateTransition(targetStatus);
         paymentStatus = targetStatus;
