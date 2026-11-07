@@ -9,6 +9,7 @@ import { promotionService, type Promotion } from '../../services/sellerService'
 import { useApi } from '../../hooks/useApi'
 import { useDocumentTitle } from '../../hooks/useDocumentTitle'
 import { useCartStore } from '../../stores/cartStore'
+import { useAuthStore } from '../../stores/authStore'
 import type { Product } from '../../types/product'
 import { MAX_RETAIL_QUANTITY, PRODUCT_TYPE_LABEL, ROUTES } from '../../constants'
 import { cn } from '../../lib/format'
@@ -25,6 +26,8 @@ const vnd = (n: number) => `${n.toLocaleString('vi-VN')}₫`
 export function ProductDetailPage() {
   const { id = '' } = useParams()
   const navigate = useNavigate()
+  const user = useAuthStore((st) => st.user)
+  const isSeller = user?.role === 'PROVIDER'
   const add = useCartStore((st) => st.add)
   const { data: product, loading, error, reload } = useApi(() => productService.detail(id), [id])
   const providerId = product?.providerId
@@ -246,68 +249,81 @@ export function ProductDetailPage() {
                 Áp dụng cho đơn sỉ từ 20 hộp: gửi yêu cầu báo giá sỉ, mô tả logo cần in; xưởng sẽ báo giá và liên hệ nhận file.
               </Link>
               <div className="space-y-space-sm pt-space-xs">
-                {' '}
-                <div className="flex items-center gap-space-md">
-                  {' '}
-                  <div className="flex items-center bg-surface-container-lowest rounded-[0.125rem] shadow-sm px-space-xs py-1">
-                    {' '}
-                    <button type="button" aria-label="Giảm số lượng" onClick={() => setQuantity((q) => Math.max(1, q - 1))} className="w-8 h-8 rounded-[0.125rem] flex items-center justify-center text-ink-dark hover:bg-surface-container transition-colors">
-                      {' '}
-                      <Icon name="remove" className="text-[18px]" aria-hidden />{' '}
-                    </button>{' '}
-                    <input
-                      className="w-12 text-center bg-transparent font-headline-sm text-headline-sm text-ink-dark font-bold focus:outline-none"
-                      id="itemQuantity"
-                      max={maxQty}
-                      min={1}
-                      type="number"
-                      aria-label="Số lượng"
-                      value={quantity}
-                      onChange={(e) => setQuantity(Math.max(1, Math.min(maxQty, Number(e.target.value) || 1)))}
-                    />{' '}
-                    <button type="button" aria-label="Tăng số lượng" onClick={() => setQuantity((q) => Math.min(maxQty, q + 1))} className="w-8 h-8 rounded-[0.125rem] flex items-center justify-center text-ink-dark hover:bg-surface-container transition-colors">
-                      {' '}
-                      <Icon name="add" className="text-[18px]" aria-hidden />{' '}
-                    </button>{' '}
-                  </div>{' '}
-                  <button
-                    className="flex-1 bg-primary text-champagne-light hover:bg-ink-dark px-space-lg py-3 rounded-[0.125rem] shadow-md flex items-center justify-center gap-space-xs font-label-md text-label-md uppercase tracking-wider transition-all"
-                    type="button"
-                    onClick={buyNow}
-                    disabled={!inStock}
-                  >
-                    {' '}
-                    <Icon name="bolt" className="text-[20px] text-secondary-fixed" aria-hidden />{' '}
-                    <span>Đặt Mua Thượng Tuyển Ngay</span>{' '}
-                  </button>{' '}
-                </div>{' '}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-space-sm">
-                  {' '}
-                  <button
-                    className="bg-surface-container-lowest text-ink-dark hover:bg-surface-container px-space-md py-2.5 rounded-[0.125rem] shadow-sm flex items-center justify-center gap-space-xs font-label-md text-label-md uppercase tracking-wider transition-colors"
-                    type="button"
-                    onClick={addToCart}
-                    disabled={!inStock}
-                  >
-                    {' '}
-                    <Icon name="add_shopping_cart" className="text-secondary text-[20px]" aria-hidden />{' '}
-                    <span>{product.productType === 'BOX_SHELL' ? 'Phối Bánh Vào Hộp Này' : added ? 'Đã Thêm Vào Giỏ' : variant?.stockQuantity === 0 && canPreorder
-                      ? 'Đặt Trước Bánh Tươi' : 'Thêm Vào Giỏ Hàng'}</span>{' '}
-                  </button>{' '}
-                  <button
-                    className="bg-tertiary-container text-secondary-fixed hover:bg-tertiary px-space-md py-2.5 rounded-[0.125rem] shadow-sm flex items-center justify-center gap-space-xs font-label-md text-label-md uppercase tracking-wider transition-colors"
-                    type="button"
-                    onClick={() => navigate(ROUTES.rfq)}
-                  >
-                    {' '}
-                    <Icon name="mark_email_read" className="text-[20px]" aria-hidden /> <span>Yêu Cầu Mẫu Thử B2B</span>{' '}
-                  </button>{' '}
-                </div>{' '}
+                {isSeller ? (
+                  <div className="p-4 rounded-[0.25rem] bg-secondary-fixed-dim/10 border border-secondary-fixed/30 flex flex-col gap-2">
+                    <div className="flex items-center gap-2 text-primary font-medium">
+                      <Icon name="info" className="text-[20px] text-secondary" aria-hidden />
+                      <span>Chế độ xem dành cho Nghệ Nhân (Chủ gian hàng)</span>
+                    </div>
+                    <p className="text-small text-muted leading-relaxed">
+                      Tài khoản Nghệ Nhân / Chủ gian hàng chỉ hỗ trợ xem và tra cứu quy cách sản phẩm, không thể đặt mua lẻ trực tiếp.
+                    </p>
+                    <div className="pt-1 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => navigate('/seller/products')}
+                        className="btn btn-secondary text-body-sm py-1.5 px-3"
+                      >
+                        Vào quản lý mẻ bánh của xưởng
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-space-md">
+                      <div className="flex items-center bg-surface-container-lowest rounded-[0.125rem] shadow-sm px-space-xs py-1">
+                        <button type="button" aria-label="Giảm số lượng" onClick={() => setQuantity((q) => Math.max(1, q - 1))} className="w-8 h-8 rounded-[0.125rem] flex items-center justify-center text-ink-dark hover:bg-surface-container transition-colors">
+                          <Icon name="remove" className="text-[18px]" aria-hidden />
+                        </button>
+                        <input
+                          className="w-12 text-center bg-transparent font-headline-sm text-headline-sm text-ink-dark font-bold focus:outline-none"
+                          id="itemQuantity"
+                          max={maxQty}
+                          min={1}
+                          type="number"
+                          aria-label="Số lượng"
+                          value={quantity}
+                          onChange={(e) => setQuantity(Math.max(1, Math.min(maxQty, Number(e.target.value) || 1)))}
+                        />
+                        <button type="button" aria-label="Tăng số lượng" onClick={() => setQuantity((q) => Math.min(maxQty, q + 1))} className="w-8 h-8 rounded-[0.125rem] flex items-center justify-center text-ink-dark hover:bg-surface-container transition-colors">
+                          <Icon name="add" className="text-[18px]" aria-hidden />
+                        </button>
+                      </div>
+                      <button
+                        className="flex-1 bg-primary text-champagne-light hover:bg-ink-dark px-space-lg py-3 rounded-[0.125rem] shadow-md flex items-center justify-center gap-space-xs font-label-md text-label-md uppercase tracking-wider transition-all"
+                        type="button"
+                        onClick={buyNow}
+                        disabled={!inStock}
+                      >
+                        <Icon name="bolt" className="text-[20px] text-secondary-fixed" aria-hidden />
+                        <span>Đặt Mua Thượng Tuyển Ngay</span>
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-space-sm">
+                      <button
+                        className="bg-surface-container-lowest text-ink-dark hover:bg-surface-container px-space-md py-2.5 rounded-[0.125rem] shadow-sm flex items-center justify-center gap-space-xs font-label-md text-label-md uppercase tracking-wider transition-colors"
+                        type="button"
+                        onClick={addToCart}
+                        disabled={!inStock}
+                      >
+                        <Icon name="add_shopping_cart" className="text-secondary text-[20px]" aria-hidden />
+                        <span>{product.productType === 'BOX_SHELL' ? 'Phối Bánh Vào Hộp Này' : added ? 'Đã Thêm Vào Giỏ' : variant?.stockQuantity === 0 && canPreorder
+                          ? 'Đặt Trước Bánh Tươi' : 'Thêm Vào Giỏ Hàng'}</span>
+                      </button>
+                      <button
+                        className="bg-tertiary-container text-secondary-fixed hover:bg-tertiary px-space-md py-2.5 rounded-[0.125rem] shadow-sm flex items-center justify-center gap-space-xs font-label-md text-label-md uppercase tracking-wider transition-colors"
+                        type="button"
+                        onClick={() => navigate(ROUTES.rfq)}
+                      >
+                        <Icon name="mark_email_read" className="text-[20px]" aria-hidden /> <span>Yêu Cầu Mẫu Thử B2B</span>
+                      </button>
+                    </div>
+                  </>
+                )}
                 <div className="flex items-center justify-center gap-2 pt-space-xs text-on-surface-variant font-body-sm text-body-sm">
-                  {' '}
-                  <Icon name="security" className="text-secondary text-[18px]" aria-hidden />{' '}
-                  <Link to={ROUTES.policy} className="underline underline-offset-2 hover:text-secondary">Chính sách đổi mới & bảo hiểm bánh vỡ</Link>{' '}
-                </div>{' '}
+                  <Icon name="security" className="text-secondary text-[18px]" aria-hidden />
+                  <Link to={ROUTES.policy} className="underline underline-offset-2 hover:text-secondary">Chính sách đổi mới & bảo hiểm bánh vỡ</Link>
+                </div>
               </div>{' '}
             </div>{' '}
           </div>{' '}

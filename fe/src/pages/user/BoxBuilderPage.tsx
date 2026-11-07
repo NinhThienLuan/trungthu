@@ -6,6 +6,7 @@ import { cn, formatVnd } from '../../lib/format'
 import { MAX_RETAIL_QUANTITY, ROUTES } from '../../constants'
 import { productService } from '../../services/productService'
 import { useCartStore, type BoxSlot } from '../../stores/cartStore'
+import { useAuthStore } from '../../stores/authStore'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { QuantityStepper } from '../../components/ui/QuantityStepper'
 import { EmptyState, ErrorState, Notice, Spinner } from '../../components/ui/States'
@@ -27,6 +28,8 @@ export function BoxBuilderPage() {
     return [...shells.content, ...cakes.content]
   }, [])
   const { items, addBox, setQuantity } = useCartStore()
+  const user = useAuthStore((s) => s.user)
+  const isSeller = user?.role === 'PROVIDER'
   const [providerId, setProviderId] = useState<string>()
   const [boxId, setBoxId] = useState<string>()
   const [slots, setSlots] = useState<Array<BoxSlot | null>>([])
@@ -161,13 +164,19 @@ export function BoxBuilderPage() {
               <div className="flex justify-between border-t border-line pt-1 font-semibold"><dt>Giá 1 hộp</dt><dd>{formatVnd(boxTotal)}</dd></div>
             </dl>
             {notice && <Notice tone={notice.ok ? 'success' : 'danger'}>{notice.text}</Notice>}
-            <div className="flex flex-wrap gap-2">
-              <button type="button" className="btn btn-primary" disabled={!isFull} onClick={addToCart}>
-                {isFull ? 'Thêm vào giỏ' : `Chọn thêm ${capacity - filled.filter(Boolean).length} vị`}
-              </button>
-              {notice?.ok && <Link to={ROUTES.cart} className="btn btn-outline">Xem giỏ hàng</Link>}
-              <button type="button" className="btn btn-ghost" onClick={() => { setSlots([]); setActive(0) }}>Làm lại</button>
-            </div>
+            {isSeller ? (
+              <div className="rounded-sm bg-amber-50 p-3 text-small text-amber-800 border border-amber-200">
+                Tài khoản Nghệ Nhân chỉ dùng để xem trước và phối thử cấu hình hộp, không hỗ trợ mua hàng trực tiếp.
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                <button type="button" className="btn btn-primary" disabled={!isFull} onClick={addToCart}>
+                  {isFull ? 'Thêm vào giỏ' : `Chọn thêm ${capacity - filled.filter(Boolean).length} vị`}
+                </button>
+                {notice?.ok && <Link to={ROUTES.cart} className="btn btn-outline">Xem giỏ hàng</Link>}
+                <button type="button" className="btn btn-ghost" onClick={() => { setSlots([]); setActive(0) }}>Làm lại</button>
+              </div>
+            )}
           </section>
 
           <section className="card flex flex-col gap-3 p-5">
