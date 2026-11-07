@@ -3,6 +3,7 @@ import { NavLink, Outlet, ScrollRestoration, useLocation, useNavigate } from 're
 import { Icon } from '../Icon'
 import { handleStitchLinkClick } from '../../routes/stitchPaths'
 import { FlashToast } from '../ui/FlashToast'
+    import { SellerStatusBanner } from '../SellerStatusBanner'
 import { cn } from '../../lib/format'
 import { useAuthStore } from '../../stores/authStore'
 
@@ -58,14 +59,14 @@ export function AdminLayout() {
       {menuOpen && <div className="fixed inset-0 z-40 bg-ink-dark/50 lg:hidden" onClick={() => setMenuOpen(false)} aria-hidden />}
       <aside className={cn('fixed left-0 top-0 h-full w-72 overflow-y-auto bg-primary-container z-50 flex flex-col justify-between shadow-[4px_0_24px_rgba(5,19,34,0.18)] no-print print:hidden transition-transform lg:translate-x-0', menuOpen ? 'translate-x-0' : '-translate-x-full')}>
         <div className="flex flex-col">
-          <NavLink to="/" className="h-20 px-space-lg flex items-center justify-between bg-ink-dark/40" title="Về trang chủ sàn">
+          <NavLink to={isAdmin ? '/admin/kyc' : '/'} className="h-20 px-space-lg flex items-center justify-between bg-ink-dark/40" title={isAdmin ? 'Khu vực quản trị sàn' : 'Về trang chủ sàn'}>
             <div className="flex items-center gap-space-sm">
               <div className="w-9 h-9 rounded-[0.25rem] bg-primary flex items-center justify-center">
                 <Icon name="nest_clock_farsight_analog" className="text-secondary-fixed text-[22px]" aria-hidden />
               </div>
               <div className="flex flex-col">
                 <span className="font-headline-sm text-headline-sm text-champagne-light tracking-wide leading-none">Nguyệt Viên</span>
-                <span className="font-label-sm text-label-sm text-secondary-fixed uppercase tracking-[0.2em] mt-1">Đài Nghệ Nhân</span>
+                <span className="font-label-sm text-label-sm text-secondary-fixed uppercase tracking-[0.2em] mt-1">{isAdmin ? 'Quản Trị Sàn' : 'Đài Nghệ Nhân'}</span>
               </div>
             </div>
           </NavLink>
@@ -164,13 +165,15 @@ export function AdminLayout() {
             </div>
 
             <div className="flex shrink-0 items-center gap-space-sm lg:gap-space-md">
-              <NavLink
-                to="/"
-                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[0.25rem] bg-ink-dark/40 text-champagne-light hover:bg-ink-dark hover:text-white transition-colors text-body-sm font-medium"
-              >
-                <Icon name="arrow_back" className="text-[16px] text-secondary-fixed" aria-hidden />
-                <span>Về Sàn Bán Lẻ</span>
-              </NavLink>
+              {!isAdmin && (
+                <NavLink
+                  to="/"
+                  className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[0.25rem] bg-ink-dark/40 text-champagne-light hover:bg-ink-dark hover:text-white transition-colors text-body-sm font-medium"
+                >
+                  <Icon name="arrow_back" className="text-[16px] text-secondary-fixed" aria-hidden />
+                  <span>Về Sàn Bán Lẻ</span>
+                </NavLink>
+              )}
 
               <div className="flex items-center gap-space-sm pl-space-sm border-l border-white/10">
                 <div className="hidden md:flex flex-col text-right">
@@ -200,6 +203,7 @@ export function AdminLayout() {
         </header>
 
         <main className="relative pt-20 bg-surface min-h-screen print:pt-0 print:bg-white print:min-h-0" onClick={(e) => handleStitchLinkClick(e, navigate)}>
+          {user?.role === 'PROVIDER' && <SellerStatusBanner key={user.id} />}
           <Outlet />
         </main>
       </div>

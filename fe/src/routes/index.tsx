@@ -44,25 +44,45 @@ export const router = createBrowserRouter([
   {
     element: <UserLayout />,
     children: [
-      // Trang buyer chuyển nguyên từ Stitch
-      { path: '/', element: stitch('', <RfqFormCatcher><HomePage /></RfqFormCatcher>) },
-      { path: '/products', element: stitch('Bộ sưu tập', <CatalogPage />) },
-      { path: '/products/:id', element: stitch(undefined, <ProductDetailPage />) },
-      { path: '/box-builder', element: <BoxBuilderPage /> },
-      { path: '/rfq', element: stitch('Báo giá doanh nghiệp', <RfqPortalPage />) },
-      // Đặt sỉ đi qua RFQ (báo giá -> chấp nhận); link cũ chuyển về đó
-      { path: '/b2b/checkout', element: <Navigate to={ROUTES.rfq} replace /> },
-      // Luồng đặt hàng chạy được
-      { path: '/cart', element: <CartPage /> },
-      { path: '/policy', element: <PolicyPage /> },
+      {
+        // Toàn bộ các trang công khai/bán lẻ: Cấm PLATFORM_ADMIN truy cập (Admin chỉ vào khu vực quản trị)
+        element: <ProtectedRoute requireAuth={false} disallowedRoles={['PLATFORM_ADMIN']} />,
+        children: [
+          // Trang xem sản phẩm / thông tin (Guest, Customer, Provider đều xem được)
+          { path: '/', element: stitch('', <RfqFormCatcher><HomePage /></RfqFormCatcher>) },
+          { path: '/products', element: stitch('Bộ sưu tập', <CatalogPage />) },
+          { path: '/products/:id', element: stitch(undefined, <ProductDetailPage />) },
+          { path: '/box-builder', element: <BoxBuilderPage /> },
+          { path: '/rfq', element: stitch('Báo giá doanh nghiệp', <RfqPortalPage />) },
+          // Đặt sỉ đi qua RFQ (báo giá -> chấp nhận); link cũ chuyển về đó
+          { path: '/b2b/checkout', element: <Navigate to={ROUTES.rfq} replace /> },
+          { path: '/policy', element: <PolicyPage /> },
+
+          // Giỏ hàng: Khách vãng lai và Customer được xem; Cấm PROVIDER và PLATFORM_ADMIN
+          {
+            element: <ProtectedRoute requireAuth={false} disallowedRoles={['PROVIDER', 'PLATFORM_ADMIN']} />,
+            children: [
+              { path: '/cart', element: <CartPage /> },
+            ],
+          },
+
+          // Luồng mua hàng & quản lý đơn cá nhân: Yêu cầu đăng nhập và chỉ dành cho CUSTOMER
+          {
+            element: <ProtectedRoute allowedRoles={['CUSTOMER']} />,
+            children: [
+              { path: '/checkout', element: <CheckoutPage /> },
+              { path: '/payment', element: <PaymentPage /> },
+              { path: '/orders', element: <MyOrdersPage /> },
+              { path: '/orders/:id', element: <OrderDetailPage /> },
+            ],
+          },
+        ],
+      },
+      // Trang đổi mật khẩu: Mọi vai trò đã đăng nhập đều có thể truy cập
       {
         element: <ProtectedRoute />,
         children: [
-          { path: '/checkout', element: <CheckoutPage /> },
-          { path: '/payment', element: <PaymentPage /> },
-          { path: '/orders', element: <MyOrdersPage /> },
           { path: ROUTES.changePassword, element: <ChangePasswordPage /> },
-          { path: '/orders/:id', element: <OrderDetailPage /> },
         ],
       },
       { path: '*', element: <NotFoundPage /> },
@@ -91,6 +111,7 @@ export const router = createBrowserRouter([
         // Khu vực Admin sàn duy nhất
         element: <ProtectedRoute allowedRoles={['PLATFORM_ADMIN']} />,
         children: [
+          { path: '/admin', element: <Navigate to="/admin/kyc" replace /> },
           { path: '/admin/kyc', element: <QualityReviewPage /> },
           { path: '/admin/subscriptions', element: <SubscriptionsAdminPage /> },
           { path: '/admin/complaints', element: <ComplaintsPage scope="admin" /> },

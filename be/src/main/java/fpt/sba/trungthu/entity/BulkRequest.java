@@ -28,6 +28,16 @@ public class BulkRequest extends BaseEntity {
     @JoinColumn(name = "customer_id", nullable = false, foreignKey = @ForeignKey(name = "FK_BULK_REQUEST_customer_id"))
     private User customer;
 
+    // Xưởng khách chọn gửi riêng; null = gửi mọi xưởng đủ điều kiện
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "target_provider_id", foreignKey = @ForeignKey(name = "FK_BULK_REQUEST_target_provider_id"))
+    private User targetProvider;
+
+    // Bánh / set quà khách muốn báo giá (tuỳ chọn, thuộc targetProvider)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "product_id", foreignKey = @ForeignKey(name = "FK_BULK_REQUEST_product_id"))
+    private Product product;
+
     @Column(name = "request_code", nullable = false, length = 255)
     private String requestCode;
 

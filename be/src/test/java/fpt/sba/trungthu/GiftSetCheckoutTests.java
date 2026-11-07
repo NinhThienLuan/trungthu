@@ -194,14 +194,16 @@ class GiftSetCheckoutTests {
                         choice.cakeVariantId(), choice.cakeVariantId());
 
         JsonNode preview = call("/api/checkout/preview", "{\"groups\":[" + group + "]}", buyer);
-        assertThat(lineForVariant(preview.at("/data/groups/0/lines"), choice.boxVariantId())
-                .get("subtotal").decimalValue())
-                .isEqualByComparingTo(choice.boxPrice());
+        // Thứ tự dòng (vỏ hộp / bánh) phụ thuộc UUID ngẫu nhiên: tìm dòng vỏ hộp theo variantId
+        JsonNode boxLine = preview.at("/data/groups/0/lines").valueStream()
+                .filter(line -> line.path("variantId").asText().equals(choice.boxVariantId().toString()))
+                .findFirst().orElseThrow();
+        assertThat(boxLine.path("subtotal").decimalValue()).isEqualByComparingTo(choice.boxPrice());
         JsonNode created = call("/api/checkout", """
                 {"receiverName":"Mua","receiverPhone":"0903000003","shippingAddress":"12 Tràng Tiền","groups":[%s]}"""
                 .formatted(group), buyer);
-        assertThat(lineForVariant(created.at("/data/0/lines"), choice.boxVariantId())
-                .get("variantName").asText()).contains("×4");
+        assertThat(created.at("/data/0/lines").valueStream().map(line -> line.path("variantName").asText()))
+                .anyMatch(name -> name.contains("×4"));
         assertThat(variants.findById(choice.boxVariantId()).orElseThrow().getStockQuantity())
                 .isEqualTo(choice.boxStockBefore() - 1);
     }

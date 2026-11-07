@@ -9,6 +9,7 @@ import { sellerService } from '../../services/sellerService'
 import { orderService } from '../../services/orderService'
 import type { OrderDetail, OrderStatus } from '../../types/order'
 import { OrderStatusChip } from '../../components/OrderStatusChip'
+import { BakeSheet } from '../../components/BakeSheet'
 import { TextInput } from '../../components/ui/Field'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { EmptyState, ErrorState, Notice, Spinner } from '../../components/ui/States'
@@ -29,6 +30,22 @@ const NEXT: Partial<Record<OrderStatus, { to: OrderStatus; label: string }>> = {
 /** Seller: danh sách đơn của xưởng, xác nhận cọc VietQR, chuyển trạng thái, huỷ đơn chưa cọc */
 export function OrdersPage() {
   useDocumentTitle('Đơn hàng')
+  const [tab, setTab] = useState<'orders' | 'bake'>('orders')
+  return (
+    <div className={cn('page flex flex-col', tab === 'bake' ? 'gap-4 py-5' : 'section gap-6')}>
+      <div className={cn('no-print', tab === 'bake' && '[&>div:first-child]:pb-4 max-sm:[&_h1]:text-headline-lg-mobile max-sm:[&_button]:px-2.5 max-sm:[&_button]:tracking-normal')}>
+        <PageHeader eyebrow="Gian hàng" title="Đơn hàng" description="Quản lý đơn hàng và tổng hợp phiếu nướng theo ngày, tháng." />
+        <div className="flex flex-wrap gap-2" aria-label="Chế độ xem đơn hàng">
+          <button type="button" aria-pressed={tab === 'orders'} className={cn('chip', tab === 'orders' && 'chip-active')} onClick={() => setTab('orders')}>Danh sách đơn hàng</button>
+          <button type="button" aria-pressed={tab === 'bake'} className={cn('chip', tab === 'bake' && 'chip-active')} onClick={() => setTab('bake')}>Phiếu nướng hôm nay</button>
+        </div>
+      </div>
+      {tab === 'bake' ? <BakeSheet /> : <OrdersList />}
+    </div>
+  )
+}
+
+function OrdersList() {
   const [params, setParams] = useSearchParams()
   const status = (params.get('status') as OrderStatus | null) ?? undefined
   const [page, setPage] = useState(0)
@@ -41,8 +58,8 @@ export function OrdersPage() {
   }
 
   return (
-    <div className="page section flex flex-col gap-6">
-      <PageHeader eyebrow="Gian hàng" title="Đơn hàng" description="Chờ cọc → Đã cọc → Vào mẻ nướng → Đang giao → Hoàn tất. Chỉ huỷ được đơn chưa cọc hoặc COD chưa nướng." />
+    <div className="no-print flex flex-col gap-6">
+      <p className="text-small text-muted">Chờ cọc → Đã cọc → Vào mẻ nướng → Đang giao → Hoàn tất. Chỉ huỷ được đơn chưa cọc hoặc COD chưa nướng.</p>
 
       <div className="flex flex-wrap gap-2">
         <button type="button" className={cn('chip', !status && 'chip-active')} onClick={() => filter()}>Tất cả</button>

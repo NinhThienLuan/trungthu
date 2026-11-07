@@ -107,6 +107,9 @@ export const rfqSchema = z.object({
     .min(RFQ_MIN_QUANTITY, `Báo giá sỉ áp dụng từ ${RFQ_MIN_QUANTITY} hộp`),
   expectedBudget: z.preprocess((v) => (v === '' ? undefined : v), z.coerce.number().min(0, 'Ngân sách không được âm').optional()),
   description: z.string().trim().max(100000).optional().transform((v) => v || undefined),
+  // Ô chọn để trống = gửi mọi xưởng / chưa chọn sản phẩm
+  providerId: z.string().optional().transform((v) => v || undefined),
+  productId: z.string().optional().transform((v) => v || undefined),
 })
 
 /** Gom lỗi zod thành { field: message } để hiển thị dưới từng ô */

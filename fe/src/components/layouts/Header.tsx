@@ -1,9 +1,9 @@
 // import { useState, useRef, useEffect, type FormEvent } from 'react'
 import { useState, useRef, useEffect} from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
-import { Menu, X } from 'lucide-react'
+import { Menu, ShieldCheck, Store, User, X } from 'lucide-react'
 import { Icon } from '../Icon'
-import { HOME_BY_ROLE, ROUTES } from '../../constants'
+import { ROUTES } from '../../constants'
 import { cartCount, useCartStore } from '../../stores/cartStore'
 import { useAuthStore } from '../../stores/authStore'
 import { cn } from '../../lib/format'
@@ -29,6 +29,9 @@ export function Header() {
   const popupRef = useRef<HTMLDivElement>(null)
   const count = useCartStore((s) => cartCount(s.items))
   const { user, logout } = useAuthStore()
+  const visibleNav = BASE_NAV.filter((item) =>
+    item.to !== '/seller/profile' || !user || user.role === 'PROVIDER',
+  )
   const navigate = useNavigate()
 
   // Đóng popup khi click ra ngoài
@@ -77,17 +80,11 @@ export function Header() {
         {/*</form>*/}
 
         <nav className="hidden xl:flex items-center gap-5" aria-label="Điều hướng chính">
-          {BASE_NAV.map((item) => (
+          {visibleNav.map((item) => (
             <NavLink key={item.to} to={item.to} end={item.end} className={navClass}>
               {item.label}
             </NavLink>
           ))}
-          {/* Link quản trị chỉ hiển thị khi có vai trò phù hợp */}
-          {user && (user.role === 'PROVIDER' || user.role === 'PLATFORM_ADMIN') && (
-            <NavLink to={HOME_BY_ROLE[user.role]} className={navClass}>
-              Hoàng Đài Quản Trị
-            </NavLink>
-          )}
         </nav>
 
         <div className="flex items-center gap-space-md shrink-0">
@@ -99,18 +96,21 @@ export function Header() {
             <span>RFQ Doanh Nghiệp</span>
           </Link>
 
-          <Link
-            className="relative p-2 text-champagne-light hover:text-secondary-fixed transition-colors flex items-center justify-center"
-            to={ROUTES.cart}
-            aria-label={`Giỏ hàng, ${count} sản phẩm`}
-          >
-            <Icon name="shopping_bag" className="text-[22px]" aria-hidden />
-            {count > 0 && (
-              <span className="absolute top-1 right-1 min-w-4 h-4 px-0.5 rounded-[0.75rem] bg-secondary text-on-secondary font-label-sm text-[10px] flex items-center justify-center leading-none">
-                {count}
-              </span>
-            )}
-          </Link>
+          {/* Seller và Admin không có giỏ hàng mua sắm */}
+          {(!user || (user.role !== 'PROVIDER' && user.role !== 'PLATFORM_ADMIN')) && (
+            <Link
+              className="relative p-2 text-champagne-light hover:text-secondary-fixed transition-colors flex items-center justify-center"
+              to={ROUTES.cart}
+              aria-label={`Giỏ hàng, ${count} sản phẩm`}
+            >
+              <Icon name="shopping_bag" className="text-[22px]" aria-hidden />
+              {count > 0 && (
+                <span className="absolute top-1 right-1 min-w-4 h-4 px-0.5 rounded-[0.75rem] bg-secondary text-on-secondary font-label-sm text-[10px] flex items-center justify-center leading-none">
+                  {count}
+                </span>
+              )}
+            </Link>
+          )}
 
           {/* NÚT BẤM PROFILE CÁ NHÂN -> MỞ POPUP */}
           <div className="relative" ref={popupRef}>
@@ -173,12 +173,17 @@ export function Header() {
                           </span>
                           <span className="text-small text-muted truncate">{user.email}</span>
                           <div className="mt-1">
-                            <span className="inline-block px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider bg-gold/20 text-gold-ink border border-gold/40">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider bg-gold/20 text-gold-ink border border-gold/40">
                               {user.role === 'PLATFORM_ADMIN'
-                                ? '👑 Quản Trị Viên Sàn'
+                                ? <ShieldCheck size={12} className="shrink-0" aria-hidden="true" />
                                 : user.role === 'PROVIDER'
-                                  ? '🏮 Chủ Gian Hàng'
-                                  : '✨ Khách Hàng Thân Thiết'}
+                                  ? <Store size={12} className="shrink-0" aria-hidden="true" />
+                                  : <User size={12} className="shrink-0" aria-hidden="true" />}
+                              {user.role === 'PLATFORM_ADMIN'
+                                ? 'Quản Trị Viên Sàn'
+                                : user.role === 'PROVIDER'
+                                  ? 'Chủ Gian Hàng'
+                                  : 'Khách Hàng Thân Thiết'}
                             </span>
                           </div>
                         </div>
@@ -193,17 +198,33 @@ export function Header() {
 
                     {/* Danh sách liên kết tiện ích */}
                     <div className="py-2 px-1">
-                      <Link
-                        to={ROUTES.orders}
-                        onClick={() => setProfilePopupOpen(false)}
-                        className="flex items-center gap-3 px-3.5 py-2 text-body rounded-md hover:bg-champagne/30 transition-colors"
-                      >
-                        <Icon name="receipt_long" className="text-navy text-[18px]" aria-hidden />
-                        <div className="flex flex-col">
-                          <span className="font-medium text-navy text-[13px]">Đơn hàng của tôi</span>
-                          <span className="text-[11px] text-muted">Xem tiến độ nướng bánh & giao nhận</span>
-                        </div>
-                      </Link>
+                      {user.role === 'CUSTOMER' && (
+                        <>
+                          <Link
+                            to={ROUTES.orders}
+                            onClick={() => setProfilePopupOpen(false)}
+                            className="flex items-center gap-3 px-3.5 py-2 text-body rounded-md hover:bg-champagne/30 transition-colors"
+                          >
+                            <Icon name="receipt_long" className="text-navy text-[18px]" aria-hidden />
+                            <div className="flex flex-col">
+                              <span className="font-medium text-navy text-[13px]">Đơn hàng của tôi</span>
+                              <span className="text-[11px] text-muted">Xem tiến độ nướng bánh & giao nhận</span>
+                            </div>
+                          </Link>
+
+                          <Link
+                            to="/orders?tab=rfq"
+                            onClick={() => setProfilePopupOpen(false)}
+                            className="flex items-center gap-3 px-3.5 py-2 text-body rounded-md hover:bg-champagne/30 transition-colors"
+                          >
+                            <Icon name="request_quote" className="text-navy text-[18px]" aria-hidden />
+                            <div className="flex flex-col">
+                              <span className="font-medium text-navy text-[13px]">Đơn lớn & Báo giá B2B</span>
+                              <span className="text-[11px] text-muted">Theo dõi RFQ & so sánh báo giá xưởng</span>
+                            </div>
+                          </Link>
+                        </>
+                      )}
 
                       <Link
                         to={ROUTES.changePassword}
@@ -321,16 +342,11 @@ export function Header() {
       {/* Menu di động */}
       {mobileMenuOpen && (
         <nav className="xl:hidden flex flex-col gap-space-md px-margin-mobile pb-space-lg pt-space-sm border-t border-white/10" aria-label="Menu di động">
-          {BASE_NAV.map((item) => (
+          {visibleNav.map((item) => (
             <NavLink key={item.to} to={item.to} end={item.end} className={navClass} onClick={() => setMobileMenuOpen(false)}>
               {item.label}
             </NavLink>
           ))}
-          {user && (user.role === 'PROVIDER' || user.role === 'PLATFORM_ADMIN') && (
-            <NavLink to={HOME_BY_ROLE[user.role]} className={navClass} onClick={() => setMobileMenuOpen(false)}>
-              Hoàng Đài Quản Trị
-            </NavLink>
-          )}
 
           <div className="pt-2 border-t border-white/10">
             {user ? (
@@ -338,6 +354,29 @@ export function Header() {
                 <span className="text-champagne-light text-small font-medium">
                   Đang đăng nhập: <strong>{user.fullName}</strong> ({user.role})
                 </span>
+                {user.role === 'CUSTOMER' && (
+                  <>
+                    <NavLink to={ROUTES.orders} className={navClass} onClick={() => setMobileMenuOpen(false)}>
+                      Đơn hàng của tôi
+                    </NavLink>
+                    <NavLink to="/orders?tab=rfq" className={navClass} onClick={() => setMobileMenuOpen(false)}>
+                      Đơn lớn & Báo giá B2B
+                    </NavLink>
+                  </>
+                )}
+                {user.role === 'PROVIDER' && (
+                  <NavLink to="/seller" className={navClass} onClick={() => setMobileMenuOpen(false)}>
+                    Kênh Gian Hàng Seller
+                  </NavLink>
+                )}
+                {user.role === 'PLATFORM_ADMIN' && (
+                  <NavLink to="/admin/kyc" className={navClass} onClick={() => setMobileMenuOpen(false)}>
+                    Trang Quản Trị Sàn
+                  </NavLink>
+                )}
+                <NavLink to={ROUTES.changePassword} className={navClass} onClick={() => setMobileMenuOpen(false)}>
+                  Đổi mật khẩu
+                </NavLink>
                 <button
                   type="button"
                   className="text-left text-danger-soft font-headline-sm text-[15px] font-medium tracking-wide flex items-center gap-1.5 cursor-pointer"

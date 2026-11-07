@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Icon } from './Icon'
 import { useCartStore } from '../stores/cartStore'
+import { useAuthStore } from '../stores/authStore'
 import { ROUTES } from '../constants'
 import type { Product } from '../types/product'
 
@@ -10,6 +11,8 @@ import type { Product } from '../types/product'
 /** promotion: nhãn khuyến mãi đang chạy của xưởng cho sản phẩm này (vd "Mua 3 tặng 1") */
 export function CatalogCard({ product, promotion }: { product: Product; promotion?: string }) {
   const add = useCartStore((s) => s.add)
+  const user = useAuthStore((s) => s.user)
+  const isSeller = user?.role === 'PROVIDER'
   const [added, setAdded] = useState(false)
   const variant = product.variants[0]
   const canPreorder = product.productType === 'LOOSE_CAKE'
@@ -78,16 +81,26 @@ export function CatalogCard({ product, promotion }: { product: Product; promotio
               </span>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={buyOne}
-            disabled={!inStock}
-            className="mt-2 w-full py-2.5 px-2 rounded-[0.125rem] bg-primary text-secondary-fixed hover:bg-ink-dark font-label-sm text-label-sm uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5 disabled:opacity-40"
-          >
-            <Icon name={added ? 'check' : 'shopping_cart'} className="text-[16px]" aria-hidden />
-            {added ? 'Đã thêm vào giỏ' : variant?.stockQuantity === 0 && canPreorder
-              ? 'Đặt trước · nhận sau 7 ngày' : inStock ? 'Thêm vào giỏ' : 'Hết hàng'}
-          </button>
+          {isSeller ? (
+            <Link
+              to={ROUTES.product(product.id)}
+              className="mt-2 w-full py-2.5 px-2 rounded-[0.125rem] bg-surface-container text-primary hover:bg-surface-container-high font-label-sm text-label-sm uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5 border border-line"
+            >
+              <Icon name="visibility" className="text-[16px]" aria-hidden />
+              <span>Xem chi tiết</span>
+            </Link>
+          ) : (
+            <button
+              type="button"
+              onClick={buyOne}
+              disabled={!inStock}
+              className="mt-2 w-full py-2.5 px-2 rounded-[0.125rem] bg-primary text-secondary-fixed hover:bg-ink-dark font-label-sm text-label-sm uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5 disabled:opacity-40"
+            >
+              <Icon name={added ? 'check' : 'shopping_cart'} className="text-[16px]" aria-hidden />
+              {added ? 'Đã thêm vào giỏ' : variant?.stockQuantity === 0 && canPreorder
+                ? 'Đặt trước · nhận sau 7 ngày' : inStock ? 'Thêm vào giỏ' : 'Hết hàng'}
+            </button>
+          )}
         </div>
       </div>
     </article>

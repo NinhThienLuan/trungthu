@@ -9,8 +9,10 @@ import { promotionService, type Promotion } from '../../services/sellerService'
 import { useApi } from '../../hooks/useApi'
 import { useDocumentTitle } from '../../hooks/useDocumentTitle'
 import { useCartStore } from '../../stores/cartStore'
+import { useAuthStore } from '../../stores/authStore'
 import type { Product } from '../../types/product'
 import { MAX_RETAIL_QUANTITY, PRODUCT_TYPE_LABEL, ROUTES } from '../../constants'
+import { cn } from '../../lib/format'
 
 const DETAIL_TABS = [
   { id: 'story', label: 'Câu Chuyện Sản Phẩm' },
@@ -24,6 +26,8 @@ const vnd = (n: number) => `${n.toLocaleString('vi-VN')}₫`
 export function ProductDetailPage() {
   const { id = '' } = useParams()
   const navigate = useNavigate()
+  const user = useAuthStore((st) => st.user)
+  const isSeller = user?.role === 'PROVIDER'
   const add = useCartStore((st) => st.add)
   const { data: product, loading, error, reload } = useApi(() => productService.detail(id), [id])
   const providerId = product?.providerId
@@ -51,7 +55,8 @@ export function ProductDetailPage() {
   }
 
   const variant = product.variants.find((v) => v.id === variantId) ?? product.variants[0]
-  const promotions = (running ?? []).filter((p) => !p.productId || p.productId === product.id)
+  // BE không áp khuyến mãi cho set quà (giá set đã cố định)
+  const promotions = product.productType === 'GIFT_SET' ? [] : (running ?? []).filter((p) => !p.productId || p.productId === product.id)
   const price = variant?.price ?? 0
   const canPreorder = product.productType === 'LOOSE_CAKE'
   // Đơn lẻ tối đa MAX_RETAIL_QUANTITY mỗi loại (bánh nướng theo đơn cũng vậy); mua nhiều hơn -> báo giá sỉ
@@ -206,7 +211,7 @@ export function ProductDetailPage() {
                 </div>{' '}
                 <SetContents product={product} setPrice={price} />
               </div>{' '}
-              <PromotionBox promotions={promotions} />
+              <PromotionBox promotions={promotions} quantity={quantity} unitPrice={price} />
               <div className="space-y-space-xs">
                 {' '}
                 <div className="flex items-center justify-between">
@@ -244,68 +249,81 @@ export function ProductDetailPage() {
                 Áp dụng cho đơn sỉ từ 20 hộp: gửi yêu cầu báo giá sỉ, mô tả logo cần in; xưởng sẽ báo giá và liên hệ nhận file.
               </Link>
               <div className="space-y-space-sm pt-space-xs">
-                {' '}
-                <div className="flex items-center gap-space-md">
-                  {' '}
-                  <div className="flex items-center bg-surface-container-lowest rounded-[0.125rem] shadow-sm px-space-xs py-1">
-                    {' '}
-                    <button type="button" aria-label="Giảm số lượng" onClick={() => setQuantity((q) => Math.max(1, q - 1))} className="w-8 h-8 rounded-[0.125rem] flex items-center justify-center text-ink-dark hover:bg-surface-container transition-colors">
-                      {' '}
-                      <Icon name="remove" className="text-[18px]" aria-hidden />{' '}
-                    </button>{' '}
-                    <input
-                      className="w-12 text-center bg-transparent font-headline-sm text-headline-sm text-ink-dark font-bold focus:outline-none"
-                      id="itemQuantity"
-                      max={maxQty}
-                      min={1}
-                      type="number"
-                      aria-label="Số lượng"
-                      value={quantity}
-                      onChange={(e) => setQuantity(Math.max(1, Math.min(maxQty, Number(e.target.value) || 1)))}
-                    />{' '}
-                    <button type="button" aria-label="Tăng số lượng" onClick={() => setQuantity((q) => Math.min(maxQty, q + 1))} className="w-8 h-8 rounded-[0.125rem] flex items-center justify-center text-ink-dark hover:bg-surface-container transition-colors">
-                      {' '}
-                      <Icon name="add" className="text-[18px]" aria-hidden />{' '}
-                    </button>{' '}
-                  </div>{' '}
-                  <button
-                    className="flex-1 bg-primary text-champagne-light hover:bg-ink-dark px-space-lg py-3 rounded-[0.125rem] shadow-md flex items-center justify-center gap-space-xs font-label-md text-label-md uppercase tracking-wider transition-all"
-                    type="button"
-                    onClick={buyNow}
-                    disabled={!inStock}
-                  >
-                    {' '}
-                    <Icon name="bolt" className="text-[20px] text-secondary-fixed" aria-hidden />{' '}
-                    <span>Đặt Mua Thượng Tuyển Ngay</span>{' '}
-                  </button>{' '}
-                </div>{' '}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-space-sm">
-                  {' '}
-                  <button
-                    className="bg-surface-container-lowest text-ink-dark hover:bg-surface-container px-space-md py-2.5 rounded-[0.125rem] shadow-sm flex items-center justify-center gap-space-xs font-label-md text-label-md uppercase tracking-wider transition-colors"
-                    type="button"
-                    onClick={addToCart}
-                    disabled={!inStock}
-                  >
-                    {' '}
-                    <Icon name="add_shopping_cart" className="text-secondary text-[20px]" aria-hidden />{' '}
-                    <span>{product.productType === 'BOX_SHELL' ? 'Phối Bánh Vào Hộp Này' : added ? 'Đã Thêm Vào Giỏ' : variant?.stockQuantity === 0 && canPreorder
-                      ? 'Đặt Trước Bánh Tươi' : 'Thêm Vào Giỏ Hàng'}</span>{' '}
-                  </button>{' '}
-                  <button
-                    className="bg-tertiary-container text-secondary-fixed hover:bg-tertiary px-space-md py-2.5 rounded-[0.125rem] shadow-sm flex items-center justify-center gap-space-xs font-label-md text-label-md uppercase tracking-wider transition-colors"
-                    type="button"
-                    onClick={() => navigate(ROUTES.rfq)}
-                  >
-                    {' '}
-                    <Icon name="mark_email_read" className="text-[20px]" aria-hidden /> <span>Yêu Cầu Mẫu Thử B2B</span>{' '}
-                  </button>{' '}
-                </div>{' '}
+                {isSeller ? (
+                  <div className="p-4 rounded-[0.25rem] bg-secondary-fixed-dim/10 border border-secondary-fixed/30 flex flex-col gap-2">
+                    <div className="flex items-center gap-2 text-primary font-medium">
+                      <Icon name="info" className="text-[20px] text-secondary" aria-hidden />
+                      <span>Chế độ xem dành cho Nghệ Nhân (Chủ gian hàng)</span>
+                    </div>
+                    <p className="text-small text-muted leading-relaxed">
+                      Tài khoản Nghệ Nhân / Chủ gian hàng chỉ hỗ trợ xem và tra cứu quy cách sản phẩm, không thể đặt mua lẻ trực tiếp.
+                    </p>
+                    <div className="pt-1 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => navigate('/seller/products')}
+                        className="btn btn-secondary text-body-sm py-1.5 px-3"
+                      >
+                        Vào quản lý mẻ bánh của xưởng
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-space-md">
+                      <div className="flex items-center bg-surface-container-lowest rounded-[0.125rem] shadow-sm px-space-xs py-1">
+                        <button type="button" aria-label="Giảm số lượng" onClick={() => setQuantity((q) => Math.max(1, q - 1))} className="w-8 h-8 rounded-[0.125rem] flex items-center justify-center text-ink-dark hover:bg-surface-container transition-colors">
+                          <Icon name="remove" className="text-[18px]" aria-hidden />
+                        </button>
+                        <input
+                          className="w-12 text-center bg-transparent font-headline-sm text-headline-sm text-ink-dark font-bold focus:outline-none"
+                          id="itemQuantity"
+                          max={maxQty}
+                          min={1}
+                          type="number"
+                          aria-label="Số lượng"
+                          value={quantity}
+                          onChange={(e) => setQuantity(Math.max(1, Math.min(maxQty, Number(e.target.value) || 1)))}
+                        />
+                        <button type="button" aria-label="Tăng số lượng" onClick={() => setQuantity((q) => Math.min(maxQty, q + 1))} className="w-8 h-8 rounded-[0.125rem] flex items-center justify-center text-ink-dark hover:bg-surface-container transition-colors">
+                          <Icon name="add" className="text-[18px]" aria-hidden />
+                        </button>
+                      </div>
+                      <button
+                        className="flex-1 bg-primary text-champagne-light hover:bg-ink-dark px-space-lg py-3 rounded-[0.125rem] shadow-md flex items-center justify-center gap-space-xs font-label-md text-label-md uppercase tracking-wider transition-all"
+                        type="button"
+                        onClick={buyNow}
+                        disabled={!inStock}
+                      >
+                        <Icon name="bolt" className="text-[20px] text-secondary-fixed" aria-hidden />
+                        <span>Đặt Mua Thượng Tuyển Ngay</span>
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-space-sm">
+                      <button
+                        className="bg-surface-container-lowest text-ink-dark hover:bg-surface-container px-space-md py-2.5 rounded-[0.125rem] shadow-sm flex items-center justify-center gap-space-xs font-label-md text-label-md uppercase tracking-wider transition-colors"
+                        type="button"
+                        onClick={addToCart}
+                        disabled={!inStock}
+                      >
+                        <Icon name="add_shopping_cart" className="text-secondary text-[20px]" aria-hidden />
+                        <span>{product.productType === 'BOX_SHELL' ? 'Phối Bánh Vào Hộp Này' : added ? 'Đã Thêm Vào Giỏ' : variant?.stockQuantity === 0 && canPreorder
+                          ? 'Đặt Trước Bánh Tươi' : 'Thêm Vào Giỏ Hàng'}</span>
+                      </button>
+                      <button
+                        className="bg-tertiary-container text-secondary-fixed hover:bg-tertiary px-space-md py-2.5 rounded-[0.125rem] shadow-sm flex items-center justify-center gap-space-xs font-label-md text-label-md uppercase tracking-wider transition-colors"
+                        type="button"
+                        onClick={() => navigate(ROUTES.rfq)}
+                      >
+                        <Icon name="mark_email_read" className="text-[20px]" aria-hidden /> <span>Yêu Cầu Mẫu Thử B2B</span>
+                      </button>
+                    </div>
+                  </>
+                )}
                 <div className="flex items-center justify-center gap-2 pt-space-xs text-on-surface-variant font-body-sm text-body-sm">
-                  {' '}
-                  <Icon name="security" className="text-secondary text-[18px]" aria-hidden />{' '}
-                  <Link to={ROUTES.policy} className="underline underline-offset-2 hover:text-secondary">Chính sách đổi mới & bảo hiểm bánh vỡ</Link>{' '}
-                </div>{' '}
+                  <Icon name="security" className="text-secondary text-[18px]" aria-hidden />
+                  <Link to={ROUTES.policy} className="underline underline-offset-2 hover:text-secondary">Chính sách đổi mới & bảo hiểm bánh vỡ</Link>
+                </div>
               </div>{' '}
             </div>{' '}
           </div>{' '}
@@ -348,7 +366,7 @@ export function ProductDetailPage() {
 }
 
 /** Khuyến mãi đang chạy của xưởng cho sản phẩm này; BE tự trừ khi đặt hàng */
-function PromotionBox({ promotions }: { promotions: Promotion[] }) {
+function PromotionBox({ promotions, quantity, unitPrice }: { promotions: Promotion[]; quantity: number; unitPrice: number }) {
   if (promotions.length === 0) {
     return (
       <Link to={ROUTES.rfq} className="block p-space-md rounded-[0.25rem] bg-surface-container-lowest shadow-sm font-body-sm text-body-sm text-on-surface-variant hover:bg-champagne-light/40">
@@ -356,23 +374,118 @@ function PromotionBox({ promotions }: { promotions: Promotion[] }) {
       </Link>
     )
   }
+
+  // Đánh giá từng promotion với số lượng và đơn giá hiện tại
+  const evaluated = promotions.map((p) => {
+    let saved = 0
+    let rate = 0
+    let isQualified = false
+    let dynamicNote = ''
+
+    if (p.type === 'BUY_X_GET_Y' && p.buyQuantity && p.freeQuantity) {
+      const bundle = p.buyQuantity + p.freeQuantity
+      const sets = Math.floor(quantity / bundle)
+      const remainder = quantity % bundle
+      rate = p.freeQuantity / bundle
+      if (sets > 0) {
+        isQualified = true
+        const freeCakes = sets * p.freeQuantity
+        saved = freeCakes * unitPrice
+        dynamicNote = `Đang chọn ${quantity} cái: Được tặng ${freeCakes} bánh miễn phí (Tiết kiệm ${vnd(saved)})!`
+        if (remainder > 0) {
+          dynamicNote += ` Thêm ${bundle - remainder} cái nữa để nhận tiếp bánh tặng.`
+        }
+      } else {
+        const needed = bundle - remainder
+        dynamicNote = quantity >= p.buyQuantity && remainder === p.buyQuantity
+          ? `Bạn đã chọn ${quantity} cái! Thêm ${needed} bánh nữa để được TẶNG ${p.freeQuantity}!`
+          : `Chọn thêm ${needed} cái nữa (đủ ${bundle} cái) để được tặng ${p.freeQuantity} bánh miễn phí!`
+      }
+    } else if (p.type === 'PERCENT_OFF' && p.minQuantity && p.percentOff) {
+      rate = (p.percentOff ?? 0) / 100
+      if (quantity >= p.minQuantity) {
+        isQualified = true
+        saved = Math.floor((unitPrice * quantity * p.percentOff) / 100)
+        dynamicNote = `Đang chọn ${quantity} cái: Đã đạt mức giảm ${p.percentOff}% toàn bộ (Tiết kiệm ${vnd(saved)})!`
+      } else {
+        dynamicNote = `Chọn thêm ${p.minQuantity - quantity} cái nữa để được giảm ngay ${p.percentOff}%.`
+      }
+    }
+
+    return { p, saved, rate, isQualified, dynamicNote }
+  })
+
+  // Tìm ưu đãi tốt nhất (nếu có cái đạt điều kiện thì lấy cái giảm nhiều nhất; nếu chưa cái nào đạt thì lấy cái có tỷ lệ giảm cao nhất)
+  const qualifiedList = evaluated.filter((e) => e.isQualified)
+  let bestId: string
+  if (qualifiedList.length > 0) {
+    bestId = qualifiedList.sort((a, b) => b.saved - a.saved)[0].p.id
+  } else {
+    bestId = [...evaluated].sort((a, b) => b.rate - a.rate)[0].p.id
+  }
+
+  // Sắp xếp: Ưu đãi tốt nhất luôn đứng đầu tiên
+  const sorted = [...evaluated].sort((a, b) => (a.p.id === bestId ? -1 : b.p.id === bestId ? 1 : b.rate - a.rate))
+
   return (
     <div className="bg-primary-container text-champagne-light p-space-md rounded-[0.25rem] shadow-md space-y-space-sm">
-      <div className="flex items-center gap-space-xs">
-        <Icon name="sell" className="text-secondary-fixed text-[20px]" aria-hidden />
-        <span className="font-label-lg text-label-lg text-secondary-fixed uppercase tracking-wider">Khuyến mãi của xưởng</span>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-space-xs">
+          <Icon name="sell" className="text-secondary-fixed text-[20px]" aria-hidden />
+          <span className="font-label-lg text-label-lg text-secondary-fixed uppercase tracking-wider">Khuyến mãi của xưởng</span>
+        </div>
+        {promotions.length > 1 && (
+          <span className="text-[11px] text-champagne-light/80 italic">Có {promotions.length} ưu đãi</span>
+        )}
       </div>
-      <ul className="space-y-1.5">
-        {promotions.map((p) => (
-          <li key={p.id} className="flex flex-wrap items-baseline justify-between gap-2">
-            <span className="font-headline-sm text-headline-sm text-secondary-fixed font-bold">{p.label}</span>
-            <span className="font-label-sm text-[11px] text-on-primary-container">
-              {p.name} · đến {new Date(p.endDate).toLocaleDateString('vi-VN')}
-            </span>
-          </li>
-        ))}
+
+      <ul className="space-y-2">
+        {sorted.map(({ p, isQualified, dynamicNote }) => {
+          const isBest = p.id === bestId
+          return (
+            <li
+              key={p.id}
+              className={cn(
+                'flex flex-col gap-1 rounded-[0.125rem] p-2.5 transition-all',
+                isBest ? 'bg-primary/70 border border-secondary-fixed/60 shadow-inner' : 'border border-primary/40 opacity-80',
+              )}
+            >
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="font-headline-sm text-headline-sm text-secondary-fixed font-bold">{p.label}</span>
+                  {isBest && promotions.length > 1 && (
+                    <span className="px-1.5 py-0.5 rounded-[0.125rem] bg-secondary text-on-secondary font-bold text-[9px] uppercase tracking-wider">
+                      Ưu đãi tốt nhất
+                    </span>
+                  )}
+                </div>
+                <span className="font-label-sm text-[11px] text-on-primary-container">
+                  {p.name} · đến {new Date(p.endDate).toLocaleDateString('vi-VN')}
+                </span>
+              </div>
+              {dynamicNote && (
+                <div
+                  className={cn(
+                    'mt-0.5 rounded-[0.125rem] px-2 py-1 text-[11px] font-medium flex items-center gap-1.5',
+                    isQualified
+                      ? 'bg-secondary-fixed/20 text-secondary-fixed font-semibold'
+                      : isBest
+                        ? 'bg-primary text-champagne-light'
+                        : 'bg-primary/40 text-champagne-light/80',
+                  )}
+                >
+                  <Icon name={isQualified ? 'check_circle' : 'auto_awesome'} className="text-[14px] shrink-0" aria-hidden />
+                  <span>{dynamicNote}</span>
+                </div>
+              )}
+            </li>
+          )
+        })}
       </ul>
-      <p className="font-label-sm text-[11px] text-on-primary-container">Tự động trừ vào giá khi đặt hàng, áp cho số lượng trong cùng một đơn.</p>
+
+      <div className="pt-2 border-t border-primary/40 flex items-center justify-between text-[11px] text-on-primary-container">
+        <span>Tự động áp dụng ưu đãi giảm nhiều nhất khi đặt hàng (không cộng dồn ưu đãi).</span>
+      </div>
     </div>
   )
 }

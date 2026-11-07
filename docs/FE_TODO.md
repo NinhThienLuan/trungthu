@@ -11,7 +11,8 @@
 ## PHẦN 1. CÔNG VIỆC CỦA THẠCH (FE2 - TRỌNG TÂM)
 
 ### Nhiệm vụ 1: Xây dựng màn hình "Phiếu ra lò" (In phiếu nướng bánh) — [ƯU TIÊN 1]
-* **Bối cảnh:** Backend đã hoàn thiện database view `v_bake_lines` tổng hợp số lượng bánh cần nướng theo ngày giao, và Luân (BE4) đang phụ trách mở endpoint `GET /api/provider/bake-sheet?date=YYYY-MM-DD`. FE đang chờ kết nối API này.
+* **Cập nhật 2026-11-03:** Đã triển khai FE trên nhánh `feat/fe2-bake-sheet`, cập nhật theo `origin/master` tại `d7b4c02`: tab phiếu nướng, ngày nướng mặc định hôm nay, chọn ngày bất kỳ/hôm nay/ngày mai, tổng hợp số bánh và mã đơn từ API, in trắng đen. DTO: `variantId`, `productName`, `variantName`, `bakeQuantity`, `orderCodes`; `date` là ngày nướng, ngày giao là ngày tiếp theo. Build/lint đạt; 46 test `OrderApiTests` + `BakeLinesViewTests` đạt. Đã kiểm tra FE gọi API thật trên backend H2 riêng qua Vite proxy, đăng nhập bằng cookie: dữ liệu bảng/tổng/mã đơn khớp response, ngày rỗng và giao diện in đạt. Dữ liệu kiểm tra do demo seeder tạo, chưa kiểm tra trên database triển khai.
+* **Bối cảnh:** Backend đã có view `v_bake_lines` và endpoint `GET /api/provider/bake-sheet?date=YYYY-MM-DD` do BE4 phụ trách, nhận ngày nướng.
 * **Các bước triển khai:**
   1. **Service (`fe/src/services/sellerService.ts`):**  
      Bổ sung hàm gọi API:
@@ -46,6 +47,7 @@
 ---
 
 ### Nhiệm vụ 3: Hoàn thiện luồng KYC & Gói Bán Hàng SaaS — [ƯU TIÊN 3]
+* **Cập nhật 2026-11-03:** Đã triển khai FE trên nhánh `feat/fe2-kyc-saas`: banner KYC/gói tại layout Seller, kiểm tra đủ 3 loại giấy tờ được duyệt và ngày hiệu lực gói, modal xem ảnh/PDF có phóng to ảnh, báo lỗi khi thiếu lý do từ chối. Giữ các luồng đã có: hiển thị lý do, nộp lại giấy tờ, mã giao dịch và kích hoạt gói. Build/lint đạt; đã kiểm tra giao diện với API giả lập, chưa kiểm thử tích hợp backend thực tế.
 * **Giao diện Seller ([`ProfilePage.tsx`](file:///d:/GitHub/trungthu/fe/src/pages/admin/ProfilePage.tsx) & [`SubscriptionPage.tsx`](file:///d:/GitHub/trungthu/fe/src/pages/admin/SubscriptionPage.tsx)):**
   1. Hiển thị rõ lý do từ chối duyệt: Nếu chứng từ nào bị `REJECTED`, hiển thị `rejectionReason` từ Backend để Seller biết nguyên nhân và bấm nút tải lại file mới.
   2. Bổ sung **Banner cảnh báo quyền bán** ở đầu trang Seller:
@@ -119,12 +121,40 @@ Dưới đây là 4 hiệu ứng animation được đúc kết từ concept thi
 
 | Thành viên | Hạng mục công việc | Mức độ ưu tiên | Trạng thái |
 | :--- | :--- | :---: | :---: |
-| **Thạch (FE2)** | Xây dựng màn hình & In phiếu nướng bánh (`bake-sheet`) | **Cao nhất (P1)** | Chưa bắt đầu |
+| **Thạch (FE2)** | Xây dựng màn hình & In phiếu nướng bánh (`bake-sheet`) | **Cao nhất (P1)** | Hoàn thành; đã kiểm thử tích hợp API thật trên H2 |
 | **Thạch (FE2)** | Dọn dẹp các nút Set quà ngoài scope trong `BakeBatchPage` | **Cao (P2)** | Chưa bắt đầu |
-| **Thạch (FE2)** | Hoàn thiện luồng KYC & Gói SaaS (Banner, Modal duyệt) | **Trung bình (P3)** | Chưa bắt đầu |
+| **Thạch (FE2)** | Hoàn thiện luồng KYC & Gói SaaS (Banner, Modal duyệt) | **Trung bình (P3)** | Đã triển khai FE; chờ kiểm thử tích hợp BE |
 | **Thạch (FE2)** | Xóa raw emoji trong `Header.tsx` | **Trung bình (P4)** | Chưa bắt đầu |
-| **Tuấn (FE1)** | Xử lý lỗi tồn kho Checkout (bỏ hardcode 99) | **Cao (P1)** | Chưa bắt đầu |
-| **Tuấn (FE1)** | Thêm Guest Guard cho trang Auth (`/login`, `/register`) | **Trung bình (P2)** | Chưa bắt đầu |
-| **Tuấn (FE1)** | Xử lý Session Timeout chuyển hướng tại `http.ts` | **Trung bình (P3)** | Chưa bắt đầu |
-| **Tuấn (FE1)** | Dọn dẹp các hàm Mock cũ trong `apis/` | **Thấp (P4)** | Chưa bắt đầu |
+| **Tuấn (FE1)** | Xử lý lỗi tồn kho Checkout (bỏ hardcode 99) | **Cao (P1)** | Hoàn thành (e241c6e) |
+| **Tuấn (FE1)** | Thêm Guest Guard cho trang Auth (`/login`, `/register`) | **Trung bình (P2)** | Hoàn thành (e241c6e) |
+| **Tuấn (FE1)** | Xử lý Session Timeout chuyển hướng tại `http.ts` | **Trung bình (P3)** | Hoàn thành (e241c6e) |
+| **Tuấn (FE1)** | Dọn dẹp các hàm Mock cũ trong `apis/` | **Thấp (P4)** | Hoàn thành (e241c6e) |
 | **Tuấn (FE1)** | Tích hợp 4 hiệu ứng Animation trang chủ (Phần 3) | **Mở rộng (P4)** | Tham khảo |
+
+---
+
+## PHẦN 4. ĐÁNH GIÁ & ĐỀ XUẤT NÂNG CẤP TÍNH NĂNG KHUYẾN MÃI (PROMOTION ENGINE)
+
+### 1. Hiện Trạng & Giới Hạn Scope Hiện Tại
+- **Kiến trúc Backend (`Promotion.java` & `PromotionController.java`)**:
+  - Khuyến mãi thuộc sở hữu của từng **Provider (Xưởng)**.
+  - Hỗ trợ 2 hình thức:
+    1. `PERCENT_OFF`: Giảm % đơn giá khi mua từ `minQuantity` cái trở lên (áp dụng cho từng dòng bánh lẻ).
+    2. `BUY_X_GET_Y`: Mua X tặng Y (ví dụ mua 3 tặng 1). Lặp lại theo từng bộ số lượng.
+  - Cơ chế tự động tính trong Checkout (`CheckoutServiceImpl.java`): Quét các khuyến mãi đang chạy của xưởng, chọn khuyến mãi có mức giảm lớn nhất (`bestDiscount`) để trừ trực tiếp vào đơn giá từng dòng hàng.
+  - Phân hệ Seller: Đã có trang quản trị `/seller/promotions` ([`PromotionsPage.tsx`](file:///d:/GitHub/trungthu/fe/src/pages/admin/PromotionsPage.tsx)) đầy đủ chức năng tạo, bật/tắt, xóa.
+- **Điểm nghẽn ở Storefront (Phía Khách Hàng - Buyer)**:
+  - Khách vào Catalog và trang chi tiết sản phẩm hoàn toàn **không thấy nhãn/badge khuyến mãi** dù API `GET /api/public/promotions` đã sẵn sàng.
+  - Giỏ hàng (`CartPage`) không có thanh tiến trình nhắc nhở tăng số lượng để nhận ưu đãi (Upsell Nudge).
+  - Chưa hỗ trợ mã giảm giá nhập tay (Promo Code / Coupon).
+
+### 2. Định Hướng Nâng Cấp Nghiệp Vụ Chuyên Sâu
+- **Giai đoạn 1: Nâng cấp Trải nghiệm Storefront (Không cần sửa Backend)**:
+  - Hiển thị Badge khuyến mãi trực tiếp trên thẻ sản phẩm (`CatalogCard.tsx`) và trang chi tiết (`ProductDetailPage.tsx`).
+  - Tích hợp **Smart Upsell Nudge** trong Giỏ hàng: Ví dụ khách chọn 2 cái thập cẩm, hiển thị thông báo *"Mua thêm 1 bánh để được TẶNG 1 hoặc GIẢM 10%"*.
+  - Hiển thị giá gạch ngang (giá gốc vs giá sau khuyến mãi) và nhãn ưu đãi rõ ràng tại Giỏ hàng và Checkout.
+- **Giai đoạn 2: Mở rộng Nghiệp Vụ Backend & Động cơ Khuyến Mãi (Khảo sát nâng cấp)**:
+  - Bổ sung bảng `Voucher` / `PromoCode` nhập tay cho toàn đơn hàng (Order-level discount).
+  - Giảm giá theo ngưỡng giá trị đơn hàng (Ví dụ: Đơn từ 1.000.000đ giảm 50.000đ).
+  - Flash Sale theo khung giờ mẻ nướng (Countdown timer).
+

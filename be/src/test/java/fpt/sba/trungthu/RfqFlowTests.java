@@ -61,7 +61,7 @@ class RfqFlowTests {
         as(buyer);
         var request = rfq.create(new CreateRfqRequest("Công ty Mặt Trăng", "0123456789", "Lan",
                 "Thu mua", "0901234567", "lan@example.com", 100, today.plusDays(7),
-                new BigDecimal("50000000"), "In logo", null));
+                new BigDecimal("50000000"), "In logo", null, null, null));
         assertThat(request.code()).startsWith("RFQ-");
         assertThat(rfq.mine()).extracting("id").contains(request.id());
 
@@ -219,7 +219,7 @@ class RfqFlowTests {
         as(buyer);
         var request = rfq.create(new CreateRfqRequest("Công ty Mặt Trăng", "0123456789", "Lan",
                 "Thu mua", "0901234567", "lan@example.com", 100, today.plusDays(7),
-                null, null, null));
+                null, null, null, null, null));
 
         as(seller);
         String invalidQuote = """
@@ -237,6 +237,36 @@ class RfqFlowTests {
         return users.saveAndFlush(User.builder().email(UUID.randomUUID() + "@example.com")
                 .password("unused").fullName("Test").role(role).storeName(role == UserRole.PROVIDER ? "Xưởng thử" : null)
                 .isComplianceApproved(eligible).isSeasonActive(eligible).build());
+    }
+
+    @Test
+    void rfqSentToOneProviderIsHiddenFromOthers() {
+        LocalDate today = LocalDate.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh"));
+        User buyer = createUser(UserRole.CUSTOMER, false);
+        User seller = createUser(UserRole.PROVIDER, true);
+        User otherSeller = createUser(UserRole.PROVIDER, true);
+        subscribe(seller, today);
+        subscribe(otherSeller, today);
+
+        as(buyer);
+        var request = rfq.create(new CreateRfqRequest("Công ty Mặt Trăng", "0123456789", "Lan",
+                "Thu mua", "0901234567", "lan@example.com", 100, today.plusDays(7),
+                null, null, null, seller.getId(), null));
+        assertThat(request.providerId()).isEqualTo(seller.getId());
+        assertThat(request.providerName()).isEqualTo("Xưởng thử");
+        assertThatThrownBy(() -> rfq.create(new CreateRfqRequest("Công ty Mặt Trăng", "0123456789", "Lan",
+                "Thu mua", "0901234567", "lan@example.com", 100, today.plusDays(7),
+                null, null, null, buyer.getId(), null))).isInstanceOf(ResponseStatusException.class);
+
+        as(otherSeller);
+        assertThat(rfq.providerFeed()).extracting("id").doesNotContain(request.id());
+        assertThatThrownBy(() -> rfq.submitQuote(request.id(), new SubmitQuoteRequest(new BigDecimal("410000"),
+                100, today.plusDays(7), today.plusDays(5), null))).isInstanceOf(ResponseStatusException.class);
+
+        as(seller);
+        assertThat(rfq.providerFeed()).extracting("id").contains(request.id());
+        assertThat(rfq.submitQuote(request.id(), new SubmitQuoteRequest(new BigDecimal("420000"),
+                100, today.plusDays(7), today.plusDays(5), null)).status()).isEqualTo(QuoteStatus.SUBMITTED);
     }
 
     private void subscribe(User provider, LocalDate today) {
