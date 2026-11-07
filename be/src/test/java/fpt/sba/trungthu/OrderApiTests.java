@@ -107,6 +107,36 @@ class OrderApiTests {
     }
 
     @Test
+    void sellerAndBuyerListFilterByDateRange() throws Exception {
+        mvc.perform(get("/api/provider/orders")
+                        .header("Authorization", token(seller))
+                        .param("from", "2026-10-21")
+                        .param("to", "2026-10-25")
+                        .param("size", "100")
+                        .param("page", "0"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalElements").value(1))
+                .andExpect(jsonPath("$.data.content[0].id").value(pending.getId().toString()));
+
+        mvc.perform(get("/api/provider/orders")
+                        .header("Authorization", token(seller))
+                        .param("from", "2026-11-02")
+                        .param("to", "2026-12-01")
+                        .param("size", "100")
+                        .param("page", "0"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalElements").value(0));
+
+        mvc.perform(get("/api/orders/me")
+                        .header("Authorization", token(buyer))
+                        .param("from", "2026-10-19")
+                        .param("to", "2026-10-20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalElements").value(1))
+                .andExpect(jsonPath("$.data.content[0].id").value(deposited.getId().toString()));
+    }
+
+    @Test
     void buyerAndOwningSellerCanReadDetailsWithoutEntitiesOrInternalFields() throws Exception {
         for (User owner : new User[]{buyer, seller}) {
             mvc.perform(get("/api/orders/{id}", deposited.getId()).header("Authorization", token(owner)))
