@@ -36,6 +36,7 @@ export function ProductDetailPage() {
   const [variantId, setVariantId] = useState<string>()
   const [activeImage, setActiveImage] = useState(0)
   const [quantity, setQuantity] = useState(1)
+  const [qtyDraft, setQtyDraft] = useState<string | null>(null)
   const [added, setAdded] = useState(false)
   const [tab, setTab] = useState<DetailTab>('story')
   useDocumentTitle(product?.name)
@@ -283,8 +284,14 @@ export function ProductDetailPage() {
                           min={1}
                           type="number"
                           aria-label="Số lượng"
-                          value={quantity}
-                          onChange={(e) => setQuantity(Math.max(1, Math.min(maxQty, Number(e.target.value) || 1)))}
+                          value={qtyDraft ?? quantity}
+                          onChange={(e) => {
+                            // Cho xoá trống rồi gõ số mới; rời ô thì hiện lại số đã chốt
+                            setQtyDraft(e.target.value)
+                            const n = Math.floor(Number(e.target.value))
+                            if (e.target.value !== '' && n >= 1) setQuantity(Math.min(n, maxQty))
+                          }}
+                          onBlur={() => setQtyDraft(null)}
                         />
                         <button type="button" aria-label="Tăng số lượng" onClick={() => setQuantity((q) => Math.min(maxQty, q + 1))} className="w-8 h-8 rounded-[0.125rem] flex items-center justify-center text-ink-dark hover:bg-surface-container transition-colors">
                           <Icon name="add" className="text-[18px]" aria-hidden />

@@ -216,6 +216,9 @@ export function CartPage() {
                         </p>
                       </div>
                       <QuantityStepper size="sm" value={item.quantity} max={maxOrderQuantity(item)}
+                        maxHint={item.canPreorder || item.kind === 'box'
+                          ? `Tối đa ${maxOrderQuantity(item)}/đơn lẻ — cần nhiều hơn hãy gửi báo giá sỉ`
+                          : 'Đã hết số lượng có sẵn'}
                         onChange={(q) => setQuantity(item.lineId, q)} />
                       {(() => {
                         const promo = itemEvals.get(item.lineId)
