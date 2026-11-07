@@ -9,14 +9,14 @@ import vn.payos.PayOS;
 import vn.payos.core.ClientOptions;
 import vn.payos.exception.APIException;
 import vn.payos.exception.NotFoundException;
-import vn.payos.exception.PayOSException;
 import vn.payos.model.v2.paymentRequests.CreatePaymentLinkRequest;
 import vn.payos.model.v2.paymentRequests.CreatePaymentLinkResponse;
 import vn.payos.model.v2.paymentRequests.PaymentLink;
-import vn.payos.model.webhooks.WebhookData;
 
 import java.net.URI;
+import java.security.MessageDigest;
 import java.time.Instant;
+import java.util.HexFormat;
 import java.util.Map;
 
 @Component
@@ -65,17 +65,32 @@ public class PayosSubscriptionGateway {
         return client.paymentRequests().cancel(orderCode, "Seller huy thanh toan goi");
     }
 
-    public WebhookData verify(Map<String, Object> payload) {
+    public record PaymentNotice(long orderCode, String linkId, String code, String currency) {}
+
+    public PaymentNotice verify(Map<String, Object> payload) {
         requireConfigured();
-        try {
-            return client.webhooks().verify(payload);
-        } catch (PayOSException | IllegalArgumentException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Webhook payOS không hợp lệ.");
+        if (!(payload.get("data") instanceof Map<?, ?> data) || !(payload.get("signature") instanceof String signature)
+                || !signature.matches("[a-fA-F0-9]{64}")
+                || !(data.get("orderCode") instanceof Integer || data.get("orderCode") instanceof Long)
+                || !(data.get("paymentLinkId") instanceof String linkId)
+                || !(data.get("code") instanceof String code) || !(data.get("currency") instanceof String currency)) {
+            throw invalidWebhook();
         }
+        // Sign the actual fields sent by payOS, including any new fields and explicit nulls.
+        String expected = client.getCrypto().createSignatureFromObj(data, client.getOptions().getChecksumKey());
+        HexFormat hex = HexFormat.of();
+        if (!MessageDigest.isEqual(hex.parseHex(expected), hex.parseHex(signature))) {
+            throw invalidWebhook();
+        }
+        return new PaymentNotice(((Number) data.get("orderCode")).longValue(), linkId, code, currency);
+    }
+
+    private static ResponseStatusException invalidWebhook() {
+        return new ResponseStatusException(HttpStatus.BAD_REQUEST, "Webhook payOS không hợp lệ.");
     }
 
     public static String trustedCheckoutUrl(String url) {
-        URI uri = URI.create(url);
+        URI uri = url == null ? URI.create("") : URI.create(url);
         if (!"https".equals(uri.getScheme()) || uri.getUserInfo() != null || uri.getPort() != -1
                 || !("pay.payos.vn".equals(uri.getHost()) || "next.pay.payos.vn".equals(uri.getHost()))) {
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Đường dẫn thanh toán payOS không hợp lệ.");
