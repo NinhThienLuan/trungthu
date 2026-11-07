@@ -64,6 +64,13 @@ public class ProviderProductController {
         return ResponseEntity.ok(ApiResponseDTO.success(listResult));
     }
 
+    @GetMapping("/{productId}")
+    @Operation(summary = "Get my product detail with variants and stock (seller view)")
+    public ResponseEntity<ApiResponseDTO<ProductResponse>> getMyProduct(@PathVariable UUID productId) {
+        String providerEmail = securityContextService.getCurrentUserEmail();
+        return ResponseEntity.ok(ApiResponseDTO.success(productService.getMyProduct(providerEmail, productId)));
+    }
+
     @PostMapping
     @Operation(summary = "Create a product")
     public ResponseEntity<ApiResponseDTO<ProductResponse>> createProduct(
@@ -94,6 +101,14 @@ public class ProviderProductController {
         String providerEmail = securityContextService.getCurrentUserEmail();
         return ResponseEntity.ok(ApiResponseDTO.success("Product updated successfully",
                 productService.updateProduct(providerEmail, productId, request)));
+    }
+
+    @PostMapping("/{productId}/publish")
+    @Operation(summary = "Publish product to store (DRAFT -> ACTIVE)")
+    public ResponseEntity<ApiResponseDTO<ProductResponse>> publish(@PathVariable UUID productId) {
+        String providerEmail = securityContextService.getCurrentUserEmail();
+        return ResponseEntity.ok(ApiResponseDTO.success("Product published successfully",
+                productService.publish(providerEmail, productId)));
     }
 
     @PostMapping("/{productId}/discontinue")

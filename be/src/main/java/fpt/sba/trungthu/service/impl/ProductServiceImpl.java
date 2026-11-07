@@ -103,6 +103,25 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public ProductResponse getMyProduct(String providerEmail, UUID productId) {
+        log.info("Fetching product {} for provider: {}", productId, providerEmail);
+        try {
+            Product product = findOwnedProduct(providerEmail, productId);
+            ProductResponse response = productMapper.toResponse(product, ProductView.PROVIDER);
+            markOrderedVariants(List.of(response));
+            return response;
+        } catch (ResponseStatusException rse) {
+            throw rse;
+        } catch (Exception ex) {
+            log.error("Error fetching product {} for provider {}: {}", productId, providerEmail, ex.getMessage(), ex);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Cannot retrieve product");
+        } finally {
+            log.debug("Finished getMyProduct for: {}", productId);
+        }
+    }
+
+    @Override
     @Transactional
     public ProductResponse createProduct(String providerEmail, ProductRequest request) {
         log.info("Creating new product for provider: {}, productName: {}", providerEmail, request.getName());
@@ -162,40 +181,14 @@ public class ProductServiceImpl implements ProductService {
                     throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                             "Hết hàng được gắn khi mọi phân loại hết tồn");
                 }
-                if (target == ProductStatus.ACTIVE && product.getStatus() == ProductStatus.SOLD_OUT) {
-                    throw new ResponseStatusException(HttpStatus.CONFLICT, "Nhập kho để bán lại");
-                }
                 if (target == ProductStatus.ARCHIVED) {
                     assertOrdersClosed(product);
                 }
                 if (target == ProductStatus.ACTIVE) {
-                    var policy = providerPolicyService.canPublishProducts(providerEmail);
-                    if (!Boolean.TRUE.equals(policy.getCanPublishProducts())) {
-                        throw new ResponseStatusException(HttpStatus.CONFLICT,
-                                policy.getReason() == null ? "Provider cannot publish products" : policy.getReason());
-                    }
-                }
-                product.getStatus().validateTransition(target);
-                if (target == ProductStatus.ACTIVE
-                        && (product.getImages() == null || product.getImages().isEmpty())) {
-                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cần có ảnh trước khi đăng bán");
-                }
-                if (target == ProductStatus.ACTIVE && product.getProductType() == ProductType.GIFT_SET) {
-                    boolean hasBox = product.getSetComponents() != null && product.getSetComponents().stream()
-                            .anyMatch(row -> row.getComponentVariant().getProduct().getProductType() == ProductType.BOX_SHELL
-                                    && row.getQuantity() > 0);
-                    if (!hasBox) {
-                        throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                                "Cần nhập ít nhất một set trước khi đăng bán");
-                    }
-                } else if (target == ProductStatus.ACTIVE
-                        && (product.getVariants() == null || product.getVariants().isEmpty())) {
-                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                            "A product needs at least one variant before it can be active");
-                }
-                product.setStatus(target);
-                if (target == ProductStatus.ACTIVE) {
-                    saleStatus.refresh(product.getId());
+                    validateAndPublish(product, providerEmail);
+                } else {
+                    product.getStatus().validateTransition(target);
+                    product.setStatus(target);
                 }
             }
 
@@ -210,6 +203,54 @@ public class ProductServiceImpl implements ProductService {
         } finally {
             log.debug("Finished updateProduct for: {}", productId);
         }
+    }
+
+    @Override
+    @Transactional
+    public ProductResponse publish(String providerEmail, UUID productId) {
+        log.info("Publishing product {} for provider: {}", productId, providerEmail);
+        try {
+            Product product = findOwnedProduct(providerEmail, productId);
+            validateAndPublish(product, providerEmail);
+            log.info("Product {} published successfully by provider: {}", productId, providerEmail);
+            return productMapper.toResponse(product, ProductView.PROVIDER);
+        } catch (ResponseStatusException rse) {
+            throw rse;
+        } catch (Exception ex) {
+            log.error("Unexpected error publishing product {} for {}: {}", productId, providerEmail, ex.getMessage(), ex);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Cannot publish product");
+        } finally {
+            log.debug("Finished publish for: {}", productId);
+        }
+    }
+
+    private void validateAndPublish(Product product, String providerEmail) {
+        if (product.getStatus() == ProductStatus.SOLD_OUT) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Nhập kho để bán lại");
+        }
+        var policy = providerPolicyService.canPublishProducts(providerEmail);
+        if (!Boolean.TRUE.equals(policy.getCanPublishProducts())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    policy.getReason() == null ? "Provider cannot publish products" : policy.getReason());
+        }
+        product.getStatus().validateTransition(ProductStatus.ACTIVE);
+        if (product.getImages() == null || product.getImages().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cần có ảnh trước khi đăng bán");
+        }
+        if (product.getProductType() == ProductType.GIFT_SET) {
+            boolean hasBox = product.getSetComponents() != null && product.getSetComponents().stream()
+                    .anyMatch(row -> row.getComponentVariant().getProduct().getProductType() == ProductType.BOX_SHELL
+                            && row.getQuantity() > 0);
+            if (!hasBox) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Cần nhập ít nhất một set trước khi đăng bán");
+            }
+        } else if (product.getVariants() == null || product.getVariants().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "A product needs at least one variant before it can be active");
+        }
+        product.setStatus(ProductStatus.ACTIVE);
+        saleStatus.refresh(product.getId());
     }
 
     @Override

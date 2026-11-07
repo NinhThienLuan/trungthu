@@ -29,9 +29,16 @@ public interface ProductService {
      */
     List<ProductResponse> getMyProducts(String providerEmail);
 
+    /**
+     * Lấy chi tiết một sản phẩm của Provider (kèm tồn kho, phân loại)
+     */
+    ProductResponse getMyProduct(String providerEmail, UUID productId);
+
     ProductResponse createProduct(String providerEmail, ProductRequest request);
 
     ProductResponse updateProduct(String providerEmail, UUID productId, ProductRequest request);
+
+    ProductResponse publish(String providerEmail, UUID productId);
 
     ProductResponse archive(String providerEmail, UUID productId);
 

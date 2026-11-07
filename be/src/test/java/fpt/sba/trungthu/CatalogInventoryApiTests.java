@@ -652,6 +652,48 @@ class CatalogInventoryApiTests {
         return new Created(productId, variantId);
     }
 
+    @Test
+    void getMyProductAndPublishFlow() throws Exception {
+        // 1. Tạo sản phẩm nháp (DRAFT)
+        String body = mvc.perform(post("/api/provider/products").header("Authorization", token(provider))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Bánh Nháp\",\"productType\":\"LOOSE_CAKE\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.status").value("DRAFT"))
+                .andReturn().getResponse().getContentAsString();
+        String productId = body.replaceAll("(?s).*\"id\":\"([^\"]+)\".*", "$1");
+
+        // 2. GET /api/provider/products/{id} phải thành công và trả về DRAFT (trước đây bị 405 Method Not Allowed)
+        mvc.perform(get("/api/provider/products/{id}", productId).header("Authorization", token(provider)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(productId))
+                .andExpect(jsonPath("$.data.status").value("DRAFT"));
+
+        // 3. Publish khi chưa có ảnh hoặc phân loại -> 400
+        mvc.perform(post("/api/provider/products/{id}/publish", productId).header("Authorization", token(provider)))
+                .andExpect(status().isBadRequest());
+
+        // 4. Thêm ảnh và phân loại
+        mvc.perform(put("/api/provider/products/{id}/images", productId).header("Authorization", token(provider))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"images\":[{\"imageUrl\":\"https://cdn/cake.jpg\",\"isPrimary\":true,\"displayOrder\":0}]}"))
+                .andExpect(status().isOk());
+        mvc.perform(post("/api/provider/products/{id}/variants", productId).header("Authorization", token(provider))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"variantName\":\"150g\",\"sku\":\"PUB-CAKE-150\",\"price\":50000,\"stockQuantity\":10,\"weightGram\":150}"))
+                .andExpect(status().isCreated());
+
+        // 5. Publish thành công (DRAFT -> ACTIVE)
+        mvc.perform(post("/api/provider/products/{id}/publish", productId).header("Authorization", token(provider)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("ACTIVE"));
+
+        // 6. GET lại kiểm tra trạng thái đã là ACTIVE
+        mvc.perform(get("/api/provider/products/{id}", productId).header("Authorization", token(provider)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("ACTIVE"));
+    }
+
     private record Created(String productId, String variantId) {
     }
 

@@ -4,7 +4,7 @@ import { useApi } from '../../hooks/useApi'
 import { useDocumentTitle } from '../../hooks/useDocumentTitle'
 import { formatVnd } from '../../lib/format'
 import { PRODUCT_TYPE_LABEL } from '../../constants'
-import { sellerService, type ProductInput, type SellerProduct, type SellerProductStatus } from '../../services/sellerService'
+import { sellerService, type SellerProduct, type SellerProductStatus } from '../../services/sellerService'
 import type { ProductType } from '../../types/product'
 import { Field, TextArea, TextInput } from '../../components/ui/Field'
 import { PageHeader } from '../../components/ui/PageHeader'
@@ -90,14 +90,7 @@ type Panel = { kind: 'variant' | 'info' | 'recipe' | 'pack' } | { kind: 'import'
 function ProductCard({ product: p, catalog, run }: { product: SellerProduct; catalog: SellerProduct[]; run: (action: () => Promise<unknown>, done: string) => Promise<boolean> }) {
   const [panel, setPanel] = useState<Panel>()
   const toggle = (next: Panel) => setPanel(JSON.stringify(panel) === JSON.stringify(next) ? undefined : next)
-  // BE ghi đè mọi trường khi sửa -> luôn gửi lại mô tả, câu chuyện, nguyên liệu hiện có
-  const input = (status: ProductInput['status']): ProductInput => ({
-    name: p.name, description: p.description ?? undefined, story: p.story ?? undefined, ingredients: p.ingredients ?? undefined,
-    // BE trả salePrice tính sẵn cho mọi sản phẩm (= giá gốc khi không giảm): chỉ gửi lại khi là set đang giảm giá
-    salePrice: p.productType === 'GIFT_SET' && p.salePrice != null && p.listPrice != null && p.salePrice < p.listPrice
-      ? p.salePrice : undefined,
-    productType: p.productType, status,
-  })
+
   const close = (ok: boolean) => ok && setPanel(undefined)
   const isSet = p.productType === 'GIFT_SET'
 
@@ -122,7 +115,7 @@ function ProductCard({ product: p, catalog, run }: { product: SellerProduct; cat
         </div>
         <div className="flex flex-wrap gap-2">
           {p.status === 'DRAFT' && (
-            <button type="button" className="btn btn-primary btn-sm" onClick={() => run(() => sellerService.updateProduct(p.id, input('ACTIVE')), `Đã mở bán "${p.name}".`)}>Mở bán</button>
+            <button type="button" className="btn btn-primary btn-sm" onClick={() => run(() => sellerService.publishProduct(p.id), `Đã mở bán "${p.name}".`)}>Mở bán</button>
           )}
           <button type="button" className="btn btn-outline btn-sm" onClick={() => toggle({ kind: 'info' })}>Sửa thông tin</button>
           {!isSet && <button type="button" className="btn btn-outline btn-sm" onClick={() => toggle({ kind: 'variant' })}>Thêm phân loại</button>}

@@ -48,11 +48,11 @@ export function B2bPortalView() {
                 {' '}
                 <Icon name="verified" className="text-secondary-fixed text-[18px]" aria-hidden />{' '}
                 <span className="font-label-sm text-label-sm text-secondary-fixed tracking-widest uppercase">
-                  Đại Nguyện Giao Thảo • Mùa Trăng Ất Tỵ 2025
+                  Đại Nguyện Giao Thảo • Mùa Trăng Ất Tỵ 2026
                 </span>{' '}
               </div>{' '}
               <h1 className="font-headline-xl text-headline-xl lg:text-[52px] lg:leading-[62px] text-champagne-light tracking-tight">
-                {' Giải Pháp Quà Tặng Doanh Nghiệp & Ngoại Giao Mùa Trăng 2025 '}
+                {' Giải Pháp Quà Tặng Doanh Nghiệp & Ngoại Giao Mùa Trăng 2026 '}
               </h1>{' '}
               <p className="font-body-lg text-body-lg text-on-primary-container leading-relaxed max-w-2xl">
                 {' Năng lực bảo chứng bao tiêu hơn '}

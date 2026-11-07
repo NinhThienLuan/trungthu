@@ -103,8 +103,10 @@ export const sellerService = {
     unwrap(http.patch<ApiResponse<OrderDetail>>(`/provider/orders/${id}/status`, { status, collectedAmount })),
 
   products: () => unwrap(http.get<ApiResponse<SellerProduct[]>>(P)),
+  product: (id: string) => unwrap(http.get<ApiResponse<SellerProduct>>(`${P}/${id}`)),
   createProduct: (body: ProductInput) => unwrap(http.post<ApiResponse<SellerProduct>>(P, body)),
   updateProduct: (id: string, body: ProductInput) => unwrap(http.put<ApiResponse<SellerProduct>>(`${P}/${id}`, body)),
+  publishProduct: (id: string) => unwrap(http.post<ApiResponse<SellerProduct>>(`${P}/${id}/publish`)),
   /** Thay album bằng một ảnh đại diện (URL hoặc data URI, BE giới hạn 2MB ký tự) */
   setImage: (id: string, imageUrl: string) =>
     unwrap(http.put<ApiResponse<SellerProduct>>(`${P}/${id}/images`, { images: [{ imageUrl, isPrimary: true, displayOrder: 0 }] })),
