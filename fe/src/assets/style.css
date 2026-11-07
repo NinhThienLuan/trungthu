@@ -392,6 +392,30 @@
   }
 }
 
+.bake-view-toggle {
+  @apply inline-flex min-h-11 items-center gap-1.5 rounded-sm px-2.5 text-small font-semibold text-navy hover:bg-champagne/40 sm:min-h-9;
+}
+
+.bake-view-toggle[aria-pressed="true"] {
+  @apply bg-navy text-white;
+}
+
+.bake-calendar-grid :is(th, td) + :is(th, td) {
+  @apply border-l border-line;
+}
+
+.bake-calendar-day {
+  @apply flex min-h-12 w-full flex-col items-start justify-start gap-0.5 px-1.5 py-1 text-left text-navy hover:bg-champagne/40 focus-visible:outline-offset-[-2px] sm:px-2.5;
+}
+
+.bake-calendar-day[aria-current="date"] > span:first-child {
+  @apply text-gold-ink underline underline-offset-2;
+}
+
+.bake-calendar-day[aria-pressed="true"] {
+  @apply rounded-md bg-champagne ring-1 ring-gold ring-inset;
+}
+
 @media print {
   body:has(.bake-sheet) div:has(.bake-sheet) {
     background: white !important;
