@@ -1,7 +1,7 @@
 import { http, unwrap } from '../apis/http'
 import { MAX_RETAIL_QUANTITY } from '../constants'
 import type { ApiResponse, Page } from '../types/api'
-import type { Product, ProductType } from '../types/product'
+import type { LeadTime, Product, ProductType, VariantAvailability } from '../types/product'
 
 export interface ProductQuery {
   type?: ProductType
@@ -38,6 +38,7 @@ interface BeProduct {
     weightGram: number | null
     boxCapacity: number | null
     purchasable: boolean
+    availability?: VariantAvailability
   }>
 }
 
@@ -81,6 +82,7 @@ const toProduct = (p: BeProduct): Product => {
       // BE công khai không trả số tồn, chỉ `purchasable`: giới hạn mỗi loại theo đơn lẻ; BE vẫn chặn khi thiếu hàng
       stockQuantity: v.purchasable ? MAX_RETAIL_QUANTITY : 0,
       status: v.purchasable ? 'ACTIVE' : 'OUT_OF_STOCK',
+      availability: v.availability,
     })),
   }
 }
@@ -89,6 +91,13 @@ export const productService = {
   list: async ({ type, page = 0, size = 12, sortBy, direction }: ProductQuery = {}): Promise<Page<Product>> => {
     const res = await unwrap(http.get<ApiResponse<Page<BeProduct>>>('/products', { params: { type, page, size, sortBy, direction } }))
     return { ...res, content: res.content.map(toProduct) }
+  },
+
+  /** Ngày nhận sớm nhất cho các món của MỘT xưởng (variantId -> số lượng, bánh trong hộp tách riêng) */
+  leadTime: (lines: Record<string, number>) => {
+    const params = new URLSearchParams()
+    Object.entries(lines).forEach(([variantId, quantity]) => params.append('line', `${variantId}:${quantity}`))
+    return unwrap(http.get<ApiResponse<LeadTime>>('/products/lead-time', { params }))
   },
 
   detail: async (id: string): Promise<Product> =>

@@ -1,7 +1,7 @@
 // Tự sinh từ bản thiết kế Stitch — giữ nguyên nội dung. Sửa logic ở trang bọc ngoài.
 import { useState } from 'react'
 import { Icon } from '../../components/Icon'
-import { MIN_LEAD_DAYS, RFQ_MIN_QUANTITY } from '../../constants'
+import { RFQ_LEAD_DAYS, RFQ_MIN_QUANTITY } from '../../constants'
 import { addDays, toIsoDate } from '../../lib/format'
 import { useApi } from '../../hooks/useApi'
 import { productService } from '../../services/productService'
@@ -603,7 +603,7 @@ export function B2bPortalView() {
                     <input
                       className="w-full px-space-md py-2.5 bg-surface-container-low text-primary rounded-[0.125rem] font-body-md text-body-md focus:outline-none focus:ring-1 focus:ring-secondary aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-error"
                       name="expectedDeliveryDate"
-                      min={toIsoDate(addDays(new Date(), MIN_LEAD_DAYS))}
+                      min={toIsoDate(addDays(new Date(), RFQ_LEAD_DAYS))}
                       required
                       type="date"
                     />{' '}

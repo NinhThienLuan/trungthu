@@ -7,6 +7,8 @@ import { useAuthStore } from '../../stores/authStore'
 import { orderService } from '../../services/orderService'
 import { promotionService, type Promotion } from '../../services/sellerService'
 import { useApi } from '../../hooks/useApi'
+import { useLeadTimes } from '../../hooks/useLeadTimes'
+import type { LeadTime } from '../../types/product'
 import { errorMessage } from '../../apis/http'
 import { BULK_LEAD_DAYS, BULK_ORDER_QUANTITY, DEPOSIT_RATE, MIN_LEAD_DAYS, ROUTES } from '../../constants'
 import { addDays, cn, formatVnd, toIsoDate } from '../../lib/format'
@@ -96,6 +98,19 @@ function evaluateItemPromotion(item: CartItem, promotions: Promotion[]): Promoti
   return evals.sort((a, b) => (a.neededQuantity ?? 999) - (b.neededQuantity ?? 999))[0]
 }
 
+/** Giải thích ngày nhận sớm nhất của một xưởng: có sẵn / nướng theo đơn / đơn sỉ / thiếu hàng */
+function LeadNote({ lead, days, bulk }: { lead: LeadTime | null | undefined; days: number; bulk: boolean }) {
+  const text = lead?.unavailable.length
+    ? `Không đủ hàng: ${lead.unavailable.join(', ')}. Vui lòng giảm số lượng.`
+    : lead?.bakeToOrder.length
+      ? `Vượt số bánh có sẵn (${lead.bakeToOrder.join(', ')}): cả đơn nướng theo đơn, nhận sớm nhất sau ${days} ngày.`
+      : bulk && days === BULK_LEAD_DAYS
+        ? `Từ ${BULK_ORDER_QUANTITY} sản phẩm cần chọn ngày nhận cách ít nhất ${BULK_LEAD_DAYS} ngày.`
+        : days === MIN_LEAD_DAYS ? 'Hàng có sẵn — nhận sớm nhất từ ngày mai.' : null
+  if (!text) return null
+  return <p className={`px-5 pb-2 text-small ${lead?.unavailable.length ? 'text-danger' : 'text-gold-ink'}`}>{text}</p>
+}
+
 export function CartPage() {
   useDocumentTitle('Giỏ hàng')
   const { items, deliveryDates, setQuantity, remove, setDeliveryDate } = useCartStore()
@@ -105,9 +120,10 @@ export function CartPage() {
   const [checkingDates, setCheckingDates] = useState(false)
   const navigate = useNavigate()
   const groups = groupByProvider(items)
+  const { leadDays, leadTimes } = useLeadTimes(items)
   const total = groups.reduce((sum, g) => sum + g.subtotal, 0)
   const missingDate = groups.some((group) => !deliveryDates[group.providerId]
-    || deliveryDates[group.providerId] < toIsoDate(addDays(new Date(), leadDaysForItems(group.items))))
+    || deliveryDates[group.providerId] < toIsoDate(addDays(new Date(), leadDays(group))))
 
   const itemEvals = new Map<string, PromotionEval | null>()
   let totalSavings = 0
@@ -276,20 +292,15 @@ export function CartPage() {
                 <DeliveryDateField
                   providerId={group.providerId}
                   value={deliveryDates[group.providerId]}
-                  minLeadDays={leadDaysForItems(group.items)}
+                  minLeadDays={leadDays(group)}
                   onChange={(d) => setDeliveryDate(group.providerId, d)}
                 />
               </div>
-              {leadDaysForItems(group.items) === BULK_LEAD_DAYS && (
-                <p className="px-5 pb-2 text-small text-gold-ink">
-                  {group.items.reduce((sum, item) => sum + item.quantity, 0) >= BULK_ORDER_QUANTITY
-                    ? `Từ ${BULK_ORDER_QUANTITY} sản phẩm cần chọn ngày nhận cách ít nhất ${BULK_LEAD_DAYS} ngày.`
-                    : `Bánh nướng theo đơn khi vượt tồn kho cần chọn ngày nhận cách ít nhất ${BULK_LEAD_DAYS} ngày.`}
-                </p>
-              )}
-              {deliveryDates[group.providerId] && deliveryDates[group.providerId] < toIsoDate(addDays(new Date(), leadDaysForItems(group.items))) && (
+              <LeadNote lead={leadTimes[group.providerId]} days={leadDays(group)}
+                bulk={group.items.reduce((sum, item) => sum + item.quantity, 0) >= BULK_ORDER_QUANTITY} />
+              {deliveryDates[group.providerId] && deliveryDates[group.providerId] < toIsoDate(addDays(new Date(), leadDays(group))) && (
                 <p className="px-5 pb-3 text-small text-danger" role="alert">
-                  Ngày đã chọn không còn hợp lệ. Vui lòng chọn ngày nhận cách ít nhất {leadDaysForItems(group.items)} ngày.
+                  Ngày đã chọn không còn hợp lệ. Vui lòng chọn ngày nhận cách ít nhất {leadDays(group)} ngày.
                 </p>
               )}
               {dateErrors[group.providerId] && (

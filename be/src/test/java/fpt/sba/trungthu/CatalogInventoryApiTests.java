@@ -351,13 +351,14 @@ class CatalogInventoryApiTests {
         ProductVariant soldOut = variants.findById(variant.getId()).orElseThrow();
         assertThat(soldOut.getStockQuantity()).isZero();
         assertThat(soldOut.getStatus()).isEqualTo(VariantStatus.OUT_OF_STOCK);
-        assertThat(capacities.findById(capacity.getId()).orElseThrow().getReservedQuantity()).isEqualTo(1);
+        // Bánh lấy từ kho đã nướng xong: không chiếm suất nướng
+        assertThat(capacities.findById(capacity.getId()).orElseThrow().getReservedQuantity()).isZero();
 
         org.junit.jupiter.api.Assertions.assertThrows(InventoryConflictException.class,
                 () -> tx.executeWithoutResult(status -> inventory.reserve(command)));
 
         tx.executeWithoutResult(status -> inventory.release(new ReleaseStockCommand(List.of(
-                new ReleaseStockCommand.ReleaseLine(variant.getId(), 1, capacity.getId(), 1)))));
+                new ReleaseStockCommand.ReleaseLine(variant.getId(), 1, null, 0)))));
         entityManager.clear();
         ProductVariant restored = variants.findById(variant.getId()).orElseThrow();
         assertThat(restored.getStockQuantity()).isEqualTo(1);

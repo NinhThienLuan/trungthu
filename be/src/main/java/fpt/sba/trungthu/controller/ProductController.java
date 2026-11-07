@@ -6,6 +6,7 @@ import fpt.sba.trungthu.dto.response.ProductResponse;
 import fpt.sba.trungthu.entity.ProductImage;
 import fpt.sba.trungthu.entity.enumeration.ProductType;
 import fpt.sba.trungthu.repository.ProductImageRepository;
+import fpt.sba.trungthu.service.CheckoutService;
 import fpt.sba.trungthu.service.ProductService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -23,6 +24,9 @@ import org.springframework.web.server.ResponseStatusException;
 import java.net.URI;
 import java.time.Duration;
 import java.util.Base64;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -32,6 +36,7 @@ import java.util.UUID;
 public class ProductController {
 
     private final ProductService productService;
+    private final CheckoutService checkoutService;
     private final ProductImageRepository productImages;
 
     @GetMapping
@@ -48,6 +53,21 @@ public class ProductController {
 
         PageResponse<ProductResponse> pagedProducts = productService.getProducts(type, pageable);
         return ResponseEntity.ok(ApiResponseDTO.success(pagedProducts));
+    }
+
+    /** Công khai: ngày nhận sớm nhất cho số lượng khách chọn (line=variantId:số lượng, lặp lại cho từng món) */
+    @GetMapping("/lead-time")
+    public ResponseEntity<ApiResponseDTO<CheckoutService.LeadTime>> leadTime(@RequestParam List<String> line) {
+        Map<UUID, Integer> lines = new LinkedHashMap<>();
+        try {
+            for (String item : line) {
+                String[] parts = item.split(":");
+                lines.merge(UUID.fromString(parts[0]), Integer.parseInt(parts[1]), Integer::sum);
+            }
+        } catch (RuntimeException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "line phải có dạng variantId:số lượng");
+        }
+        return ResponseEntity.ok(ApiResponseDTO.success(checkoutService.leadTime(lines)));
     }
 
     @GetMapping("/{productId}")

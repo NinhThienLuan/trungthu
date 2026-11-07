@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { BANK_CODES, MIN_LEAD_DAYS, RFQ_MIN_QUANTITY } from '../constants'
+import { BANK_CODES, RFQ_LEAD_DAYS, RFQ_MIN_QUANTITY } from '../constants'
 import { addDays, toIsoDate } from '../lib/format'
 
 // Giống regex của RegisterRequest bên BE
@@ -100,7 +100,7 @@ export const rfqSchema = z.object({
   expectedDeliveryDate: z
     .string()
     .min(1, 'Vui lòng chọn ngày nhận')
-    .refine((d) => d >= toIsoDate(addDays(new Date(), MIN_LEAD_DAYS)), `Ngày nhận phải sau hôm nay ít nhất ${MIN_LEAD_DAYS} ngày`),
+    .refine((d) => d >= toIsoDate(addDays(new Date(), RFQ_LEAD_DAYS)), `Ngày nhận phải sau hôm nay ít nhất ${RFQ_LEAD_DAYS} ngày`),
   requestedQuantity: z.coerce
     .number({ invalid_type_error: 'Vui lòng nhập số lượng' })
     .int('Số lượng phải là số nguyên')

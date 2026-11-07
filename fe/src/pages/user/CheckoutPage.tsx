@@ -7,12 +7,13 @@ import { errorMessage } from '../../apis/http'
 import { groupByProvider, useCartStore, type CartItem } from '../../stores/cartStore'
 import { useAuthStore } from '../../stores/authStore'
 import { useApi } from '../../hooks/useApi'
+import { useLeadTimes } from '../../hooks/useLeadTimes'
 import { useDocumentTitle } from '../../hooks/useDocumentTitle'
 import { checkoutSchema, fieldErrors } from '../../schemas'
 import { COD_MAX_TOTAL, DEPOSIT_RATE, ROUTES } from '../../constants'
 import { cn, formatVnd } from '../../lib/format'
 import { addDays, toIsoDate } from '../../lib/format'
-import { leadDaysForItems, toCheckoutGroups, type PayChoice } from '../../lib/checkoutGroups'
+import { toCheckoutGroups, type PayChoice } from '../../lib/checkoutGroups'
 import { Field, TextInput } from '../../components/ui/Field'
 import { OrderItemsSummary } from '../../components/OrderItemsSummary'
 import { SearchableSelect, type SelectGroup } from '../../components/ui/SearchableSelect'
@@ -82,8 +83,9 @@ export function CheckoutPage() {
   const placed = useRef(false)
 
   const groups = groupByProvider(items)
+  const { leadDays } = useLeadTimes(items)
   const ready = groups.length > 0 && groups.every((group) => deliveryDates[group.providerId]
-    && deliveryDates[group.providerId] >= toIsoDate(addDays(new Date(), leadDaysForItems(group.items))))
+    && deliveryDates[group.providerId] >= toIsoDate(addDays(new Date(), leadDays(group))))
   const carts = allocate(items, recipients)
   const overAllocated = items.filter((item) => recipients.slice(1)
     .reduce((sum, r) => sum + (r.qty[item.lineId] ?? 0), 0) > item.quantity)

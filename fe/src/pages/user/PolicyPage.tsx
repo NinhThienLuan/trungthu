@@ -1,13 +1,14 @@
 import { useDocumentTitle } from '../../hooks/useDocumentTitle'
-import { DEPOSIT_RATE, HOLD_MINUTES, MIN_LEAD_DAYS } from '../../constants'
+import { BULK_LEAD_DAYS, BULK_ORDER_QUANTITY, DEPOSIT_RATE, HOLD_MINUTES, MIN_LEAD_DAYS } from '../../constants'
 import { PageHeader } from '../../components/ui/PageHeader'
 
 const SECTIONS = [
   {
     title: 'Đặt hàng & ngày nhận',
     points: [
-      `Ngày nhận phải sau ngày đặt ít nhất ${MIN_LEAD_DAYS} ngày để xưởng chuẩn bị.`,
-      'Bánh được nướng trước ngày giao 1 ngày, không lưu kho dài ngày.',
+      `Bánh có sẵn trong kho: nhận sớm nhất sau ${MIN_LEAD_DAYS} ngày (từ ngày mai).`,
+      `Đặt vượt số bánh có sẵn hoặc từ ${BULK_ORDER_QUANTITY} sản phẩm: xưởng nướng theo đơn, ngày nhận cách ít nhất ${BULK_LEAD_DAYS} ngày.`,
+      'Bánh nướng theo đơn được nướng trước ngày giao 1 ngày.',
       'Giỏ có nhiều xưởng sẽ được tách thành nhiều đơn, mỗi đơn một ngày nhận.',
     ],
   },

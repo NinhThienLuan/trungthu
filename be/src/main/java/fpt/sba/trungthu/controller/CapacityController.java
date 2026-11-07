@@ -1,5 +1,6 @@
 package fpt.sba.trungthu.controller;
 
+import fpt.sba.trungthu.common.policy.CheckoutLeadTime;
 import fpt.sba.trungthu.common.security.SecurityContextService;
 import fpt.sba.trungthu.dto.response.ApiResponseDTO;
 import fpt.sba.trungthu.entity.DailyCapacity;
@@ -37,8 +38,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class CapacityController {
     private static final ZoneId VIETNAM = ZoneId.of("Asia/Ho_Chi_Minh");
-    /** Trùng quy tắc checkout: ngày nhận >= hôm nay + 3 */
-    private static final int MIN_LEAD_DAYS = 3;
     private static final int MAX_RANGE_DAYS = 120;
 
     private final SecurityContextService security;
@@ -59,12 +58,15 @@ public class CapacityController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
         checkRange(from, to);
         Map<LocalDate, DailyCapacity> byBakeDate = byDate(providerId, from.minusDays(1), to.minusDays(1));
-        LocalDate earliest = LocalDate.now(VIETNAM).plusDays(MIN_LEAD_DAYS);
+        LocalDate today = LocalDate.now(VIETNAM);
+        LocalDate earliest = today.plusDays(CheckoutLeadTime.READY_DAYS);
         List<DayAvailability> days = new ArrayList<>();
         for (LocalDate d = from; !d.isAfter(to); d = d.plusDays(1)) {
             DailyCapacity bake = byBakeDate.get(d.minusDays(1));
-            days.add(new DayAvailability(d, !d.isBefore(earliest) && bake != null
-                    && bake.getReservedQuantity() < bake.getMaxQuantity()));
+            // Trước mốc nướng theo đơn: giao từ kho, không cần suất nướng (tồn kho kiểm khi đặt)
+            boolean fromStock = !CheckoutLeadTime.canBakeToOrder(d, today);
+            days.add(new DayAvailability(d, !d.isBefore(earliest) && (fromStock || bake != null
+                    && bake.getReservedQuantity() < bake.getMaxQuantity())));
         }
         return ResponseEntity.ok(ApiResponseDTO.success(days));
     }

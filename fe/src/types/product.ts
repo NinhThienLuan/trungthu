@@ -10,6 +10,17 @@ export interface ProductVariant {
   weightGram: number | null
   boxCapacity: number | null
   status: ProductStatus
+  /** Trạng thái cho khách, không lộ số tồn (BE ProductVariantResponse.availability) */
+  availability?: VariantAvailability
+}
+
+export type VariantAvailability = 'READY' | 'LOW' | 'BAKE_TO_ORDER' | 'UNAVAILABLE'
+
+/** GET /api/products/lead-time: ngày nhận sớm nhất cho số lượng đã chọn */
+export interface LeadTime {
+  earliestDelivery: string
+  bakeToOrder: string[]
+  unavailable: string[]
 }
 
 export interface Product {

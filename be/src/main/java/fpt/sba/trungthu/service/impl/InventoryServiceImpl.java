@@ -195,7 +195,8 @@ public class InventoryServiceImpl implements InventoryService {
             }
             ProductVariant variant = preview.get(line.variantId());
             Product product = variant.getProduct();
-            int bake = bakeQuantity(product.getProductType(), variant, line.quantity());
+            // Bánh lấy từ kho đã nướng xong: chỉ bánh nướng theo đơn mới chiếm suất nướng
+            int bake = line.futureBake() ? bakeQuantity(product.getProductType(), variant, line.quantity()) : 0;
             if (line.futureBake()) {
                 if (product.getProductType() != ProductType.LOOSE_CAKE
                         || !CheckoutLeadTime.canBakeToOrder(line.deliveryDate(), LocalDate.now(VIETNAM))
@@ -248,6 +249,8 @@ public class InventoryServiceImpl implements InventoryService {
         }
         List<UUID> variantOrder = stockDemand.keySet().stream().sorted().toList();
         if (!variantOrder.isEmpty()) {
+            // Khoá dòng tồn kho theo thứ tự id trước khi trừ: hai đơn tranh cái bánh cuối không cùng thắng
+            lockVariants(variantOrder);
             for (UUID variantId : variantOrder) {
                 int updated = entityManager.createQuery("""
                         UPDATE ProductVariant v

@@ -82,24 +82,27 @@ class CheckoutFlowTests {
 
     @Test
     void expirationJobRetriesWhenResourceReleaseRollsBack() {
-        Order order = orders.findById(checkout.checkout(cakeRequest(delivery, 2)).getFirst().getId()).orElseThrow();
+        // Đơn nướng theo đơn (nhận sau 7 ngày) mới chiếm suất nướng; bánh từ kho thì không
+        LocalDate bakeDelivery = LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh")).plusDays(7);
+        DailyCapacity bakeCapacity = capacities.save(DailyCapacity.builder().provider(cake.getProduct().getProvider())
+                .capacityDate(bakeDelivery.minusDays(1)).maxQuantity(10).reservedQuantity(0).build());
+        Order order = orders.findById(checkout.checkout(cakeRequest(bakeDelivery, 2)).getFirst().getId()).orElseThrow();
         order.setHoldExpiresAt(Instant.now().minusSeconds(1));
         orders.saveAndFlush(order);
-        cakeCapacity.setReservedQuantity(0); // giả lập lỗi hoàn suất nướng, transaction hủy phải rollback
-        capacities.saveAndFlush(cakeCapacity);
+        bakeCapacity.setReservedQuantity(0); // giả lập lỗi hoàn suất nướng, transaction hủy phải rollback
+        capacities.saveAndFlush(bakeCapacity);
 
         expirationJob.expirePendingDeposits();
         assertThat(orders.findById(order.getId()).orElseThrow().getOrderStatus()).isEqualTo(OrderStatus.PENDING_DEPOSIT);
-        assertThat(variants.findById(cake.getId()).orElseThrow().getStockQuantity()).isEqualTo(8);
         assertThat(payments.findByOrderIdOrderByCreatedAtAsc(order.getId()).getFirst().getPaymentStatus())
                 .isEqualTo(TransactionStatus.PENDING);
 
-        cakeCapacity.setReservedQuantity(2);
-        capacities.saveAndFlush(cakeCapacity);
+        bakeCapacity.setReservedQuantity(2);
+        capacities.saveAndFlush(bakeCapacity);
         expirationJob.expirePendingDeposits();
         assertThat(orders.findById(order.getId()).orElseThrow().getOrderStatus()).isEqualTo(OrderStatus.CANCELLED);
         assertThat(variants.findById(cake.getId()).orElseThrow().getStockQuantity()).isEqualTo(10);
-        assertThat(capacities.findById(cakeCapacity.getId()).orElseThrow().getReservedQuantity()).isZero();
+        assertThat(capacities.findById(bakeCapacity.getId()).orElseThrow().getReservedQuantity()).isZero();
     }
 
     @BeforeEach
@@ -116,6 +119,26 @@ class CheckoutFlowTests {
         cakeCapacity = capacity(cakeProvider);
         boxCapacity = capacity(boxProvider);
         when(security.getCurrentUser()).thenReturn(customer);
+    }
+
+    @Test
+    void stockCakesShipFromTomorrowAndOverStockBakesToOrder() {
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh"));
+        // Kho có 10 cái: đặt 2 nhận từ ngày mai; đặt 11 thì cả dòng nướng theo đơn, nhận từ 7 ngày
+        var ready = checkout.leadTime(java.util.Map.of(cake.getId(), 2));
+        assertThat(ready.earliestDelivery()).isEqualTo(today.plusDays(1));
+        assertThat(ready.bakeToOrder()).isEmpty();
+        var overStock = checkout.leadTime(java.util.Map.of(cake.getId(), 11));
+        assertThat(overStock.earliestDelivery()).isEqualTo(today.plusDays(7));
+        assertThat(overStock.bakeToOrder()).hasSize(1);
+
+        int reservedBefore = capacities.findById(cakeCapacity.getId()).orElseThrow().getReservedQuantity();
+        checkout.checkout(cakeRequest(today.plusDays(1), 2));
+        assertThat(variants.findById(cake.getId()).orElseThrow().getStockQuantity()).isEqualTo(8);
+        assertThat(capacities.findById(cakeCapacity.getId()).orElseThrow().getReservedQuantity()).isEqualTo(reservedBefore);
+        assertThatThrownBy(() -> checkout.preview(cakeRequest(today.plusDays(2), 11)))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("Chọn ngày nhận cách ít nhất 7 ngày");
     }
 
     @Test
@@ -144,8 +167,9 @@ class CheckoutFlowTests {
         assertThat(instruction.imageUrl()).contains("img.vietqr.io/image/VCB-123456789-compact2.svg")
                 .contains("amount=160000");
         assertThat(variants.findById(cake.getId()).orElseThrow().getStockQuantity()).isEqualTo(8);
-        assertThat(capacities.findById(cakeCapacity.getId()).orElseThrow().getReservedQuantity()).isEqualTo(2);
-        assertThat(capacities.findById(boxCapacity.getId()).orElseThrow().getReservedQuantity()).isEqualTo(2);
+        // Nhận sau 5 ngày: bánh lấy từ kho (đã nướng), không chiếm suất nướng
+        assertThat(capacities.findById(cakeCapacity.getId()).orElseThrow().getReservedQuantity()).isZero();
+        assertThat(capacities.findById(boxCapacity.getId()).orElseThrow().getReservedQuantity()).isZero();
 
         lifecycle.cancel(qr.getId());
         assertThat(variants.findById(box.getId()).orElseThrow().getStockQuantity()).isEqualTo(10);
@@ -190,7 +214,7 @@ class CheckoutFlowTests {
         assertThat(payments.sumSuccessfulAmountByOrderId(qr.getId())).isEqualByComparingTo("320000");
         assertThat(orders.findById(qr.getId()).orElseThrow().getPaymentStatus())
                 .isEqualTo(OrderPaymentStatus.PAID_FULL);
-        assertThat(capacities.findById(boxCapacity.getId()).orElseThrow().getReservedQuantity()).isEqualTo(2);
+        assertThat(capacities.findById(boxCapacity.getId()).orElseThrow().getReservedQuantity()).isZero();
     }
 
     @Test

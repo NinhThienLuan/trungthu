@@ -5,7 +5,8 @@ import type { User, UserRole } from '../types/user'
 export const BRAND = 'Nguyệt Viên Đài'
 
 // Quy tắc nghiệp vụ (SRS) — đổi ở đây, không viết số cứng trong component
-export const MIN_LEAD_DAYS = 3 // ngày nhận >= hôm nay + 3
+export const MIN_LEAD_DAYS = 1 // bánh có sẵn trong kho: nhận từ ngày mai
+export const RFQ_LEAD_DAYS = 3 // RFQ sỉ: ngày nhận >= hôm nay + 3 (RfqServiceImpl)
 export const BULK_ORDER_QUANTITY = 20 // từ 20 sản phẩm/xưởng cần chuẩn bị lâu hơn
 /** Số lượng tối đa mỗi loại bánh trong một đơn lẻ (mua nhiều hơn: đặt trước bánh tươi hoặc báo giá sỉ) */
 export const MAX_RETAIL_QUANTITY = 20

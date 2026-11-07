@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Icon } from '../../components/Icon'
+import { DeliveryEstimate } from '../../components/DeliveryEstimate'
 import { ProductReviews } from '../../components/ProductReviews'
 import { ErrorState, Spinner } from '../../components/ui/States'
 import { productService } from '../../services/productService'
@@ -299,6 +300,9 @@ export function ProductDetailPage() {
                         <span>Đặt Mua Thượng Tuyển Ngay</span>
                       </button>
                     </div>
+                    {variant && product.productType !== 'GIFT_SET' && product.productType !== 'BOX_SHELL' && (
+                      <DeliveryEstimate variantId={variant.id} quantity={quantity} availability={variant.availability} />
+                    )}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-space-sm">
                       <button
                         className="bg-surface-container-lowest text-ink-dark hover:bg-surface-container px-space-md py-2.5 rounded-[0.125rem] shadow-sm flex items-center justify-center gap-space-xs font-label-md text-label-md uppercase tracking-wider transition-colors"

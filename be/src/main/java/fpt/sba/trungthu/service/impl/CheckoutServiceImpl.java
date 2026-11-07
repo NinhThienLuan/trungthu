@@ -131,6 +131,39 @@ public class CheckoutServiceImpl implements CheckoutService {
         return created;
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public LeadTime leadTime(Map<UUID, Integer> lines) {
+        if (lines.isEmpty() || lines.size() > MAX_ITEMS) throw badRequest("Invalid cart item");
+        LocalDate today = LocalDate.now(VIETNAM);
+        List<String> bakeToOrder = new ArrayList<>();
+        List<String> unavailable = new ArrayList<>();
+        long total = 0;
+        for (Map.Entry<UUID, Integer> entry : lines.entrySet()) {
+            int quantity = entry.getValue();
+            if (quantity <= 0 || quantity > 10_000) throw badRequest("Invalid cart item");
+            total += quantity;
+            ProductVariant variant = variants.findById(entry.getKey())
+                    .orElseThrow(() -> badRequest("Sản phẩm không tồn tại"));
+            Product product = variant.getProduct();
+            String name = product.getName() + " - " + variant.getVariantName();
+            boolean listed = product.getStatus() == ProductStatus.ACTIVE || product.getStatus() == ProductStatus.SOLD_OUT;
+            // Cùng điều kiện với stockReady / futureBake khi đặt hàng
+            boolean ready = variant.getStatus() == VariantStatus.IN_STOCK && product.getStatus() == ProductStatus.ACTIVE
+                    && variant.getStockQuantity() != null && variant.getStockQuantity() >= quantity;
+            if (ready) continue;
+            if (product.getProductType() == ProductType.LOOSE_CAKE && listed
+                    && (variant.getStatus() == VariantStatus.IN_STOCK || variant.getStatus() == VariantStatus.OUT_OF_STOCK)) {
+                bakeToOrder.add(name);
+            } else {
+                unavailable.add(name);
+            }
+        }
+        int days = Math.max(CheckoutLeadTime.requiredDays(total),
+                bakeToOrder.isEmpty() ? CheckoutLeadTime.READY_DAYS : CheckoutLeadTime.EXTENDED_DAYS);
+        return new LeadTime(today.plusDays(days), bakeToOrder, unavailable);
+    }
+
     private List<Plan> plan(CheckoutRequest request, boolean lock) {
         if (request == null || request.groups() == null || request.groups().isEmpty()
                 || request.groups().size() > MAX_GROUPS) {
@@ -164,7 +197,7 @@ public class CheckoutServiceImpl implements CheckoutService {
             if (group.deliveryDate().isBefore(today.plusDays(minLeadDays))) {
                 throw badRequest("Đơn từ " + CheckoutLeadTime.BULK_QUANTITY + " sản phẩm cần đặt trước ít nhất "
                         + CheckoutLeadTime.EXTENDED_DAYS + " ngày; đơn ít hơn cần ít nhất "
-                        + CheckoutLeadTime.STANDARD_DAYS + " ngày");
+                        + CheckoutLeadTime.READY_DAYS + " ngày");
             }
             sortedItems.sort(Comparator.comparing(item -> item.key().toString()));
             Set<UUID> seenVariants = new HashSet<>();
@@ -233,7 +266,7 @@ public class CheckoutServiceImpl implements CheckoutService {
                 if (type == ProductType.BOX_SHELL && contents == null) {
                     throw badRequest("Hộp quà chỉ bán kèm bánh — hãy dùng Tự phối hộp quà để chọn bánh cho hộp");
                 }
-                long bake = bakeFor(variant, item.quantity());
+                long bake = bakeFor(variant, item.quantity(), group.deliveryDate(), today);
                 if (bake > Integer.MAX_VALUE - (long) bakeQuantity) throw badRequest("Baking quantity is too large");
                 bakeQuantity += (int) bake;
                 BigDecimal amount = variant.getPrice().multiply(BigDecimal.valueOf(item.quantity()));
@@ -309,9 +342,15 @@ public class CheckoutServiceImpl implements CheckoutService {
         return result;
     }
 
-    private static long bakeFor(ProductVariant variant, int quantity) {
+    /** Thành phần set quà: giữ cách tính như InventoryServiceImpl.expandSet (bánh trong set tính suất nướng) */
+    private static long setBakeFor(ProductVariant component, int quantity) {
+        return component.getProduct().getProductType() == ProductType.LOOSE_CAKE ? quantity : 0;
+    }
+
+    /** Chỉ bánh nướng theo đơn mới chiếm suất nướng; bánh lấy từ kho đã nướng xong */
+    private static long bakeFor(ProductVariant variant, int quantity, LocalDate deliveryDate, LocalDate today) {
         return switch (variant.getProduct().getProductType()) {
-            case LOOSE_CAKE -> quantity;
+            case LOOSE_CAKE -> CheckoutLeadTime.canBakeToOrder(deliveryDate, today) ? quantity : 0;
             // Vỏ hộp không nướng: bánh trong hộp là các dòng bánh lẻ riêng
             case BOX_SHELL, GREETING_CARD, ADDON_SERVICE, GIFT_SET -> 0;
         };
@@ -362,7 +401,7 @@ public class CheckoutServiceImpl implements CheckoutService {
             else others = others.add(charged.multiply(BigDecimal.valueOf(take)));
             list = list.add(component.getPrice().setScale(0, RoundingMode.DOWN)
                     .multiply(BigDecimal.valueOf(take)));
-            bake += bakeFor(component, take);
+            bake += setBakeFor(component, take);
         }
         // Như expandSet: phần lệch do làm tròn dồn vào vỏ hộp để tổng = salePrice × số set
         if (sale != null) {

@@ -91,7 +91,8 @@ class GiftSetCheckoutTests {
     @Transactional
     void checkoutCapacityConflictIncludesBakeDateAndRemainingSlots() throws Exception {
         User buyer = users.findByEmail("buyer@gmail.com").orElseThrow();
-        LocalDate delivery = LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh")).plusDays(5);
+        // Nhận sau 8 ngày: bánh nướng theo đơn nên chiếm suất nướng của ngày hôm trước
+        LocalDate delivery = LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh")).plusDays(8);
         Product cake = products.findAll().stream()
                 .filter(p -> p.getProductType() == ProductType.LOOSE_CAKE && p.getStatus() == ProductStatus.ACTIVE)
                 .filter(p -> capacities.findByProviderIdAndCapacityDate(p.getProvider().getId(), delivery.minusDays(1)).isPresent())

@@ -54,23 +54,25 @@ class CapacityApiTests {
 
     @Test
     void deliveryDayNeedsFreeBakeCapacityOnThePreviousDayAndLeadTime() throws Exception {
-        LocalDate d = today.plusDays(5);
+        // Từ mốc nướng theo đơn (7 ngày): cần suất nướng trống ở ngày trước đó
+        LocalDate d = today.plusDays(8);
         capacities.saveAndFlush(DailyCapacity.builder().provider(provider).capacityDate(d.minusDays(1))
                 .maxQuantity(10).reservedQuantity(0).build());
         capacities.saveAndFlush(DailyCapacity.builder().provider(provider).capacityDate(d)
                 .maxQuantity(10).reservedQuantity(10).build());
-        capacities.saveAndFlush(DailyCapacity.builder().provider(provider).capacityDate(today)
-                .maxQuantity(10).reservedQuantity(0).build());
 
         // Công khai, không cần đăng nhập
         mvc.perform(get("/api/providers/{id}/available-dates", provider.getId())
-                        .param("from", today.plusDays(1).toString()).param("to", d.plusDays(1).toString()))
+                        .param("from", today.toString()).param("to", d.plusDays(1).toString()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.length()").value(6))
-                .andExpect(jsonPath("$.data[0].available").value(false)) // ngày nướng = hôm nay nhưng chưa đủ 3 ngày
-                .andExpect(jsonPath("$.data[4].date").value(d.toString()))
-                .andExpect(jsonPath("$.data[4].available").value(true))
-                .andExpect(jsonPath("$.data[5].available").value(false)); // ngày nướng d đã kín
+                .andExpect(jsonPath("$.data.length()").value(10))
+                .andExpect(jsonPath("$.data[0].available").value(false)) // hôm nay: sớm nhất là ngày mai
+                .andExpect(jsonPath("$.data[1].available").value(true))  // ngày mai: giao từ kho, không cần suất nướng
+                .andExpect(jsonPath("$.data[6].available").value(true))
+                .andExpect(jsonPath("$.data[7].available").value(false)) // nướng theo đơn nhưng chưa mở suất nướng
+                .andExpect(jsonPath("$.data[8].date").value(d.toString()))
+                .andExpect(jsonPath("$.data[8].available").value(true))
+                .andExpect(jsonPath("$.data[9].available").value(false)); // ngày nướng d đã kín
     }
 
     @Test
