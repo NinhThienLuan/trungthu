@@ -11,6 +11,8 @@ import java.util.UUID;
 
 /** 409 khi giữ hàng: thiếu tồn kho hoặc hết suất nướng. Có tên món / ngày nhận thì ghi rõ để khách biết sửa gì */
 public class InventoryConflictException extends ResponseStatusException {
+    private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public record Details(String code, UUID providerId, UUID variantId, Integer availableStock,
             Integer requestedQuantity, LocalDate bakeDate, Integer remainingCapacity) {}
@@ -19,6 +21,13 @@ public class InventoryConflictException extends ResponseStatusException {
 
     public InventoryConflictException(String code, UUID providerId, UUID variantId, LocalDate bakeDate) {
         this(code, providerId, variantId, bakeDate, null, null, null, null);
+    }
+
+    public InventoryConflictException(String code, UUID providerId, UUID variantId, LocalDate bakeDate,
+            String productName) {
+        this(code, providerId, variantId, bakeDate,
+                "Sản phẩm " + productName + " không còn nhận đặt. Vui lòng chọn sản phẩm khác.",
+                null, null, null);
     }
 
     private InventoryConflictException(String code, UUID providerId, UUID variantId, LocalDate bakeDate,
