@@ -15,8 +15,10 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -72,4 +74,9 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
               AND o.holdExpiresAt <= :deadline ORDER BY o.holdExpiresAt, o.id
             """)
     List<Order> findExpiredPendingDeposits(@Param("deadline") Instant deadline, Pageable pageable);
+
+    long countByOrderStatus(OrderStatus orderStatus);
+
+    @Query("SELECT COALESCE(SUM(o.totalAmount), 0) FROM Order o WHERE o.orderStatus IN :statuses")
+    BigDecimal sumTotalAmountByOrderStatusIn(@Param("statuses") Collection<OrderStatus> statuses);
 }

@@ -53,4 +53,9 @@ public interface StoreComplianceDocRepository extends JpaRepository<StoreComplia
      * Đếm số tài liệu APPROVED của Provider
      */
     long countByProviderIdAndVerificationStatus(UUID providerId, ComplianceDocStatus status);
+
+    /**
+     * Đếm số tài liệu theo trạng thái xác minh (Admin dashboard)
+     */
+    long countByVerificationStatus(ComplianceDocStatus status);
 }

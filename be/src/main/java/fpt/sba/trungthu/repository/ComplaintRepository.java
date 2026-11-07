@@ -16,4 +16,6 @@ public interface ComplaintRepository extends JpaRepository<Complaint, UUID> {
     List<Complaint> findAllByOrderByCreatedAtDesc();
 
     boolean existsByOrderIdAndStatusIn(UUID orderId, Collection<ComplaintStatus> statuses);
+
+    long countByStatusIn(Collection<ComplaintStatus> statuses);
 }

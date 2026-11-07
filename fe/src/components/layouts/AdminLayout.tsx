@@ -3,7 +3,7 @@ import { NavLink, Outlet, ScrollRestoration, useLocation, useNavigate } from 're
 import { Icon } from '../Icon'
 import { handleStitchLinkClick } from '../../routes/stitchPaths'
 import { FlashToast } from '../ui/FlashToast'
-    import { SellerStatusBanner } from '../SellerStatusBanner'
+import { SellerStatusBanner } from '../SellerStatusBanner'
 import { cn } from '../../lib/format'
 import { useAuthStore } from '../../stores/authStore'
 
@@ -22,6 +22,7 @@ const NAV = [
   { to: '/seller/settings', icon: 'tune', label: 'Cài Đặt Bán Hàng' },
 ]
 const ADMIN_NAV = [
+  { to: '/admin', icon: 'dashboard', label: 'Bảng Điều Khiển', end: true },
   { to: '/admin/kyc', icon: 'biotech', label: 'Thẩm Định Chất Lượng' },
   { to: '/admin/subscriptions', icon: 'receipt_long', label: 'Gói Bán Hàng' },
   { to: '/admin/complaints', icon: 'report_problem', label: 'Khiếu Nại' },
@@ -59,14 +60,14 @@ export function AdminLayout() {
       {menuOpen && <div className="fixed inset-0 z-40 bg-ink-dark/50 lg:hidden" onClick={() => setMenuOpen(false)} aria-hidden />}
       <aside className={cn('fixed left-0 top-0 h-full w-72 overflow-y-auto bg-primary-container z-50 flex flex-col justify-between shadow-[4px_0_24px_rgba(5,19,34,0.18)] no-print print:hidden transition-transform lg:translate-x-0', menuOpen ? 'translate-x-0' : '-translate-x-full')}>
         <div className="flex flex-col">
-          <NavLink to={isAdmin ? '/admin/kyc' : '/'} className="h-20 px-space-lg flex items-center justify-between bg-ink-dark/40" title={isAdmin ? 'Khu vực quản trị sàn' : 'Về trang chủ sàn'}>
+          <NavLink to="/" className="h-20 px-space-lg flex items-center justify-between bg-ink-dark/40" title="Về trang chủ sàn">
             <div className="flex items-center gap-space-sm">
               <div className="w-9 h-9 rounded-[0.25rem] bg-primary flex items-center justify-center">
                 <Icon name="nest_clock_farsight_analog" className="text-secondary-fixed text-[22px]" aria-hidden />
               </div>
               <div className="flex flex-col">
                 <span className="font-headline-sm text-headline-sm text-champagne-light tracking-wide leading-none">Nguyệt Viên</span>
-                <span className="font-label-sm text-label-sm text-secondary-fixed uppercase tracking-[0.2em] mt-1">{isAdmin ? 'Quản Trị Sàn' : 'Đài Nghệ Nhân'}</span>
+                <span className="font-label-sm text-label-sm text-secondary-fixed uppercase tracking-[0.2em] mt-1">Đài Nghệ Nhân</span>
               </div>
             </div>
           </NavLink>
@@ -78,15 +79,16 @@ export function AdminLayout() {
                 <span className="font-label-sm text-label-sm text-secondary-fixed-dim uppercase tracking-wider truncate">
                   {user?.role === 'PLATFORM_ADMIN' ? 'Hệ Thống Sàn' : 'Gian Hàng Nghệ Nhân'}
                 </span>
-                <span className="font-body-sm text-body-sm text-champagne-light font-medium truncate">
-                  {user?.storeName || user?.fullName || 'Đông Phương • Hải Phòng'}
+                <span className="font-headline-sm text-headline-sm text-champagne-light truncate mt-0.5">
+                  {user?.role === 'PLATFORM_ADMIN' ? 'Tổng Đài Sàn' : user?.storeName || 'Tiệm Trưởng'}
                 </span>
               </div>
-              <Icon name="verified" className="text-secondary-fixed text-[18px]" aria-hidden />
+              <span className="px-2 py-0.5 rounded-[0.25rem] bg-secondary-fixed text-primary text-[10px] font-bold uppercase tracking-wider shrink-0">
+                {user?.role === 'PLATFORM_ADMIN' ? 'ADMIN' : 'CHỦ TIỆM'}
+              </span>
             </div>
           </div>
 
-          {/* API /api/provider/** chỉ nhận seller -> admin không thấy menu gian hàng */}
           {!isAdmin && <div className="px-space-md mt-space-xs">
             <span className="font-label-sm text-label-sm text-outline-variant/60 uppercase tracking-[0.16em] px-space-sm mb-space-xs block">
               Hệ Thống Gian Hàng
@@ -108,7 +110,7 @@ export function AdminLayout() {
           </div>}
           <nav className="flex flex-col gap-1 px-space-md" aria-label="Quản trị sàn">
             {isAdmin && ADMIN_NAV.map((item) => (
-              <NavLink key={item.to} to={item.to} className={linkClass}>
+              <NavLink key={item.to} to={item.to} end={item.end} className={linkClass}>
                 <Icon name={item.icon} className="text-[20px] text-secondary-fixed-dim" aria-hidden />
                 <span className="font-body-md text-body-md">{item.label}</span>
               </NavLink>

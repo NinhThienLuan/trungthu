@@ -37,6 +37,7 @@ import { SubscriptionPage } from '../pages/admin/SubscriptionPage'
 import { SubscriptionsAdminPage } from '../pages/admin/SubscriptionsAdminPage'
 import { QualityReviewPage } from '../pages/admin/QualityReviewPage'
 import { DashboardPage } from '../pages/admin/DashboardPage'
+import { AdminDashboardPage } from '../pages/admin/AdminDashboardPage'
 
 const stitch = (title: string | undefined, page: ReactNode) => <StitchPage title={title}>{page}</StitchPage>
 
@@ -111,7 +112,8 @@ export const router = createBrowserRouter([
         // Khu vực Admin sàn duy nhất
         element: <ProtectedRoute allowedRoles={['PLATFORM_ADMIN']} />,
         children: [
-          { path: '/admin', element: <Navigate to="/admin/kyc" replace /> },
+          { path: '/admin', element: <AdminDashboardPage /> },
+          { path: '/admin/dashboard', element: <AdminDashboardPage /> },
           { path: '/admin/kyc', element: <QualityReviewPage /> },
           { path: '/admin/subscriptions', element: <SubscriptionsAdminPage /> },
           { path: '/admin/complaints', element: <ComplaintsPage scope="admin" /> },
