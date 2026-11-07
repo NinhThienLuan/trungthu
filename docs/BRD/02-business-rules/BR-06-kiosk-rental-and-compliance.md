@@ -12,8 +12,11 @@ Quy định chi tiết mô hình kinh doanh **Pure Provider SaaS Model**: các g
 ### 2.1. Nạp phí kích hoạt quyền bán SaaS
 - Provider chuyển khoản phí tới tài khoản sàn; đây là nạp phí dịch vụ, không phải ví có số dư/nạp/rút.
 - BE1 cấu hình mức phí, thời hạn, giới hạn SKU trong quyền bán. MVP không bắt buộc xây hai hạng STANDARD/VIP hay quyền quảng cáo.
-- Ghi Subscription PENDING_PAYMENT và giao dịch SUBSCRIPTION_FEE/PENDING, nội dung SUB-[SellerId]. Admin đối soát thực nhận rồi chuyển giao dịch SUCCESS và Subscription ACTIVE trong cùng transaction, có phân quyền và chống xác nhận lặp.
-- Không dùng webhook. BE1 quyết định đủ điều kiện bán qua ProviderPolicy (KYC, quyền bán ACTIVE, trạng thái tài khoản/công tắc nhận đơn); BE3 kiểm tra lại khi Checkout.
+- Khi seller chọn gói, backend chốt giá và tạo Subscription `PENDING_PAYMENT` cùng giao dịch `SUBSCRIPTION_FEE/PENDING` có mã payOS duy nhất. Seller quét VietQR của giao dịch trong app.
+- Backend xác minh chữ ký webhook và đối chiếu mã giao dịch, trạng thái, số tiền qua API payOS. Khi nhận đúng số tiền, backend ghi `SUCCESS`, thời điểm nhận tiền và kích hoạt Subscription trong cùng transaction. Webhook gửi lặp được xử lý một lần.
+- Mỗi seller có tối đa một yêu cầu đang chờ. Gói có hiệu lực đến hết năm theo giờ Việt Nam. Trong thời hạn đó, seller chỉ có thể nâng cấp với toàn bộ phí gói mới. Gói cũ tiếp tục có hiệu lực cho đến khi thanh toán gói mới thành công.
+- Phiên chưa nhận tiền có thể được hủy hoặc hết hạn. Khoản tiền sai lệch cần đối soát. Admin tiếp tục kích hoạt thủ công các yêu cầu chuyển khoản trước khi có payOS.
+- ProviderPolicy kiểm tra KYC, gói còn hiệu lực, trạng thái tài khoản và công tắc nhận đơn. BE3 kiểm tra lại khi checkout.
 - BE4 quản lý mapping/repository PaymentTransaction dùng chung; xác nhận kích hoạt SaaS thuộc BE1, không đưa vào Order lifecycle BE3.
 
 ### 2.2. Quy tắc Kiểm Duyệt Hồ Sơ Pháp Lý & An Toàn Thực Phẩm (Compliance & Food Safety Verification)
@@ -42,10 +45,10 @@ Quy định chi tiết mô hình kinh doanh **Pure Provider SaaS Model**: các g
     ├─► 2. Nạp phí kích hoạt quyền bán theo cấu hình BE1
     │
     ▼
-[Chuyển Khoản Phí SaaS Cho Admin Sàn]
+[Thanh toán phí SaaS cho sàn qua payOS]
     │
-    ├─► Provider chuyển khoản với cú pháp SUB-[SellerId]
-    ├─► Platform Admin đối soát sao kê và bấm "Xác Nhận Kích Hoạt Gói"
+    ├─► Provider quét VietQR của yêu cầu đang chờ
+    ├─► Backend xác minh webhook và đối chiếu giao dịch với payOS
     │
     ▼
 [Kích Hoạt Gói SaaS (Status = ACTIVE)]
