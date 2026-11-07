@@ -90,6 +90,8 @@ entity.transitionStatus(NewStatus.VALUE);  // validates via switch-case then set
 ---
 
 ## Known Gotchas
+- **PostgreSQL Parameter Inference with `:param IS NULL`**: Passing null/typed parameters to `:from IS NULL` in JPA queries causes PostgreSQL to throw `could not determine data type of parameter` (HTTP 500 on Heroku/Production). Solved using SpEL: `(:#{#from == null} = true OR b.deliveryDate >= :from)`.
+
 - **`"ACTIVE".equals(user.getStatus())`** → ALWAYS `false` now that `status` is `UserStatus` enum → causes 403. Use `user.getStatus() != UserStatus.ACTIVE` or `== UserStatus.ACTIVE`.
 - **`UserRepository.findByEmailAndStatus(String, String)`** → bridged to `(String, UserStatus)` via `default` interface method — still works if you pass String, but prefer enum overload directly.
 - **`@Check` on `ProductVariant`**: `box_capacity IS NULL OR box_capacity > 0` (was `IN (2, 4, 6)` — caused H2 test failures).
