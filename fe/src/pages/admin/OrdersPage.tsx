@@ -32,9 +32,9 @@ export function OrdersPage() {
   useDocumentTitle('Đơn hàng')
   const [tab, setTab] = useState<'orders' | 'bake'>('orders')
   return (
-    <div className="page section flex flex-col gap-6">
-      <div className="no-print">
-        <PageHeader eyebrow="Gian hàng" title="Đơn hàng" description="Quản lý đơn hàng và tổng hợp phiếu nướng theo ngày." />
+    <div className={cn('page flex flex-col', tab === 'bake' ? 'gap-4 py-5' : 'section gap-6')}>
+      <div className={cn('no-print', tab === 'bake' && '[&>div:first-child]:pb-4 max-sm:[&_h1]:text-headline-lg-mobile max-sm:[&_button]:px-2.5 max-sm:[&_button]:tracking-normal')}>
+        <PageHeader eyebrow="Gian hàng" title="Đơn hàng" description="Quản lý đơn hàng và tổng hợp phiếu nướng theo ngày, tháng." />
         <div className="flex flex-wrap gap-2" aria-label="Chế độ xem đơn hàng">
           <button type="button" aria-pressed={tab === 'orders'} className={cn('chip', tab === 'orders' && 'chip-active')} onClick={() => setTab('orders')}>Danh sách đơn hàng</button>
           <button type="button" aria-pressed={tab === 'bake'} className={cn('chip', tab === 'bake' && 'chip-active')} onClick={() => setTab('bake')}>Phiếu nướng hôm nay</button>
