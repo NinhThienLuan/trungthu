@@ -52,7 +52,8 @@ export function ProductDetailPage() {
   }
 
   const variant = product.variants.find((v) => v.id === variantId) ?? product.variants[0]
-  const promotions = (running ?? []).filter((p) => !p.productId || p.productId === product.id)
+  // BE không áp khuyến mãi cho set quà (giá set đã cố định)
+  const promotions = product.productType === 'GIFT_SET' ? [] : (running ?? []).filter((p) => !p.productId || p.productId === product.id)
   const price = variant?.price ?? 0
   const canPreorder = product.productType === 'LOOSE_CAKE'
   // Đơn lẻ tối đa MAX_RETAIL_QUANTITY mỗi loại (bánh nướng theo đơn cũng vậy); mua nhiều hơn -> báo giá sỉ
@@ -381,8 +382,8 @@ function PromotionBox({ promotions, quantity, unitPrice }: { promotions: Promoti
       } else {
         const needed = bundle - remainder
         dynamicNote = quantity >= p.buyQuantity && remainder === p.buyQuantity
-          ? `Bạn đã chọn ${quantity} cái! Thêm 1 bánh nữa để nhận MIỄN PHÍ chiếc thứ ${bundle}!`
-          : `Chọn thêm ${needed} cái nữa (đủ ${bundle} cái) để được tặng 1 bánh miễn phí!`
+          ? `Bạn đã chọn ${quantity} cái! Thêm ${needed} bánh nữa để được TẶNG ${p.freeQuantity}!`
+          : `Chọn thêm ${needed} cái nữa (đủ ${bundle} cái) để được tặng ${p.freeQuantity} bánh miễn phí!`
       }
     } else if (p.type === 'PERCENT_OFF' && p.minQuantity && p.percentOff) {
       rate = (p.percentOff ?? 0) / 100

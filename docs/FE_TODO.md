@@ -125,10 +125,10 @@ Dưới đây là 4 hiệu ứng animation được đúc kết từ concept thi
 | **Thạch (FE2)** | Dọn dẹp các nút Set quà ngoài scope trong `BakeBatchPage` | **Cao (P2)** | Chưa bắt đầu |
 | **Thạch (FE2)** | Hoàn thiện luồng KYC & Gói SaaS (Banner, Modal duyệt) | **Trung bình (P3)** | Đã triển khai FE; chờ kiểm thử tích hợp BE |
 | **Thạch (FE2)** | Xóa raw emoji trong `Header.tsx` | **Trung bình (P4)** | Chưa bắt đầu |
-| **Tuấn (FE1)** | Xử lý lỗi tồn kho Checkout (bỏ hardcode 99) | **Cao (P1)** | Chưa bắt đầu |
-| **Tuấn (FE1)** | Thêm Guest Guard cho trang Auth (`/login`, `/register`) | **Trung bình (P2)** | Chưa bắt đầu |
-| **Tuấn (FE1)** | Xử lý Session Timeout chuyển hướng tại `http.ts` | **Trung bình (P3)** | Chưa bắt đầu |
-| **Tuấn (FE1)** | Dọn dẹp các hàm Mock cũ trong `apis/` | **Thấp (P4)** | Chưa bắt đầu |
+| **Tuấn (FE1)** | Xử lý lỗi tồn kho Checkout (bỏ hardcode 99) | **Cao (P1)** | Hoàn thành (e241c6e) |
+| **Tuấn (FE1)** | Thêm Guest Guard cho trang Auth (`/login`, `/register`) | **Trung bình (P2)** | Hoàn thành (e241c6e) |
+| **Tuấn (FE1)** | Xử lý Session Timeout chuyển hướng tại `http.ts` | **Trung bình (P3)** | Hoàn thành (e241c6e) |
+| **Tuấn (FE1)** | Dọn dẹp các hàm Mock cũ trong `apis/` | **Thấp (P4)** | Hoàn thành (e241c6e) |
 | **Tuấn (FE1)** | Tích hợp 4 hiệu ứng Animation trang chủ (Phần 3) | **Mở rộng (P4)** | Tham khảo |
 
 ---

@@ -46,7 +46,7 @@ function evaluateItemPromotion(item: CartItem, promotions: Promotion[]): Promoti
         evals.push({
           promotion: p,
           status: 'achieved',
-          message: `Đã kích hoạt ${p.label}: Đã tặng ${freeGained} bánh miễn phí (4 bánh chỉ tính tiền 3)!`,
+          message: `Đã kích hoạt ${p.label}: Đã tặng ${freeGained} bánh miễn phí (${bundle} bánh chỉ tính tiền ${p.buyQuantity})!`,
           savedAmount,
         })
       } else {
@@ -55,8 +55,8 @@ function evaluateItemPromotion(item: CartItem, promotions: Promotion[]): Promoti
         const message = sets > 0
           ? `Đã nhận ${freeGained} bánh miễn phí. Thêm ${needed} bánh nữa để nhận thêm ${p.freeQuantity} bánh tặng!`
           : isReadyForFreeCake
-            ? `Bạn đã chọn ${item.quantity} bánh! Hãy thêm 1 bánh nữa để nhận MIỄN PHÍ chiếc thứ 4 (4 bánh chỉ tính tiền 3)`
-            : `Chọn đủ ${bundle} bánh (Mua ${p.buyQuantity} tặng ${p.freeQuantity}) để nhận 1 bánh miễn phí`
+            ? `Bạn đã chọn ${item.quantity} bánh! Thêm ${needed} bánh nữa để được TẶNG ${p.freeQuantity} (${bundle} bánh chỉ tính tiền ${p.buyQuantity})`
+            : `Chọn đủ ${bundle} bánh (Mua ${p.buyQuantity} tặng ${p.freeQuantity}) để nhận ${p.freeQuantity} bánh miễn phí`
 
         evals.push({
           promotion: p,
@@ -113,6 +113,11 @@ export function CartPage() {
   let totalSavings = 0
   for (const item of items) {
     const ev = evaluateItemPromotion(item, promotions ?? [])
+    // Như BE (CheckoutServiceImpl.promote): đơn giá sau giảm làm tròn xuống đồng, tổng = đơn giá × số lượng
+    if (ev && ev.savedAmount > 0) {
+      const list = item.unitPrice * item.quantity
+      ev.savedAmount = list - Math.floor((list - ev.savedAmount) / item.quantity) * item.quantity
+    }
     itemEvals.set(item.lineId, ev)
     if (ev && ev.savedAmount > 0) {
       totalSavings += ev.savedAmount
@@ -226,7 +231,7 @@ export function CartPage() {
                     {(() => {
                       const promo = itemEvals.get(item.lineId)
                       if (!promo) return null
-                      const isFreeCakeButton = promo.neededQuantity === 1 && item.quantity >= 3
+                      const isFreeCakeButton = promo.promotion.type === 'BUY_X_GET_Y' && item.quantity % ((promo.promotion.buyQuantity ?? 0) + (promo.promotion.freeQuantity ?? 0)) >= (promo.promotion.buyQuantity ?? 0)
                       return (
                         <div className={cn(
                           'mt-2 flex flex-wrap items-center justify-between gap-2 rounded-[0.125rem] px-3 py-1.5 text-xs transition-colors',
