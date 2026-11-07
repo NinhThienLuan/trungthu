@@ -93,7 +93,10 @@ function ProductCard({ product: p, catalog, run }: { product: SellerProduct; cat
   // BE ghi đè mọi trường khi sửa -> luôn gửi lại mô tả, câu chuyện, nguyên liệu hiện có
   const input = (status: ProductInput['status']): ProductInput => ({
     name: p.name, description: p.description ?? undefined, story: p.story ?? undefined, ingredients: p.ingredients ?? undefined,
-    salePrice: p.salePrice ?? undefined, productType: p.productType, status,
+    // BE trả salePrice tính sẵn cho mọi sản phẩm (= giá gốc khi không giảm): chỉ gửi lại khi là set đang giảm giá
+    salePrice: p.productType === 'GIFT_SET' && p.salePrice != null && p.listPrice != null && p.salePrice < p.listPrice
+      ? p.salePrice : undefined,
+    productType: p.productType, status,
   })
   const close = (ok: boolean) => ok && setPanel(undefined)
   const isSet = p.productType === 'GIFT_SET'
