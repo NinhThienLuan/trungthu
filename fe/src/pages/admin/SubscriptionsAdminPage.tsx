@@ -7,7 +7,7 @@ import { SUBSCRIPTION_STATUS, subscriptionService, type Subscription } from '../
 import { PageHeader } from '../../components/ui/PageHeader'
 import { EmptyState, ErrorState, Notice, Spinner } from '../../components/ui/States'
 
-const TABS: Subscription['status'][] = ['PENDING_PAYMENT', 'ACTIVE', 'EXPIRED', 'SUSPENDED']
+const TABS: Subscription['status'][] = ['PENDING_PAYMENT', 'ACTIVE', 'EXPIRED', 'CANCELLED', 'SUSPENDED']
 const endOfYear = () => toIsoDate(new Date(new Date().getFullYear(), 11, 31))
 
 /** Admin sàn: xác nhận đã nhận phí gói rồi kích hoạt (chọn ngày hết hạn), hoặc huỷ */
@@ -32,7 +32,7 @@ export function SubscriptionsAdminPage() {
   return (
     <div className="page section flex flex-col gap-6">
       <PageHeader eyebrow="Quản trị sàn" title="Gói bán hàng của seller"
-        description="Kiểm tra đã nhận tiền (đối chiếu mã giao dịch) rồi kích hoạt. Kích hoạt gói mới sẽ cho gói cũ của xưởng hết hạn." />
+        description="Theo dõi thanh toán payOS và đối soát các yêu cầu chuyển khoản đã gửi trước đây." />
       <div className="flex flex-wrap gap-2">
         {TABS.map((t) => (
           <button key={t} type="button" className={cn('chip', status === t && 'chip-active')}
@@ -48,10 +48,16 @@ export function SubscriptionsAdminPage() {
                 <div className="text-small">
                   <h2 className="text-h3">{s.storeName ?? s.providerName} · {s.planName}</h2>
                   <p className="text-muted">{s.providerEmail} · {formatVnd(s.price)} · tối đa {s.maxProductsAllowed} sản phẩm</p>
-                  <p className="text-muted">Gửi lúc {formatDateTime(s.createdAt)}{s.paymentNote && <> · mã giao dịch: <b className="text-ink">{s.paymentNote}</b></>}</p>
-                  {s.status !== 'PENDING_PAYMENT' && s.startDate && s.endDate && <p className="text-muted">Hiệu lực {formatDate(s.startDate)} – {formatDate(s.endDate)}</p>}
+                  <p className="text-muted">Gửi lúc {formatDateTime(s.createdAt)}{s.paymentCode && <> · {s.paymentCode}</>}</p>
+                  {s.paymentNote && <p className="text-muted">{s.paymentCode ? 'Đối soát' : 'Ghi chú chuyển khoản'} · {s.paymentNote}</p>}
+                  {s.paidAt && <p className="text-muted">payOS ghi nhận lúc {formatDateTime(s.paidAt)}</p>}
+                  {s.status !== 'PENDING_PAYMENT' && s.status !== 'CANCELLED' && s.paymentStatus !== 'CANCELLED'
+                    && s.startDate && s.endDate && <p className="text-muted">Hiệu lực {formatDate(s.startDate)} – {formatDate(s.endDate)}</p>}
                 </div>
-                {s.status === 'PENDING_PAYMENT' && (
+                {s.status === 'PENDING_PAYMENT' && s.paymentCode && (
+                  <p className="text-small text-muted">{s.paymentNote ? 'Cần đối soát với payOS' : 'Chờ payOS xác nhận'}</p>
+                )}
+                {s.status === 'PENDING_PAYMENT' && !s.paymentCode && (
                   <div className="flex flex-wrap items-end gap-2">
                     <label className="text-small">
                       <span className="field-label">Hết hạn</span>

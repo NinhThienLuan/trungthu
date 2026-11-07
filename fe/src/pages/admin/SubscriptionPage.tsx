@@ -1,50 +1,67 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { QRCodeSVG } from 'qrcode.react'
 import { errorMessage } from '../../apis/http'
 import { useApi } from '../../hooks/useApi'
 import { useDocumentTitle } from '../../hooks/useDocumentTitle'
-import { cn, formatDate, formatVnd } from '../../lib/format'
+import { cn, formatDate, formatDateTime, formatVnd } from '../../lib/format'
 import { isSubscriptionActive, notifySellerStatusChanged } from '../../lib/sellerEligibility'
-import { SUBSCRIPTION_STATUS, subscriptionService, type SubscriptionPlanCode } from '../../services/sellerService'
+import { SUBSCRIPTION_STATUS, subscriptionService, type Subscription, type SubscriptionPlanCode } from '../../services/sellerService'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { ErrorState, Notice, Spinner } from '../../components/ui/States'
 
-/** Seller: chọn gói bán hàng (giá do sàn quy định), theo dõi yêu cầu chờ admin kích hoạt */
 export function SubscriptionPage() {
   useDocumentTitle('Gói bán hàng')
   const plans = useApi(() => subscriptionService.plans(), [])
-  const mine = useApi(() => subscriptionService.mine(), [])
+  const { data: history, loading, error, reload } = useApi(() => subscriptionService.mine(), [])
   const [picked, setPicked] = useState<SubscriptionPlanCode>()
-  const [note, setNote] = useState('')
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState<{ ok: boolean; text: string }>()
 
-  const run = async (action: () => Promise<unknown>, done: string) => {
+  const active = history?.find((s) => isSubscriptionActive(s))
+  const pending = history?.find((s) => s.status === 'PENDING_PAYMENT')
+  const selected = plans.data?.find((plan) => plan.code === picked)
+  const pendingCode = pending?.paymentCode
+
+  useEffect(() => {
+    if (!pendingCode) return
+    const timer = window.setInterval(reload, 5000)
+    window.addEventListener('focus', reload)
+    return () => {
+      window.clearInterval(timer)
+      window.removeEventListener('focus', reload)
+    }
+  }, [pendingCode, reload])
+
+  useEffect(() => {
+    notifySellerStatusChanged()
+  }, [active?.id, pending?.id])
+
+  const run = async (action: () => Promise<Subscription>, fallback?: string) => {
     setBusy(true)
     setNotice(undefined)
     try {
-      await action()
-      notifySellerStatusChanged()
-      setNotice({ ok: true, text: done })
+      const subscription = await action()
+      const message = subscription.status === 'ACTIVE' ? 'Đã nhận thanh toán và kích hoạt gói.'
+        : subscription.status === 'CANCELLED' ? 'Đã hủy yêu cầu thanh toán.'
+          : subscription.status === 'EXPIRED' ? 'Yêu cầu đã hết hạn. Bạn có thể chọn lại gói.'
+            : subscription.paymentNote ? undefined : fallback
+      if (message) setNotice({ ok: true, text: message })
       setPicked(undefined)
-      setNote('')
-      mine.reload()
     } catch (err) {
       setNotice({ ok: false, text: errorMessage(err) })
     } finally {
       setBusy(false)
+      reload()
     }
   }
 
-  if ((plans.loading && !plans.data) || (mine.loading && !mine.data)) return <Spinner />
-  if (plans.error || mine.error) return <div className="page section"><ErrorState message={plans.error ?? mine.error ?? ''} onRetry={() => { plans.reload(); mine.reload() }} /></div>
-
-  const active = mine.data?.find((s) => isSubscriptionActive(s))
-  const pending = mine.data?.find((s) => s.status === 'PENDING_PAYMENT')
+  if ((plans.loading && !plans.data) || (loading && !history)) return <Spinner />
+  if (plans.error || (error && !history)) return <div className="page section"><ErrorState message={plans.error ?? error ?? ''} onRetry={() => { plans.reload(); reload() }} /></div>
 
   return (
     <div className="page section flex flex-col gap-6">
       <PageHeader eyebrow="Gian hàng" title="Gói bán hàng"
-        description="Gian hàng cần một gói đang chạy (và hồ sơ đã duyệt) để khách đặt được hàng. Chuyển khoản phí gói cho sàn, ghi mã giao dịch; admin xác nhận rồi kích hoạt." />
+        description="Quét VietQR để thanh toán phí gói cho sàn. Gói tự kích hoạt khi payOS xác nhận đã nhận đủ tiền. Gian hàng cần hồ sơ đã duyệt để nhận đơn." />
 
       {active ? (
         <Notice tone="success">Gói <b>{active.planName}</b> đang chạy đến {active.endDate && formatDate(active.endDate)} · tối đa {active.maxProductsAllowed} sản phẩm.</Notice>
@@ -52,21 +69,57 @@ export function SubscriptionPage() {
         <Notice tone="danger">Chưa có gói đang chạy: khách chưa đặt được hàng của gian hàng.</Notice>
       )}
       {pending && (
-        <div className="card flex flex-wrap items-center justify-between gap-3 p-5">
-          <p className="text-small">
-            Đang chờ admin xác nhận gói <b>{pending.planName}</b> ({formatVnd(pending.price)})
-            {pending.paymentNote && <> · mã giao dịch: {pending.paymentNote}</>}
-          </p>
-          <button type="button" className="btn btn-ghost btn-sm text-danger" disabled={busy}
-            onClick={() => window.confirm('Huỷ yêu cầu gói đang chờ?') && run(() => subscriptionService.cancel(pending.id), 'Đã huỷ yêu cầu gói.')}>
-            Huỷ yêu cầu
-          </button>
-        </div>
+        <section className="card flex flex-wrap items-start gap-6 p-5" aria-labelledby="subscription-payment-heading">
+          {pending.qrPayload && (
+            <div className="mx-auto max-w-full shrink-0 overflow-hidden rounded-lg border border-line bg-white sm:mx-0">
+              <QRCodeSVG value={pending.qrPayload} size={208} marginSize={4} className="h-auto max-w-full"
+                title={`Mã VietQR thanh toán gói ${pending.planName}`} />
+            </div>
+          )}
+          <div className="flex min-w-0 flex-1 basis-64 flex-col gap-2">
+            <h2 id="subscription-payment-heading" className="text-h3">Gói {pending.planName} · {formatVnd(pending.price)}</h2>
+            {pendingCode ? (
+              <>
+                <p className="text-small text-muted">Mã thanh toán {pendingCode}</p>
+                {pending.paymentNote ? <Notice tone="danger">{pending.paymentNote} Liên hệ hỗ trợ sàn và cung cấp mã thanh toán.</Notice>
+                  : pending.qrPayload ? <p className="text-small">Mở ứng dụng ngân hàng và quét mã VietQR. Trạng thái gói sẽ tự cập nhật trên trang này.</p>
+                    : <p className="text-small">Mở phiên thanh toán để tiếp tục.</p>}
+              </>
+            ) : (
+              <p className="text-small">Yêu cầu chuyển khoản đang chờ admin đối soát{pending.paymentNote && <> · mã giao dịch {pending.paymentNote}</>}.</p>
+            )}
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              {pendingCode && !pending.paymentNote && (pending.checkoutUrl ? (
+                <a className="btn btn-primary btn-sm" href={pending.checkoutUrl} target="_blank" rel="noopener noreferrer">
+                  Mở payOS
+                </a>
+              ) : (
+                <button type="button" className="btn btn-primary btn-sm" disabled={busy}
+                  onClick={() => run(() => subscriptionService.openCheckout(pending.id))}>Hiện mã thanh toán</button>
+              ))}
+              {pendingCode && (
+                <button type="button" className="btn btn-ghost btn-sm" disabled={busy}
+                  onClick={() => run(() => subscriptionService.refreshPayment(pending.id), 'payOS chưa xác nhận thanh toán.')}>
+                  Kiểm tra thanh toán
+                </button>
+              )}
+              {(!pendingCode || !pending.paymentNote) && (
+                <button type="button" className="btn btn-ghost btn-sm text-danger" disabled={busy}
+                  onClick={() => window.confirm('Hủy yêu cầu gói đang chờ?')
+                    && run(() => subscriptionService.cancel(pending.id), 'Yêu cầu chưa thể hủy khi giao dịch đang được xử lý.')}>
+                  Hủy yêu cầu
+                </button>
+              )}
+            </div>
+          </div>
+        </section>
       )}
 
       <div className="grid gap-4 md:grid-cols-3">
         {plans.data?.map((p) => (
-          <button key={p.code} type="button" disabled={!!pending} onClick={() => setPicked(p.code)}
+          <button key={p.code} type="button"
+            disabled={busy || !!pending || (!!active && (active.planName === p.name || p.maxProducts < (active.maxProductsAllowed ?? 0)))}
+            aria-pressed={picked === p.code} onClick={() => setPicked(p.code)}
             className={cn('card flex flex-col gap-2 p-5 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60',
               picked === p.code ? 'ring-2 ring-navy' : 'hover:bg-champagne/30')}>
             <span className="text-h3">{p.name}</span>
@@ -77,30 +130,36 @@ export function SubscriptionPage() {
         ))}
       </div>
 
-      {picked && (
+      {selected && !pending && (
         <div className="card flex flex-col gap-3 p-5">
-          <label htmlFor="paymentNote" className="field-label">Mã giao dịch / ghi chú chuyển khoản (để admin đối chiếu)</label>
-          <input id="paymentNote" className="input" maxLength={500} value={note} onChange={(e) => setNote(e.target.value)} placeholder="FT26301xxxx" />
+          {active && <p className="text-small">Gói mới thay gói hiện tại ngay khi thanh toán đủ phí. Phí đã thanh toán của gói hiện tại không được khấu trừ.</p>}
           <button type="button" className="btn btn-primary self-start" disabled={busy}
-            onClick={() => run(() => subscriptionService.request(picked, note), 'Đã gửi yêu cầu gói. Admin sẽ kích hoạt sau khi nhận tiền.')}>
-            Gửi yêu cầu gói {plans.data?.find((p) => p.code === picked)?.name}
+            onClick={() => run(async () => {
+              const subscription = await subscriptionService.request(selected.code)
+              return subscriptionService.openCheckout(subscription.id)
+            })}>
+            {busy ? 'Đang mở thanh toán…' : `Thanh toán ${formatVnd(selected.price)}`}
           </button>
         </div>
       )}
 
-      {notice && <Notice tone={notice.ok ? 'success' : 'danger'}>{notice.text}</Notice>}
+      {notice && <div role="status"><Notice tone={notice.ok ? 'success' : 'danger'}>{notice.text}</Notice></div>}
 
-      {!!mine.data?.length && (
+      {!!history?.length && (
         <section className="card overflow-x-auto p-0">
           <table className="w-full text-small">
             <thead className="text-left text-muted"><tr><th className="p-3">Gói</th><th>Giá</th><th>Thời gian</th><th className="p-3">Trạng thái</th></tr></thead>
             <tbody>
-              {mine.data.map((s) => (
+              {history.map((s) => (
                 <tr key={s.id} className="border-t border-line">
                   <td className="p-3 font-medium">{s.planName}</td>
                   <td>{formatVnd(s.price)}</td>
-                  <td className="whitespace-nowrap">{s.status === 'PENDING_PAYMENT' ? '—' : `${s.startDate && formatDate(s.startDate)} – ${s.endDate && formatDate(s.endDate)}`}</td>
-                  <td className={cn('p-3 font-medium', SUBSCRIPTION_STATUS[s.status].tone)}>{SUBSCRIPTION_STATUS[s.status].text}</td>
+                  <td className="whitespace-nowrap">{s.status === 'PENDING_PAYMENT' || s.paymentStatus === 'CANCELLED' || s.status === 'CANCELLED'
+                    ? '—' : `${s.startDate && formatDate(s.startDate)} – ${s.endDate && formatDate(s.endDate)}`}</td>
+                  <td className={cn('p-3 font-medium', SUBSCRIPTION_STATUS[s.status].tone)}>
+                    {s.status === 'PENDING_PAYMENT' && !s.paymentCode ? 'Chờ admin đối soát' : SUBSCRIPTION_STATUS[s.status].text}
+                    {s.paidAt && <span className="block text-muted">Đã trả {formatDateTime(s.paidAt)}</span>}
+                  </td>
                 </tr>
               ))}
             </tbody>
