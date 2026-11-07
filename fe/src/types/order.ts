@@ -170,6 +170,9 @@ export interface RfqRequest {
   description?: string
   expectedBudget?: number
   logoUrl?: string
+  /** Gửi riêng một xưởng (trống = mọi xưởng) */
+  providerId?: string
+  productId?: string
 }
 
 export type RfqStatus = 'NEW' | 'DISTRIBUTED' | 'QUOTES_RECEIVED' | 'WON' | 'LOST'
@@ -190,6 +193,10 @@ export interface RfqResponse {
   expectedBudget: number | null
   description: string | null
   logoUrl: string | null
+  providerId: string | null
+  providerName: string | null
+  productId: string | null
+  productName: string | null
 }
 
 export interface SubmitQuoteRequest {

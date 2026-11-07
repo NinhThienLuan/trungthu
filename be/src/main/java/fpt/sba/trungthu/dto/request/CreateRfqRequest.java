@@ -4,6 +4,7 @@ import jakarta.validation.constraints.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.UUID;
 
 public record CreateRfqRequest(
         @NotBlank @Size(min = 3, max = 255) String companyName,
@@ -16,4 +17,7 @@ public record CreateRfqRequest(
         @NotNull LocalDate expectedDeliveryDate,
         @DecimalMin("0") @Digits(integer = 16, fraction = 2) BigDecimal expectedBudget,
         @Size(max = 100000) String description,
-        @Size(max = 2048) String logoUrl) {}
+        @Size(max = 2048) String logoUrl,
+        // Tuỳ chọn: gửi riêng một xưởng / báo giá cho một sản phẩm (sản phẩm kéo theo xưởng của nó)
+        UUID providerId,
+        UUID productId) {}
