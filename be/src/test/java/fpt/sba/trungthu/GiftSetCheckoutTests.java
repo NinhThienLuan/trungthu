@@ -4,10 +4,14 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import fpt.sba.trungthu.common.security.JwtService;
 import fpt.sba.trungthu.entity.GiftSetComponent;
+import fpt.sba.trungthu.entity.DailyCapacity;
 import fpt.sba.trungthu.entity.Product;
 import fpt.sba.trungthu.entity.ProductVariant;
 import fpt.sba.trungthu.entity.User;
 import fpt.sba.trungthu.entity.enumeration.ProductType;
+import fpt.sba.trungthu.entity.enumeration.ProductStatus;
+import fpt.sba.trungthu.entity.enumeration.VariantStatus;
+import fpt.sba.trungthu.repository.DailyCapacityRepository;
 import fpt.sba.trungthu.repository.GiftSetComponentRepository;
 import fpt.sba.trungthu.repository.ProductRepository;
 import fpt.sba.trungthu.repository.ProductVariantRepository;
@@ -20,6 +24,7 @@ import org.springframework.http.MediaType;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -29,7 +34,9 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /** Set quà demo (DemoProductSeeder) + năng lực/phí giao demo (DemoCheckoutSeeder) */
@@ -45,10 +52,70 @@ class GiftSetCheckoutTests {
     @Autowired private UserRepository users;
     @Autowired private ProductRepository products;
     @Autowired private ProductVariantRepository variants;
+    @Autowired private DailyCapacityRepository capacities;
     @Autowired private GiftSetComponentRepository components;
     @Autowired private ObjectMapper json;
     @Autowired private PlatformTransactionManager transactions;
     @MockitoBean private JavaMailSender mailSender;
+
+    @Test
+    @Transactional
+    void checkoutStockConflictIncludesAvailableQuantityAndVariantId() throws Exception {
+        User buyer = users.findByEmail("buyer@gmail.com").orElseThrow();
+        LocalDate delivery = LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh")).plusDays(5);
+        Product cake = products.findAll().stream()
+                .filter(p -> p.getProductType() == ProductType.LOOSE_CAKE && p.getStatus() == ProductStatus.ACTIVE)
+                .filter(p -> capacities.findByProviderIdAndCapacityDate(p.getProvider().getId(), delivery.minusDays(1)).isPresent())
+                .findFirst().orElseThrow();
+        ProductVariant variant = variants.findByProductId(cake.getId()).stream()
+                .filter(v -> v.getStatus() == VariantStatus.IN_STOCK).findFirst().orElseThrow();
+        variant.setStockQuantity(5);
+        variants.saveAndFlush(variant);
+        String body = """
+                {"groups":[{"deliveryDate":"%s","province":"Hà Nội","district":"Hoàn Kiếm",
+                "paymentMethod":"COD","items":[{"variantId":"%s","quantity":6}]}]}"""
+                .formatted(delivery, variant.getId());
+
+        mvc.perform(post("/api/checkout").header("Authorization", "Bearer " + jwtService.generateAccessToken(buyer))
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.message").value(containsString(cake.getName())))
+                .andExpect(jsonPath("$.data.code").value("INSUFFICIENT_STOCK"))
+                .andExpect(jsonPath("$.data.variantId").value(variant.getId().toString()))
+                .andExpect(jsonPath("$.data.availableStock").value(5))
+                .andExpect(jsonPath("$.data.requestedQuantity").value(6));
+    }
+
+    @Test
+    @Transactional
+    void checkoutCapacityConflictIncludesBakeDateAndRemainingSlots() throws Exception {
+        User buyer = users.findByEmail("buyer@gmail.com").orElseThrow();
+        LocalDate delivery = LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh")).plusDays(5);
+        Product cake = products.findAll().stream()
+                .filter(p -> p.getProductType() == ProductType.LOOSE_CAKE && p.getStatus() == ProductStatus.ACTIVE)
+                .filter(p -> capacities.findByProviderIdAndCapacityDate(p.getProvider().getId(), delivery.minusDays(1)).isPresent())
+                .findFirst().orElseThrow();
+        ProductVariant variant = variants.findByProductId(cake.getId()).stream()
+                .filter(v -> v.getStatus() == VariantStatus.IN_STOCK && v.getStockQuantity() >= 2)
+                .findFirst().orElseThrow();
+        DailyCapacity capacity = capacities.findByProviderIdAndCapacityDate(cake.getProvider().getId(), delivery.minusDays(1))
+                .orElseThrow();
+        capacity.setMaxQuantity(capacity.getReservedQuantity() + 1);
+        capacities.saveAndFlush(capacity);
+        String body = """
+                {"groups":[{"deliveryDate":"%s","province":"Hà Nội","district":"Hoàn Kiếm",
+                "paymentMethod":"COD","items":[{"variantId":"%s","quantity":2}]}]}"""
+                .formatted(delivery, variant.getId());
+
+        mvc.perform(post("/api/checkout").header("Authorization", "Bearer " + jwtService.generateAccessToken(buyer))
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.data.code").value("INSUFFICIENT_CAPACITY"))
+                .andExpect(jsonPath("$.data.bakeDate").value(delivery.minusDays(1).toString()))
+                .andExpect(jsonPath("$.data.remainingCapacity").value(1))
+                .andExpect(jsonPath("$.data.requestedQuantity").value(2));
+    }
 
     @Test
     void giftSetIsSoldThroughCheckoutWithComponentLinesAndMatchingTotal() throws Exception {
@@ -127,18 +194,27 @@ class GiftSetCheckoutTests {
                         choice.cakeVariantId(), choice.cakeVariantId());
 
         JsonNode preview = call("/api/checkout/preview", "{\"groups\":[" + group + "]}", buyer);
-        assertThat(preview.at("/data/groups/0/lines/0/subtotal").decimalValue())
+        assertThat(lineForVariant(preview.at("/data/groups/0/lines"), choice.boxVariantId())
+                .get("subtotal").decimalValue())
                 .isEqualByComparingTo(choice.boxPrice());
         JsonNode created = call("/api/checkout", """
                 {"receiverName":"Mua","receiverPhone":"0903000003","shippingAddress":"12 Tràng Tiền","groups":[%s]}"""
                 .formatted(group), buyer);
-        assertThat(created.at("/data/0/lines/0/variantName").asText()).contains("×4");
+        assertThat(lineForVariant(created.at("/data/0/lines"), choice.boxVariantId())
+                .get("variantName").asText()).contains("×4");
         assertThat(variants.findById(choice.boxVariantId()).orElseThrow().getStockQuantity())
                 .isEqualTo(choice.boxStockBefore() - 1);
     }
 
     private record BoxChoice(java.util.UUID boxVariantId, java.util.UUID cakeVariantId,
             BigDecimal boxPrice, int boxStockBefore) {}
+
+    private static JsonNode lineForVariant(JsonNode lines, java.util.UUID variantId) {
+        for (JsonNode line : lines) {
+            if (variantId.toString().equals(line.path("variantId").asText())) return line;
+        }
+        throw new AssertionError("Không tìm thấy dòng sản phẩm " + variantId);
+    }
 
     /** Số set đã đóng sẵn (dòng vỏ hộp), đọc trong transaction vì quan hệ LAZY */
     private int boxesOf(Product set) {

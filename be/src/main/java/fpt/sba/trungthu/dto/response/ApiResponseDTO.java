@@ -39,6 +39,14 @@ public class ApiResponseDTO<T> {
                 .build();
     }
 
+    public static <T> ApiResponseDTO<T> error(int status, String message, T data) {
+        return ApiResponseDTO.<T>builder()
+                .status(status)
+                .message(message)
+                .data(data)
+                .build();
+    }
+
     public static <T> ApiResponseDTO<T> error(HttpStatus httpStatus, String message) {
         return ApiResponseDTO.<T>builder()
                 .status(httpStatus.value())

@@ -33,11 +33,11 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @SpringBootTest(properties = "spring.datasource.url=jdbc:h2:mem:${random.uuid};DB_CLOSE_DELAY=-1")
-// getOrderDetail (gọi trong checkout) có @PreAuthorize CUSTOMER/PROVIDER
-@WithMockUser(roles = {"CUSTOMER", "PROVIDER"})
+@WithMockUser(roles = "CUSTOMER")
 class CheckoutFlowTests {
     @Autowired private CheckoutService checkout;
     @Autowired private OrderLifecycleService lifecycle;
+    @Autowired private fpt.sba.trungthu.common.config.OrderExpirationJob expirationJob;
     @Autowired private VietQrController vietQr;
     @Autowired private UserRepository users;
     @Autowired private ProductRepository products;
@@ -60,6 +60,47 @@ class CheckoutFlowTests {
     private DailyCapacity cakeCapacity;
     private DailyCapacity boxCapacity;
     private LocalDate delivery;
+
+    @Test
+    void expirationJobCancelsAndReleasesStockAndCapacityOnlyOnce() {
+        Order order = orders.findById(checkout.checkout(cakeRequest(delivery, 2)).getFirst().getId()).orElseThrow();
+        order.setHoldExpiresAt(Instant.now().minusSeconds(1));
+        orders.saveAndFlush(order);
+
+        expirationJob.expirePendingDeposits();
+        assertThat(orders.findById(order.getId()).orElseThrow().getOrderStatus()).isEqualTo(OrderStatus.CANCELLED);
+        assertThat(orders.findById(order.getId()).orElseThrow().getHoldExpiresAt()).isNull();
+        assertThat(variants.findById(cake.getId()).orElseThrow().getStockQuantity()).isEqualTo(10);
+        assertThat(capacities.findById(cakeCapacity.getId()).orElseThrow().getReservedQuantity()).isZero();
+        assertThat(payments.findByOrderIdOrderByCreatedAtAsc(order.getId()).getFirst().getPaymentStatus())
+                .isEqualTo(TransactionStatus.CANCELLED);
+
+        expirationJob.expirePendingDeposits();
+        assertThat(variants.findById(cake.getId()).orElseThrow().getStockQuantity()).isEqualTo(10);
+        assertThat(capacities.findById(cakeCapacity.getId()).orElseThrow().getReservedQuantity()).isZero();
+    }
+
+    @Test
+    void expirationJobRetriesWhenResourceReleaseRollsBack() {
+        Order order = orders.findById(checkout.checkout(cakeRequest(delivery, 2)).getFirst().getId()).orElseThrow();
+        order.setHoldExpiresAt(Instant.now().minusSeconds(1));
+        orders.saveAndFlush(order);
+        cakeCapacity.setReservedQuantity(0); // giả lập lỗi hoàn suất nướng, transaction hủy phải rollback
+        capacities.saveAndFlush(cakeCapacity);
+
+        expirationJob.expirePendingDeposits();
+        assertThat(orders.findById(order.getId()).orElseThrow().getOrderStatus()).isEqualTo(OrderStatus.PENDING_DEPOSIT);
+        assertThat(variants.findById(cake.getId()).orElseThrow().getStockQuantity()).isEqualTo(8);
+        assertThat(payments.findByOrderIdOrderByCreatedAtAsc(order.getId()).getFirst().getPaymentStatus())
+                .isEqualTo(TransactionStatus.PENDING);
+
+        cakeCapacity.setReservedQuantity(2);
+        capacities.saveAndFlush(cakeCapacity);
+        expirationJob.expirePendingDeposits();
+        assertThat(orders.findById(order.getId()).orElseThrow().getOrderStatus()).isEqualTo(OrderStatus.CANCELLED);
+        assertThat(variants.findById(cake.getId()).orElseThrow().getStockQuantity()).isEqualTo(10);
+        assertThat(capacities.findById(cakeCapacity.getId()).orElseThrow().getReservedQuantity()).isZero();
+    }
 
     @BeforeEach
     void setUp() {
