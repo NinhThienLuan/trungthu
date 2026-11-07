@@ -182,7 +182,7 @@ export const promotionService = {
 }
 
 export type SubscriptionPlanCode = 'BASIC' | 'STANDARD' | 'PREMIUM'
-export type SubscriptionStatus = 'PENDING_PAYMENT' | 'ACTIVE' | 'EXPIRED' | 'SUSPENDED'
+export type SubscriptionStatus = 'PENDING_PAYMENT' | 'ACTIVE' | 'EXPIRED' | 'SUSPENDED' | 'CANCELLED'
 
 export interface SubscriptionPlanView {
   code: SubscriptionPlanCode
@@ -198,6 +198,11 @@ export interface Subscription {
   providerName: string
   storeName: string | null
   paymentNote: string | null
+  paymentCode: string | null
+  paymentStatus: 'PENDING' | 'SUCCESS' | 'CANCELLED' | null
+  paidAt: string | null
+  checkoutUrl: string | null
+  qrPayload: string | null
   planName: string
   price: number
   maxProductsAllowed: number
@@ -209,18 +214,23 @@ export interface Subscription {
 }
 
 export const SUBSCRIPTION_STATUS: Record<Subscription['status'], { text: string; tone: string }> = {
-  PENDING_PAYMENT: { text: 'Chờ admin xác nhận', tone: 'text-navy' },
+  PENDING_PAYMENT: { text: 'Chờ thanh toán', tone: 'text-navy' },
   ACTIVE: { text: 'Đang chạy', tone: 'text-success' },
   EXPIRED: { text: 'Hết hạn', tone: 'text-muted' },
-  SUSPENDED: { text: 'Đã huỷ', tone: 'text-muted' },
+  SUSPENDED: { text: 'Tạm khóa', tone: 'text-muted' },
+  CANCELLED: { text: 'Đã hủy', tone: 'text-muted' },
 }
 
 /** Gói bán hàng: seller chọn gói (giá do sàn quy định), admin xác nhận chuyển khoản rồi kích hoạt */
 export const subscriptionService = {
   plans: () => unwrap(http.get<ApiResponse<SubscriptionPlanView[]>>('/provider/subscriptions/plans')),
   mine: () => unwrap(http.get<ApiResponse<Subscription[]>>('/provider/subscriptions')),
-  request: (plan: SubscriptionPlanCode, paymentProof?: string) =>
-    unwrap(http.post<ApiResponse<Subscription>>('/provider/subscriptions', { plan, paymentProof })),
+  request: (plan: SubscriptionPlanCode) =>
+    unwrap(http.post<ApiResponse<Subscription>>('/provider/subscriptions', { plan })),
+  openCheckout: (id: string) =>
+    unwrap(http.post<ApiResponse<Subscription>>(`/provider/subscriptions/${id}/checkout`)),
+  refreshPayment: (id: string) =>
+    unwrap(http.post<ApiResponse<Subscription>>(`/provider/subscriptions/${id}/payment/refresh`)),
   cancel: (id: string) => unwrap(http.put<ApiResponse<Subscription>>(`/provider/subscriptions/${id}/cancel`)),
   // Admin
   byStatus: (status: SubscriptionStatus) => unwrap(http.get<ApiResponse<Subscription[]>>(`/admin/subscriptions/status/${status}`)),

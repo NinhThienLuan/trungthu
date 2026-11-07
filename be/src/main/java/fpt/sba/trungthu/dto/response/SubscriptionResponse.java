@@ -1,12 +1,14 @@
 package fpt.sba.trungthu.dto.response;
 
 import fpt.sba.trungthu.entity.enumeration.SubscriptionStatus;
+import fpt.sba.trungthu.entity.enumeration.TransactionStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -30,4 +32,9 @@ public class SubscriptionResponse {
     private LocalDate startDate;
     private LocalDate endDate;
     private LocalDateTime createdAt;
+    private TransactionStatus paymentStatus;
+    private String paymentCode;
+    private Instant paidAt;
+    private String checkoutUrl;
+    private String qrPayload;
 }

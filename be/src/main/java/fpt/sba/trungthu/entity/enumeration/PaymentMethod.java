@@ -7,6 +7,8 @@ public enum PaymentMethod {
     // Chuyển khoản quét mã VietQR; provider đối soát và xác nhận thủ công
     VIETQR,
 
+    PAYOS,
+
     // Cổng thanh toán VNPay
     VNPAY,
 

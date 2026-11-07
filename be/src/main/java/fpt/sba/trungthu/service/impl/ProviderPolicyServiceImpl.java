@@ -19,6 +19,8 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+import static fpt.sba.trungthu.service.impl.SubscriptionServiceImpl.BUSINESS_ZONE;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -39,7 +41,7 @@ public class ProviderPolicyServiceImpl implements ProviderPolicyService {
         
         // Check all 4 conditions
         boolean isComplianceApproved = provider.getIsComplianceApproved() != null && provider.getIsComplianceApproved();
-        boolean hasActiveSubscription = subscriptionRepository.hasActiveSubscription(provider.getId(), LocalDate.now());
+        boolean hasActiveSubscription = subscriptionRepository.hasActiveSubscription(provider.getId(), LocalDate.now(BUSINESS_ZONE));
         boolean isProviderActive = provider.getStatus() == UserStatus.ACTIVE;
         boolean isSeasonActive = provider.getIsSeasonActive() != null && provider.getIsSeasonActive();
         
@@ -102,7 +104,7 @@ public class ProviderPolicyServiceImpl implements ProviderPolicyService {
         User provider = userRepository.findByEmailAndStatus(providerEmail, UserStatus.ACTIVE)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Provider not found"));
         
-        if (!subscriptionRepository.hasActiveSubscription(provider.getId(), LocalDate.now())) {
+        if (!subscriptionRepository.hasActiveSubscription(provider.getId(), LocalDate.now(BUSINESS_ZONE))) {
             return 0;
         }
         

@@ -75,6 +75,7 @@ public class WebSecurityConfig {
                         .requestMatchers(WHITELIST).permitAll()
                         .requestMatchers("/ws/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/webhooks/payos/subscriptions").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/public/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/providers/*/available-dates").permitAll()
                         // Giấy tờ KYC/ATTP: chỉ seller và admin; tên file là UUID ngẫu nhiên
