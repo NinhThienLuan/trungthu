@@ -393,6 +393,47 @@
 }
 
 @media print {
+  body:has(.bake-sheet) div:has(.bake-sheet) {
+    background: white !important;
+  }
+
+  body:has(.bake-sheet) .page {
+    max-width: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .bake-sheet {
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    background: white !important;
+  }
+
+  .bake-sheet * {
+    color: black !important;
+    background: transparent !important;
+    text-shadow: none !important;
+  }
+
+  .bake-sheet tr, .bake-sheet th, .bake-sheet td {
+    border-color: black !important;
+  }
+
+  .bake-sheet tfoot {
+    display: table-row-group;
+  }
+
+  .bake-sheet tbody tr {
+    break-inside: auto;
+    page-break-inside: auto;
+  }
+
+  .bake-sheet li {
+    break-inside: avoid;
+  }
+
   header,
   footer,
   aside,

@@ -11,7 +11,8 @@
 ## PHẦN 1. CÔNG VIỆC CỦA THẠCH (FE2 - TRỌNG TÂM)
 
 ### Nhiệm vụ 1: Xây dựng màn hình "Phiếu ra lò" (In phiếu nướng bánh) — [ƯU TIÊN 1]
-* **Bối cảnh:** Backend đã hoàn thiện database view `v_bake_lines` tổng hợp số lượng bánh cần nướng theo ngày giao, và Luân (BE4) đang phụ trách mở endpoint `GET /api/provider/bake-sheet?date=YYYY-MM-DD`. FE đang chờ kết nối API này.
+* **Cập nhật 2026-11-03:** Đã triển khai FE trên nhánh `feat/fe2-bake-sheet`, cập nhật theo `origin/master` tại `d7b4c02`: tab phiếu nướng, ngày nướng mặc định hôm nay, chọn ngày bất kỳ/hôm nay/ngày mai, tổng hợp số bánh và mã đơn từ API, in trắng đen. DTO: `variantId`, `productName`, `variantName`, `bakeQuantity`, `orderCodes`; `date` là ngày nướng, ngày giao là ngày tiếp theo. Build/lint đạt; 46 test `OrderApiTests` + `BakeLinesViewTests` đạt. Đã kiểm tra FE gọi API thật trên backend H2 riêng qua Vite proxy, đăng nhập bằng cookie: dữ liệu bảng/tổng/mã đơn khớp response, ngày rỗng và giao diện in đạt. Dữ liệu kiểm tra do demo seeder tạo, chưa kiểm tra trên database triển khai.
+* **Bối cảnh:** Backend đã có view `v_bake_lines` và endpoint `GET /api/provider/bake-sheet?date=YYYY-MM-DD` do BE4 phụ trách, nhận ngày nướng.
 * **Các bước triển khai:**
   1. **Service (`fe/src/services/sellerService.ts`):**  
      Bổ sung hàm gọi API:
@@ -46,6 +47,7 @@
 ---
 
 ### Nhiệm vụ 3: Hoàn thiện luồng KYC & Gói Bán Hàng SaaS — [ƯU TIÊN 3]
+* **Cập nhật 2026-11-03:** Đã triển khai FE trên nhánh `feat/fe2-kyc-saas`: banner KYC/gói tại layout Seller, kiểm tra đủ 3 loại giấy tờ được duyệt và ngày hiệu lực gói, modal xem ảnh/PDF có phóng to ảnh, báo lỗi khi thiếu lý do từ chối. Giữ các luồng đã có: hiển thị lý do, nộp lại giấy tờ, mã giao dịch và kích hoạt gói. Build/lint đạt; đã kiểm tra giao diện với API giả lập, chưa kiểm thử tích hợp backend thực tế.
 * **Giao diện Seller ([`ProfilePage.tsx`](file:///d:/GitHub/trungthu/fe/src/pages/admin/ProfilePage.tsx) & [`SubscriptionPage.tsx`](file:///d:/GitHub/trungthu/fe/src/pages/admin/SubscriptionPage.tsx)):**
   1. Hiển thị rõ lý do từ chối duyệt: Nếu chứng từ nào bị `REJECTED`, hiển thị `rejectionReason` từ Backend để Seller biết nguyên nhân và bấm nút tải lại file mới.
   2. Bổ sung **Banner cảnh báo quyền bán** ở đầu trang Seller:
@@ -119,9 +121,9 @@ Dưới đây là 4 hiệu ứng animation được đúc kết từ concept thi
 
 | Thành viên | Hạng mục công việc | Mức độ ưu tiên | Trạng thái |
 | :--- | :--- | :---: | :---: |
-| **Thạch (FE2)** | Xây dựng màn hình & In phiếu nướng bánh (`bake-sheet`) | **Cao nhất (P1)** | Chưa bắt đầu |
+| **Thạch (FE2)** | Xây dựng màn hình & In phiếu nướng bánh (`bake-sheet`) | **Cao nhất (P1)** | Hoàn thành; đã kiểm thử tích hợp API thật trên H2 |
 | **Thạch (FE2)** | Dọn dẹp các nút Set quà ngoài scope trong `BakeBatchPage` | **Cao (P2)** | Chưa bắt đầu |
-| **Thạch (FE2)** | Hoàn thiện luồng KYC & Gói SaaS (Banner, Modal duyệt) | **Trung bình (P3)** | Chưa bắt đầu |
+| **Thạch (FE2)** | Hoàn thiện luồng KYC & Gói SaaS (Banner, Modal duyệt) | **Trung bình (P3)** | Đã triển khai FE; chờ kiểm thử tích hợp BE |
 | **Thạch (FE2)** | Xóa raw emoji trong `Header.tsx` | **Trung bình (P4)** | Chưa bắt đầu |
 | **Tuấn (FE1)** | Xử lý lỗi tồn kho Checkout (bỏ hardcode 99) | **Cao (P1)** | Chưa bắt đầu |
 | **Tuấn (FE1)** | Thêm Guest Guard cho trang Auth (`/login`, `/register`) | **Trung bình (P2)** | Chưa bắt đầu |

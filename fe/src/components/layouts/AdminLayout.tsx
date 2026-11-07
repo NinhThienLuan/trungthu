@@ -3,6 +3,7 @@ import { NavLink, Outlet, ScrollRestoration, useLocation, useNavigate } from 're
 import { Icon } from '../Icon'
 import { handleStitchLinkClick } from '../../routes/stitchPaths'
 import { FlashToast } from '../ui/FlashToast'
+import { SellerStatusBanner } from '../SellerStatusBanner'
 import { cn } from '../../lib/format'
 import { useAuthStore } from '../../stores/authStore'
 
@@ -200,6 +201,7 @@ export function AdminLayout() {
         </header>
 
         <main className="relative pt-20 bg-surface min-h-screen print:pt-0 print:bg-white print:min-h-0" onClick={(e) => handleStitchLinkClick(e, navigate)}>
+          {user?.role === 'PROVIDER' && <SellerStatusBanner key={user.id} />}
           <Outlet />
         </main>
       </div>
