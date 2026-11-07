@@ -11,6 +11,7 @@ import { useDocumentTitle } from '../../hooks/useDocumentTitle'
 import { useCartStore } from '../../stores/cartStore'
 import type { Product } from '../../types/product'
 import { MAX_RETAIL_QUANTITY, PRODUCT_TYPE_LABEL, ROUTES } from '../../constants'
+import { cn } from '../../lib/format'
 
 const DETAIL_TABS = [
   { id: 'story', label: 'Câu Chuyện Sản Phẩm' },
@@ -206,7 +207,7 @@ export function ProductDetailPage() {
                 </div>{' '}
                 <SetContents product={product} setPrice={price} />
               </div>{' '}
-              <PromotionBox promotions={promotions} />
+              <PromotionBox promotions={promotions} quantity={quantity} unitPrice={price} />
               <div className="space-y-space-xs">
                 {' '}
                 <div className="flex items-center justify-between">
@@ -348,7 +349,7 @@ export function ProductDetailPage() {
 }
 
 /** Khuyến mãi đang chạy của xưởng cho sản phẩm này; BE tự trừ khi đặt hàng */
-function PromotionBox({ promotions }: { promotions: Promotion[] }) {
+function PromotionBox({ promotions, quantity, unitPrice }: { promotions: Promotion[]; quantity: number; unitPrice: number }) {
   if (promotions.length === 0) {
     return (
       <Link to={ROUTES.rfq} className="block p-space-md rounded-[0.25rem] bg-surface-container-lowest shadow-sm font-body-sm text-body-sm text-on-surface-variant hover:bg-champagne-light/40">
@@ -356,23 +357,118 @@ function PromotionBox({ promotions }: { promotions: Promotion[] }) {
       </Link>
     )
   }
+
+  // Đánh giá từng promotion với số lượng và đơn giá hiện tại
+  const evaluated = promotions.map((p) => {
+    let saved = 0
+    let rate = 0
+    let isQualified = false
+    let dynamicNote = ''
+
+    if (p.type === 'BUY_X_GET_Y' && p.buyQuantity && p.freeQuantity) {
+      const bundle = p.buyQuantity + p.freeQuantity
+      const sets = Math.floor(quantity / bundle)
+      const remainder = quantity % bundle
+      rate = p.freeQuantity / bundle
+      if (sets > 0) {
+        isQualified = true
+        const freeCakes = sets * p.freeQuantity
+        saved = freeCakes * unitPrice
+        dynamicNote = `Đang chọn ${quantity} cái: Được tặng ${freeCakes} bánh miễn phí (Tiết kiệm ${vnd(saved)})!`
+        if (remainder > 0) {
+          dynamicNote += ` Thêm ${bundle - remainder} cái nữa để nhận tiếp bánh tặng.`
+        }
+      } else {
+        const needed = bundle - remainder
+        dynamicNote = quantity >= p.buyQuantity && remainder === p.buyQuantity
+          ? `Bạn đã chọn ${quantity} cái! Thêm 1 bánh nữa để nhận MIỄN PHÍ chiếc thứ ${bundle}!`
+          : `Chọn thêm ${needed} cái nữa (đủ ${bundle} cái) để được tặng 1 bánh miễn phí!`
+      }
+    } else if (p.type === 'PERCENT_OFF' && p.minQuantity && p.percentOff) {
+      rate = (p.percentOff ?? 0) / 100
+      if (quantity >= p.minQuantity) {
+        isQualified = true
+        saved = Math.floor((unitPrice * quantity * p.percentOff) / 100)
+        dynamicNote = `Đang chọn ${quantity} cái: Đã đạt mức giảm ${p.percentOff}% toàn bộ (Tiết kiệm ${vnd(saved)})!`
+      } else {
+        dynamicNote = `Chọn thêm ${p.minQuantity - quantity} cái nữa để được giảm ngay ${p.percentOff}%.`
+      }
+    }
+
+    return { p, saved, rate, isQualified, dynamicNote }
+  })
+
+  // Tìm ưu đãi tốt nhất (nếu có cái đạt điều kiện thì lấy cái giảm nhiều nhất; nếu chưa cái nào đạt thì lấy cái có tỷ lệ giảm cao nhất)
+  const qualifiedList = evaluated.filter((e) => e.isQualified)
+  let bestId: string
+  if (qualifiedList.length > 0) {
+    bestId = qualifiedList.sort((a, b) => b.saved - a.saved)[0].p.id
+  } else {
+    bestId = [...evaluated].sort((a, b) => b.rate - a.rate)[0].p.id
+  }
+
+  // Sắp xếp: Ưu đãi tốt nhất luôn đứng đầu tiên
+  const sorted = [...evaluated].sort((a, b) => (a.p.id === bestId ? -1 : b.p.id === bestId ? 1 : b.rate - a.rate))
+
   return (
     <div className="bg-primary-container text-champagne-light p-space-md rounded-[0.25rem] shadow-md space-y-space-sm">
-      <div className="flex items-center gap-space-xs">
-        <Icon name="sell" className="text-secondary-fixed text-[20px]" aria-hidden />
-        <span className="font-label-lg text-label-lg text-secondary-fixed uppercase tracking-wider">Khuyến mãi của xưởng</span>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-space-xs">
+          <Icon name="sell" className="text-secondary-fixed text-[20px]" aria-hidden />
+          <span className="font-label-lg text-label-lg text-secondary-fixed uppercase tracking-wider">Khuyến mãi của xưởng</span>
+        </div>
+        {promotions.length > 1 && (
+          <span className="text-[11px] text-champagne-light/80 italic">Có {promotions.length} ưu đãi</span>
+        )}
       </div>
-      <ul className="space-y-1.5">
-        {promotions.map((p) => (
-          <li key={p.id} className="flex flex-wrap items-baseline justify-between gap-2">
-            <span className="font-headline-sm text-headline-sm text-secondary-fixed font-bold">{p.label}</span>
-            <span className="font-label-sm text-[11px] text-on-primary-container">
-              {p.name} · đến {new Date(p.endDate).toLocaleDateString('vi-VN')}
-            </span>
-          </li>
-        ))}
+
+      <ul className="space-y-2">
+        {sorted.map(({ p, isQualified, dynamicNote }) => {
+          const isBest = p.id === bestId
+          return (
+            <li
+              key={p.id}
+              className={cn(
+                'flex flex-col gap-1 rounded-[0.125rem] p-2.5 transition-all',
+                isBest ? 'bg-primary/70 border border-secondary-fixed/60 shadow-inner' : 'border border-primary/40 opacity-80',
+              )}
+            >
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="font-headline-sm text-headline-sm text-secondary-fixed font-bold">{p.label}</span>
+                  {isBest && promotions.length > 1 && (
+                    <span className="px-1.5 py-0.5 rounded-[0.125rem] bg-secondary text-on-secondary font-bold text-[9px] uppercase tracking-wider">
+                      Ưu đãi tốt nhất
+                    </span>
+                  )}
+                </div>
+                <span className="font-label-sm text-[11px] text-on-primary-container">
+                  {p.name} · đến {new Date(p.endDate).toLocaleDateString('vi-VN')}
+                </span>
+              </div>
+              {dynamicNote && (
+                <div
+                  className={cn(
+                    'mt-0.5 rounded-[0.125rem] px-2 py-1 text-[11px] font-medium flex items-center gap-1.5',
+                    isQualified
+                      ? 'bg-secondary-fixed/20 text-secondary-fixed font-semibold'
+                      : isBest
+                        ? 'bg-primary text-champagne-light'
+                        : 'bg-primary/40 text-champagne-light/80',
+                  )}
+                >
+                  <Icon name={isQualified ? 'check_circle' : 'auto_awesome'} className="text-[14px] shrink-0" aria-hidden />
+                  <span>{dynamicNote}</span>
+                </div>
+              )}
+            </li>
+          )
+        })}
       </ul>
-      <p className="font-label-sm text-[11px] text-on-primary-container">Tự động trừ vào giá khi đặt hàng, áp cho số lượng trong cùng một đơn.</p>
+
+      <div className="pt-2 border-t border-primary/40 flex items-center justify-between text-[11px] text-on-primary-container">
+        <span>Tự động áp dụng ưu đãi giảm nhiều nhất khi đặt hàng (không cộng dồn ưu đãi).</span>
+      </div>
     </div>
   )
 }

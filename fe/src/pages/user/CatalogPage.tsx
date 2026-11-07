@@ -31,8 +31,15 @@ export function CatalogPage() {
   const sort = SORTS[sortKey] ?? SORTS.newest
   const [view, setView] = useState<'grid' | 'list'>('grid')
   const { data: promotions } = useApi(() => promotionService.running(), [])
-  const promotionOf = (providerId: string, productId: string) =>
-    promotions?.find((p) => p.providerId === providerId && (!p.productId || p.productId === productId))?.label
+  const promotionOf = (providerId: string, productId: string) => {
+    const matches = promotions?.filter((p) => p.providerId === providerId && (!p.productId || p.productId === productId)) ?? []
+    if (!matches.length) return undefined
+    const getRate = (p: { type: string; buyQuantity?: number | null; freeQuantity?: number | null; percentOff?: number | null }) =>
+      p.type === 'BUY_X_GET_Y' && p.buyQuantity && p.freeQuantity
+        ? p.freeQuantity / (p.buyQuantity + p.freeQuantity)
+        : (p.percentOff ?? 0) / 100
+    return matches.sort((a, b) => getRate(b) - getRate(a))[0]?.label
+  }
   const { data, loading, error, reload } = useApi(
     () => productService.list({ page, size: PAGE_SIZE, type, sortBy: sort.sortBy, direction: sort.direction }), [page, type, sortKey])
   /** Đổi bộ lọc trên URL; đổi lọc/sắp xếp thì về trang đầu */

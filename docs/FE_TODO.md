@@ -128,3 +128,31 @@ Dưới đây là 4 hiệu ứng animation được đúc kết từ concept thi
 | **Tuấn (FE1)** | Xử lý Session Timeout chuyển hướng tại `http.ts` | **Trung bình (P3)** | Chưa bắt đầu |
 | **Tuấn (FE1)** | Dọn dẹp các hàm Mock cũ trong `apis/` | **Thấp (P4)** | Chưa bắt đầu |
 | **Tuấn (FE1)** | Tích hợp 4 hiệu ứng Animation trang chủ (Phần 3) | **Mở rộng (P4)** | Tham khảo |
+
+---
+
+## PHẦN 4. ĐÁNH GIÁ & ĐỀ XUẤT NÂNG CẤP TÍNH NĂNG KHUYẾN MÃI (PROMOTION ENGINE)
+
+### 1. Hiện Trạng & Giới Hạn Scope Hiện Tại
+- **Kiến trúc Backend (`Promotion.java` & `PromotionController.java`)**:
+  - Khuyến mãi thuộc sở hữu của từng **Provider (Xưởng)**.
+  - Hỗ trợ 2 hình thức:
+    1. `PERCENT_OFF`: Giảm % đơn giá khi mua từ `minQuantity` cái trở lên (áp dụng cho từng dòng bánh lẻ).
+    2. `BUY_X_GET_Y`: Mua X tặng Y (ví dụ mua 3 tặng 1). Lặp lại theo từng bộ số lượng.
+  - Cơ chế tự động tính trong Checkout (`CheckoutServiceImpl.java`): Quét các khuyến mãi đang chạy của xưởng, chọn khuyến mãi có mức giảm lớn nhất (`bestDiscount`) để trừ trực tiếp vào đơn giá từng dòng hàng.
+  - Phân hệ Seller: Đã có trang quản trị `/seller/promotions` ([`PromotionsPage.tsx`](file:///d:/GitHub/trungthu/fe/src/pages/admin/PromotionsPage.tsx)) đầy đủ chức năng tạo, bật/tắt, xóa.
+- **Điểm nghẽn ở Storefront (Phía Khách Hàng - Buyer)**:
+  - Khách vào Catalog và trang chi tiết sản phẩm hoàn toàn **không thấy nhãn/badge khuyến mãi** dù API `GET /api/public/promotions` đã sẵn sàng.
+  - Giỏ hàng (`CartPage`) không có thanh tiến trình nhắc nhở tăng số lượng để nhận ưu đãi (Upsell Nudge).
+  - Chưa hỗ trợ mã giảm giá nhập tay (Promo Code / Coupon).
+
+### 2. Định Hướng Nâng Cấp Nghiệp Vụ Chuyên Sâu
+- **Giai đoạn 1: Nâng cấp Trải nghiệm Storefront (Không cần sửa Backend)**:
+  - Hiển thị Badge khuyến mãi trực tiếp trên thẻ sản phẩm (`CatalogCard.tsx`) và trang chi tiết (`ProductDetailPage.tsx`).
+  - Tích hợp **Smart Upsell Nudge** trong Giỏ hàng: Ví dụ khách chọn 2 cái thập cẩm, hiển thị thông báo *"Mua thêm 1 bánh để được TẶNG 1 hoặc GIẢM 10%"*.
+  - Hiển thị giá gạch ngang (giá gốc vs giá sau khuyến mãi) và nhãn ưu đãi rõ ràng tại Giỏ hàng và Checkout.
+- **Giai đoạn 2: Mở rộng Nghiệp Vụ Backend & Động cơ Khuyến Mãi (Khảo sát nâng cấp)**:
+  - Bổ sung bảng `Voucher` / `PromoCode` nhập tay cho toàn đơn hàng (Order-level discount).
+  - Giảm giá theo ngưỡng giá trị đơn hàng (Ví dụ: Đơn từ 1.000.000đ giảm 50.000đ).
+  - Flash Sale theo khung giờ mẻ nướng (Countdown timer).
+

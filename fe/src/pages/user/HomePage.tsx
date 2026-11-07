@@ -5,6 +5,7 @@ import { Icon } from '../../components/Icon'
 import { HeroMotion } from '../../components/HeroMotion'
 import { useApi } from '../../hooks/useApi'
 import { productService } from '../../services/productService'
+import { promotionService } from '../../services/sellerService'
 import { ROUTES } from '../../constants'
 import { formatVnd } from '../../lib/format'
 import type { Product } from '../../types/product'
@@ -38,6 +39,17 @@ function toShops(products: Product[]): Shop[] {
 export function HomePage() {
   // ponytail: một trang đầu (24 sp) đủ cho 4 sản phẩm + các xưởng; cần đủ xưởng khi > 24 sp thì thêm API danh sách xưởng
   const { data, loading } = useApi(() => productService.list({ size: 24 }), [])
+  const { data: promotions } = useApi(() => promotionService.running(), [])
+  const promotionOf = (providerId: string, productId: string) => {
+    const matches = promotions?.filter((p) => p.providerId === providerId && (!p.productId || p.productId === productId)) ?? []
+    if (!matches.length) return undefined
+    const getRate = (p: { type: string; buyQuantity?: number | null; freeQuantity?: number | null; percentOff?: number | null }) =>
+      p.type === 'BUY_X_GET_Y' && p.buyQuantity && p.freeQuantity
+        ? p.freeQuantity / (p.buyQuantity + p.freeQuantity)
+        : (p.percentOff ?? 0) / 100
+    return matches.sort((a, b) => getRate(b) - getRate(a))[0]?.label
+  }
+
   const products = (data?.content ?? []).filter((p) => p.status === 'ACTIVE' && p.variants.length > 0)
   const featured = products.slice(0, 4)
   const shops = toShops(products).slice(0, 4)
@@ -174,7 +186,7 @@ export function HomePage() {
                 </span>{' '}
               </div>{' '}
             </div>{' '}
-            <FeaturedProducts products={featured} loading={loading} />{' '}
+            <FeaturedProducts products={featured} loading={loading} promotionOf={promotionOf} />{' '}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-gutter pt-space-sm">
               {' '}
               <div className="p-space-lg rounded-[0.125rem] bg-surface-container-lowest border border-border-gold-subtle shadow-sm hover:shadow-md transition-shadow flex items-start gap-space-md">
@@ -446,34 +458,53 @@ export function HomePage() {
 
 const CARD = 'group relative rounded-[0.125rem] bg-surface-container-lowest border border-border-gold-subtle shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col justify-between overflow-hidden'
 
-function FeaturedProducts({ products, loading }: { products: Product[]; loading: boolean }) {
+function FeaturedProducts({
+  products,
+  loading,
+  promotionOf,
+}: {
+  products: Product[]
+  loading: boolean
+  promotionOf: (providerId: string, productId: string) => string | undefined
+}) {
   if (!loading && products.length === 0) {
     return <p className="font-body-md text-body-md text-on-surface-variant">Chưa có sản phẩm đang bán.</p>
   }
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-gutter" aria-busy={loading}>
-      {products.map((p) => (
-        <Link key={p.id} to={`${ROUTES.products}/${p.id}`} className={CARD}>
-          <div className="relative h-60 w-full overflow-hidden bg-surface-container">
-            {p.imageUrl && (
-              <img className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src={p.imageUrl} alt={p.imageAlt ?? p.name} loading="lazy" />
-            )}
-            <div className="absolute top-3 left-3 bg-primary/90 text-champagne-light border border-border-gold-subtle font-label-sm text-label-sm px-2.5 py-1 rounded-[0.125rem] uppercase tracking-wider backdrop-blur-sm">
-              {p.storeName}
+      {products.map((p) => {
+        const promo = p.productType === 'GIFT_SET' ? undefined : promotionOf(p.providerId, p.id)
+        return (
+          <Link key={p.id} to={`${ROUTES.products}/${p.id}`} className={CARD}>
+            <div className="relative h-60 w-full overflow-hidden bg-surface-container">
+              {p.imageUrl && (
+                <img className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src={p.imageUrl} alt={p.imageAlt ?? p.name} loading="lazy" />
+              )}
+              <div className="absolute top-3 left-3 flex flex-col gap-1 z-10">
+                <div className="bg-primary/90 text-champagne-light border border-border-gold-subtle font-label-sm text-label-sm px-2.5 py-1 rounded-[0.125rem] uppercase tracking-wider backdrop-blur-sm self-start">
+                  {p.storeName}
+                </div>
+                {promo && (
+                  <span className="bg-error text-on-error font-label-sm text-label-sm px-2 py-0.5 rounded-[0.125rem] uppercase tracking-wider flex items-center gap-1 self-start shadow-sm">
+                    <Icon name="sell" className="text-[12px]" aria-hidden />
+                    {promo}
+                  </span>
+                )}
+              </div>
             </div>
-          </div>
-          <div className="p-space-md flex flex-col gap-2">
-            <h3 className="font-headline-sm text-headline-sm text-primary">{p.name}</h3>
-            {p.description && <p className="font-body-sm text-body-sm text-on-surface-variant line-clamp-2">{p.description}</p>}
-            <div className="pt-2 flex items-center justify-between">
-              <span className="font-label-md text-label-md text-secondary font-bold">Từ {formatVnd(minPrice(p))}</span>
-              <span className="w-8 h-8 rounded-[0.125rem] bg-surface-container flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-champagne-light transition-colors border border-border-gold-subtle">
-                <Icon name="arrow_forward" className="text-[17px]" aria-hidden />
-              </span>
+            <div className="p-space-md flex flex-col gap-2">
+              <h3 className="font-headline-sm text-headline-sm text-primary">{p.name}</h3>
+              {p.description && <p className="font-body-sm text-body-sm text-on-surface-variant line-clamp-2">{p.description}</p>}
+              <div className="pt-2 flex items-center justify-between">
+                <span className="font-label-md text-label-md text-secondary font-bold">Từ {formatVnd(minPrice(p))}</span>
+                <span className="w-8 h-8 rounded-[0.125rem] bg-surface-container flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-champagne-light transition-colors border border-border-gold-subtle">
+                  <Icon name="arrow_forward" className="text-[17px]" aria-hidden />
+                </span>
+              </div>
             </div>
-          </div>
-        </Link>
-      ))}
+          </Link>
+        )
+      })}
     </div>
   )
 }

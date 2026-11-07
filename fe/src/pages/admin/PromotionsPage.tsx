@@ -7,6 +7,7 @@ import { promotionService, sellerService, type Promotion, type PromotionInput, t
 import { Field, TextInput } from '../../components/ui/Field'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { EmptyState, ErrorState, Notice, Spinner } from '../../components/ui/States'
+import { Icon } from '../../components/Icon'
 
 const today = () => toIsoDate(new Date())
 
@@ -30,6 +31,7 @@ export function PromotionsPage() {
   const { data, loading, error, reload } = useApi(() => promotionService.mine(), [])
   const products = useApi(() => sellerService.products(), [])
   const [type, setType] = useState<PromotionType>('BUY_X_GET_Y')
+  const [selectedProductId, setSelectedProductId] = useState<string>('')
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState<{ ok: boolean; text: string }>()
 
@@ -60,10 +62,16 @@ export function PromotionsPage() {
       buyQuantity: num('buyQuantity'), freeQuantity: num('freeQuantity'),
       startDate: f.startDate, endDate: f.endDate,
     }), `Đã tạo khuyến mãi "${f.name}".`)
-    if (ok) form.reset()
+    if (ok) {
+      form.reset()
+      setSelectedProductId('')
+    }
   }
 
   const sellable = (products.data ?? []).filter((p) => p.status !== 'ARCHIVED' && p.productType !== 'GIFT_SET')
+  const activeConflicts = (data ?? []).filter(
+    (p) => p.active && ((p.productId && p.productId === selectedProductId) || (!p.productId && selectedProductId)),
+  )
 
   return (
     <div className="page section flex flex-col gap-6">
@@ -74,11 +82,21 @@ export function PromotionsPage() {
         <h2 className="text-h3 md:col-span-2">Tạo sự kiện mới</h2>
         <TextInput label="Tên sự kiện" name="name" placeholder="Trung thu đoàn viên" required maxLength={150} />
         <Field label="Áp dụng cho" name="productId">
-          <select id="productId" name="productId" className="input" defaultValue="">
+          <select id="productId" name="productId" className="input" defaultValue="" onChange={(e) => setSelectedProductId(e.target.value)}>
             <option value="">Tất cả sản phẩm của xưởng (trừ set quà)</option>
             {sellable.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
         </Field>
+        {activeConflicts.length > 0 && (
+          <div className="md:col-span-2 rounded-[0.125rem] bg-amber-500/10 border border-amber-500/30 p-3 text-xs text-amber-900 flex items-start gap-2">
+            <Icon name="info" className="text-amber-600 text-[16px] shrink-0 mt-0.5" aria-hidden />
+            <div>
+              <span className="font-semibold">Lưu ý trùng lặp:</span> Sản phẩm này đang có{' '}
+              {activeConflicts.map((c) => `"${c.name} (${c.label})"`).join(', ')}.
+              Hệ thống sẽ luôn tự động áp dụng ưu đãi giảm nhiều tiền nhất cho khách khi mua hàng (không cộng dồn).
+            </div>
+          </div>
+        )}
         <fieldset className="md:col-span-2">
           <legend className="field-label">Kiểu khuyến mãi</legend>
           <div className="mt-1 flex flex-wrap gap-2">
@@ -118,9 +136,22 @@ export function PromotionsPage() {
               <tbody>
                 {data.map((p) => {
                   const status = statusOf(p)
+                  const overlap = data.some((o) => o.id !== p.id && o.active && p.active
+                    && (!o.productId || !p.productId || o.productId === p.productId)
+                    && !(p.endDate < o.startDate || p.startDate > o.endDate))
                   return (
                     <tr key={p.id} className="border-t border-line">
-                      <td className="p-3 font-medium">{p.name}</td>
+                      <td className="p-3">
+                        <div className="flex flex-col gap-0.5">
+                          <span className="font-medium text-navy">{p.name}</span>
+                          {overlap && (
+                            <span className="inline-flex items-center gap-1 text-[10px] text-amber-700 bg-amber-500/15 px-1.5 py-0.5 rounded w-fit font-medium">
+                              <Icon name="warning" className="text-[12px] shrink-0" aria-hidden />
+                              Trùng sản phẩm
+                            </span>
+                          )}
+                        </div>
+                      </td>
                       <td className="whitespace-nowrap font-semibold text-navy">{p.label}</td>
                       <td>{p.productName ?? 'Cả xưởng'}</td>
                       <td className="whitespace-nowrap">{formatDate(p.startDate)} – {formatDate(p.endDate)}</td>
@@ -141,6 +172,9 @@ export function PromotionsPage() {
                 })}
               </tbody>
             </table>
+            <div className="p-3 text-[11px] text-muted border-t border-line bg-surface-container-low/40">
+              * Lưu ý: Khi có nhiều chương trình khuyến mãi cùng áp dụng cho một sản phẩm, hệ thống tự động chọn ưu đãi giảm nhiều tiền nhất cho khách hàng khi đặt đơn (không cộng dồn ưu đãi).
+            </div>
           </div>
         )}
     </div>
