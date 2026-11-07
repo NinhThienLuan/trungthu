@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { useApi } from '../../hooks/useApi'
 import { useDocumentTitle } from '../../hooks/useDocumentTitle'
 import { cn, formatVnd } from '../../lib/format'
-import { MAX_RETAIL_QUANTITY, ROUTES } from '../../constants'
+import { MAX_LINE_QUANTITY, ROUTES } from '../../constants'
 import { productService } from '../../services/productService'
 import { useCartStore, type BoxSlot } from '../../stores/cartStore'
 import { useAuthStore } from '../../stores/authStore'
@@ -153,7 +153,7 @@ export function BoxBuilderPage() {
             </div>
             <div className="flex flex-wrap items-center gap-3">
               <span className="text-small">Số hộp</span>
-              <QuantityStepper value={quantity} max={Math.max(1, Math.min(MAX_RETAIL_QUANTITY, box.variant.stockQuantity))} onChange={setQty} />
+              <QuantityStepper value={quantity} max={Math.max(1, Math.min(MAX_LINE_QUANTITY, box.variant.stockQuantity))} onChange={setQty} />
               <span className="ml-auto font-serif text-h3 text-navy">{formatVnd(boxTotal * quantity)}</span>
             </div>
             <dl className="flex flex-col gap-0.5 rounded-sm bg-champagne/30 p-3 text-small">

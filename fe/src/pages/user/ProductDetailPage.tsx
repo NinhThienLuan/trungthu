@@ -12,7 +12,7 @@ import { useDocumentTitle } from '../../hooks/useDocumentTitle'
 import { useCartStore } from '../../stores/cartStore'
 import { useAuthStore } from '../../stores/authStore'
 import type { Product } from '../../types/product'
-import { MAX_RETAIL_QUANTITY, PRODUCT_TYPE_LABEL, ROUTES } from '../../constants'
+import { MAX_LINE_QUANTITY, PRODUCT_TYPE_LABEL, ROUTES } from '../../constants'
 import { cn } from '../../lib/format'
 
 const DETAIL_TABS = [
@@ -61,8 +61,8 @@ export function ProductDetailPage() {
   const promotions = product.productType === 'GIFT_SET' ? [] : (running ?? []).filter((p) => !p.productId || p.productId === product.id)
   const price = variant?.price ?? 0
   const canPreorder = product.productType === 'LOOSE_CAKE'
-  // Đơn lẻ tối đa MAX_RETAIL_QUANTITY mỗi loại (bánh nướng theo đơn cũng vậy); mua nhiều hơn -> báo giá sỉ
-  const maxQty = Math.min(MAX_RETAIL_QUANTITY, canPreorder ? MAX_RETAIL_QUANTITY : Math.max(1, variant?.stockQuantity ?? 1))
+  // Bánh lẻ không giới hạn số lượng (từ 20 cái nhận sau 7 ngày); món khác theo số đang có
+  const maxQty = Math.min(MAX_LINE_QUANTITY, canPreorder ? MAX_LINE_QUANTITY : Math.max(1, variant?.stockQuantity ?? 1))
   const inStock = !!variant && (variant.stockQuantity > 0 || canPreorder)
   const gallery = product.gallery?.length ? product.gallery : product.imageUrl ? [product.imageUrl] : []
   const configs = product.variants.map((v) => ({ variantId: v.id, label: 'Quy Cách', title: v.variantName, sub: '' }))

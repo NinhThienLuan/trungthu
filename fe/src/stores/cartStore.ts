@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { MAX_RETAIL_QUANTITY } from '../constants'
+import { MAX_LINE_QUANTITY } from '../constants'
 
 /** Một bánh đặt vào 1 ô của hộp tự phối */
 export interface BoxSlot {
@@ -58,9 +58,9 @@ interface CartState {
 }
 
 const clamp = (value: number, max: number) => Math.max(1, Math.min(value, Math.max(max, 1)))
-/** Đơn lẻ tối đa MAX_RETAIL_QUANTITY mỗi dòng (kể cả bánh nướng theo đơn); mua nhiều hơn -> báo giá sỉ */
+/** Bánh lẻ không giới hạn (đặt nhiều thì ngày nhận xa hơn, BE kiểm); set quà theo số set đang có */
 export const maxOrderQuantity = (item: Pick<CartItem, 'stock' | 'canPreorder'>) =>
-  Math.min(MAX_RETAIL_QUANTITY, item.canPreorder ? MAX_RETAIL_QUANTITY : item.stock)
+  Math.min(MAX_LINE_QUANTITY, item.canPreorder ? MAX_LINE_QUANTITY : item.stock)
 
 export const useCartStore = create<CartState>()(
   persist(

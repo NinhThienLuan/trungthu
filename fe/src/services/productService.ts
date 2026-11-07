@@ -1,5 +1,5 @@
 import { http, unwrap } from '../apis/http'
-import { MAX_RETAIL_QUANTITY } from '../constants'
+import { MAX_LINE_QUANTITY } from '../constants'
 import type { ApiResponse, Page } from '../types/api'
 import type { LeadTime, Product, ProductType, VariantAvailability } from '../types/product'
 
@@ -80,7 +80,7 @@ const toProduct = (p: BeProduct): Product => {
       weightGram: v.weightGram,
       boxCapacity: v.boxCapacity,
       // BE công khai không trả số tồn, chỉ `purchasable`: giới hạn mỗi loại theo đơn lẻ; BE vẫn chặn khi thiếu hàng
-      stockQuantity: v.purchasable ? MAX_RETAIL_QUANTITY : 0,
+      stockQuantity: v.purchasable ? MAX_LINE_QUANTITY : 0,
       status: v.purchasable ? 'ACTIVE' : 'OUT_OF_STOCK',
       availability: v.availability,
     })),

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { productService } from '../services/productService'
 import { formatDate, toIsoDate, addDays } from '../lib/format'
+import { BULK_ORDER_QUANTITY } from '../constants'
 import type { LeadTime, VariantAvailability } from '../types/product'
 
 const STATUS: Record<VariantAvailability, { label: string; tone: string }> = {
@@ -33,6 +34,7 @@ export function DeliveryEstimate({ variantId, quantity, availability }: {
   const message = !lead ? null
     : lead.unavailable.length ? 'Không đủ hàng cho số lượng này.'
     : lead.bakeToOrder.length ? `Vượt số bánh có sẵn — cả đơn sẽ nướng theo đơn, nhận sớm nhất ${formatDate(lead.earliestDelivery)}.`
+    : quantity >= BULK_ORDER_QUANTITY ? `Đặt từ ${BULK_ORDER_QUANTITY} cái — xưởng cần chuẩn bị, nhận sớm nhất ${formatDate(lead.earliestDelivery)}.`
     : lead.earliestDelivery === tomorrow ? `Có sẵn — nhận sớm nhất ngày mai (${formatDate(lead.earliestDelivery)}).`
     : `Nhận sớm nhất ${formatDate(lead.earliestDelivery)}.`
 
