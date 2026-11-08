@@ -12,6 +12,7 @@ import fpt.sba.trungthu.entity.enumeration.UserStatus;
 import fpt.sba.trungthu.repository.StoreComplianceDocRepository;
 import fpt.sba.trungthu.repository.UserRepository;
 import fpt.sba.trungthu.service.ComplianceService;
+import fpt.sba.trungthu.service.EmailService;
 import fpt.sba.trungthu.service.StorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,6 +34,7 @@ public class ComplianceServiceImpl implements ComplianceService {
     private final UserRepository userRepository;
     private final StorageService storageService;
     private final SecurityContextService security;
+    private final EmailService emailService; // CRITICAL FIX: Thêm email service
 
     private static final String[] ALLOWED_DOC_TYPES = {"application/pdf", "image/png", "image/jpeg"};
     private static final int MAX_DOC_SIZE_MB = 10;
@@ -72,6 +74,14 @@ public class ComplianceServiceImpl implements ComplianceService {
 
             StoreComplianceDoc savedDoc = complianceDocRepository.save(doc);
             log.info("Compliance document uploaded successfully: {}", savedDoc.getId());
+
+            // CRITICAL FIX: Gửi email thông báo admin khi có tài liệu mới
+            // TODO: Lấy email admin từ config hoặc database (hardcode tạm cho MVP)
+            emailService.sendNewComplianceDocumentToAdmin(
+                    "admin@trungthu.com", 
+                    providerEmail, 
+                    docType.name()
+            );
 
             return mapToResponse(savedDoc);
         } catch (Exception e) {
@@ -182,9 +192,24 @@ public class ComplianceServiceImpl implements ComplianceService {
             doc.setRejectionReason(request.getRejectionReason());
 
             StoreComplianceDoc updatedDoc = complianceDocRepository.save(doc);
+            
+            // CRITICAL FIX: Gửi email thông báo provider về kết quả review
             if (request.getNewStatus() == ComplianceDocStatus.APPROVED) {
+                emailService.sendComplianceApprovedEmail(
+                        doc.getProvider().getEmail(),
+                        doc.getDocumentType().name()
+                );
                 markApprovedWhenComplete(doc.getProvider());
+            } else if (request.getNewStatus() == ComplianceDocStatus.REJECTED) {
+                emailService.sendComplianceRejectedEmail(
+                        doc.getProvider().getEmail(),
+                        doc.getDocumentType().name(),
+                        request.getRejectionReason() != null ? request.getRejectionReason() : "Không rõ lý do"
+                );
+                // BUG FIX: Khi reject tài liệu, phải unset cờ nếu không đủ 3 loại approved
+                unmarkApprovedIfIncomplete(doc.getProvider());
             }
+            
             log.info("Document reviewed successfully: {}", docId);
 
             return mapToResponse(updatedDoc);
@@ -214,17 +239,52 @@ public class ComplianceServiceImpl implements ComplianceService {
     /**
      * Checkout và đăng bán kiểm tra User.isComplianceApproved: bật cờ khi xưởng đã có đủ
      * ATTP, giấy phép kinh doanh và KYC được duyệt (mỗi loại ít nhất một bản APPROVED).
+     * 
+     * CRITICAL FIX: Thêm pessimistic lock để tránh race condition khi 2 admin duyệt cùng lúc
      */
     private void markApprovedWhenComplete(User provider) {
-        if (Boolean.TRUE.equals(provider.getIsComplianceApproved())) return;
+        // CRITICAL FIX: Reload provider với pessimistic lock
+        User lockedProvider = userRepository.findByIdWithLock(provider.getId())
+                .orElseThrow(() -> new IllegalStateException("Provider not found: " + provider.getId()));
+        
+        if (Boolean.TRUE.equals(lockedProvider.getIsComplianceApproved())) return;
+        
         EnumSet<ComplianceDocType> approved = EnumSet.noneOf(ComplianceDocType.class);
-        complianceDocRepository.findByProviderIdOrderBySubmittedAtDesc(provider.getId()).stream()
+        complianceDocRepository.findByProviderIdOrderBySubmittedAtDesc(lockedProvider.getId()).stream()
                 .filter(d -> d.getVerificationStatus() == ComplianceDocStatus.APPROVED)
                 .forEach(d -> approved.add(d.getDocumentType()));
+        
         if (approved.containsAll(EnumSet.allOf(ComplianceDocType.class))) {
-            provider.setIsComplianceApproved(true);
-            userRepository.save(provider);
-            log.info("Provider {} is now compliance approved", provider.getEmail());
+            lockedProvider.setIsComplianceApproved(true);
+            userRepository.save(lockedProvider);
+            log.info("Provider {} is now compliance approved", lockedProvider.getEmail());
+            
+            // CRITICAL FIX: Gửi email thông báo provider đạt compliance đầy đủ
+            emailService.sendComplianceFullyApprovedEmail(lockedProvider.getEmail());
+        }
+    }
+
+    /**
+     * BUG FIX: Khi admin reject hoặc expire tài liệu, cần unset cờ isComplianceApproved
+     * nếu provider không còn đủ 3 loại tài liệu APPROVED
+     */
+    private void unmarkApprovedIfIncomplete(User provider) {
+        // CRITICAL FIX: Reload provider với pessimistic lock
+        User lockedProvider = userRepository.findByIdWithLock(provider.getId())
+                .orElseThrow(() -> new IllegalStateException("Provider not found: " + provider.getId()));
+        
+        if (Boolean.FALSE.equals(lockedProvider.getIsComplianceApproved())) return;
+        
+        EnumSet<ComplianceDocType> approved = EnumSet.noneOf(ComplianceDocType.class);
+        complianceDocRepository.findByProviderIdOrderBySubmittedAtDesc(lockedProvider.getId()).stream()
+                .filter(d -> d.getVerificationStatus() == ComplianceDocStatus.APPROVED)
+                .forEach(d -> approved.add(d.getDocumentType()));
+        
+        // Nếu không còn đủ 3 loại (FOOD_SAFETY_CERT, BUSINESS_LICENSE, IDENTITY_KYC)
+        if (!approved.containsAll(EnumSet.allOf(ComplianceDocType.class))) {
+            lockedProvider.setIsComplianceApproved(false);
+            userRepository.save(lockedProvider);
+            log.warn("Provider {} no longer compliance approved (missing approved documents)", lockedProvider.getEmail());
         }
     }
 }

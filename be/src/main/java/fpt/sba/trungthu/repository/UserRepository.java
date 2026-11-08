@@ -2,7 +2,9 @@ package fpt.sba.trungthu.repository;
 
 import fpt.sba.trungthu.entity.User;
 import fpt.sba.trungthu.entity.enumeration.UserRole;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -29,5 +31,15 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     long countByRoleAndIsComplianceApproved(UserRole role, Boolean isComplianceApproved);
 
     long countByRoleAndIsSeasonActive(UserRole role, Boolean isSeasonActive);
+
+    /**
+     * Tìm User với pessimistic lock (để update isComplianceApproved thread-safe)
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    Optional<User> findForUpdateById(UUID id);
+
+    default Optional<User> findByIdWithLock(UUID id) {
+        return findForUpdateById(id);
+    }
 
 }

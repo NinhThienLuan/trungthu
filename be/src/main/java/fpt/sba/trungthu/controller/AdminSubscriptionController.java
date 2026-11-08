@@ -28,24 +28,6 @@ public class AdminSubscriptionController {
 
     private final SubscriptionService subscriptionService;
 
-    @GetMapping("/pending")
-    @Operation(summary = "Get pending subscriptions")
-    public ResponseEntity<ApiResponseDTO<List<SubscriptionResponse>>> getPendingSubscriptions() {
-        log.info("Admin getting pending subscriptions");
-        
-        try {
-            List<SubscriptionResponse> subscriptions = subscriptionService
-                    .getAllSubscriptionsByStatus(SubscriptionStatus.PENDING_PAYMENT);
-            
-            return ResponseEntity.ok(ApiResponseDTO.success("Pending subscriptions retrieved successfully", subscriptions));
-        } catch (Exception e) {
-            log.error("Error getting pending subscriptions", e);
-            return ResponseEntity
-                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponseDTO.error(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to retrieve subscriptions: " + e.getMessage()));
-        }
-    }
-
     @GetMapping("/status/{status}")
     @Operation(summary = "Get subscriptions by status")
     public ResponseEntity<ApiResponseDTO<List<SubscriptionResponse>>> getSubscriptionsByStatus(

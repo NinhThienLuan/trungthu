@@ -79,21 +79,5 @@ public class ProviderComplianceController {
         }
     }
 
-    @GetMapping("/status")
-    @Operation(summary = "Check if provider has approved compliance documents")
-    public ResponseEntity<ApiResponseDTO<Boolean>> checkComplianceStatus() {
-        log.info("Provider checking compliance status");
-        
-        try {
-            String providerEmail = getCurrentUserEmail();
-            boolean hasApproved = complianceService.hasApprovedDocument(providerEmail);
-            
-            return ResponseEntity.ok(ApiResponseDTO.success("Compliance status checked", hasApproved));
-        } catch (Exception e) {
-            log.error("Error checking compliance status", e);
-            return ResponseEntity
-                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponseDTO.error(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to check status: " + e.getMessage()));
-        }
-    }
+
 }

@@ -10,6 +10,7 @@ import fpt.sba.trungthu.entity.enumeration.SubscriptionStatus;
 import fpt.sba.trungthu.entity.enumeration.UserStatus;
 import fpt.sba.trungthu.repository.SubscriptionRepository;
 import fpt.sba.trungthu.repository.UserRepository;
+import fpt.sba.trungthu.service.EmailService;
 import fpt.sba.trungthu.service.SubscriptionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,6 +30,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
     private final SubscriptionRepository subscriptionRepository;
     private final UserRepository userRepository;
+    private final EmailService emailService; // CRITICAL FIX: Thêm email service
 
     @Override
     @Transactional
@@ -67,6 +69,14 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
             Subscription savedSubscription = subscriptionRepository.save(subscription);
             log.info("Subscription created successfully with ID: {}", savedSubscription.getId());
+
+            // CRITICAL FIX: Gửi email thông báo admin khi có subscription request mới
+            // TODO: Lấy email admin từ config hoặc database (hardcode tạm cho MVP)
+            emailService.sendNewSubscriptionRequestToAdmin(
+                    "admin@trungthu.com",
+                    providerEmail,
+                    plan.label()
+            );
 
             return mapToResponse(savedSubscription);
         } catch (Exception e) {
@@ -112,6 +122,13 @@ public class SubscriptionServiceImpl implements SubscriptionService {
             Subscription updatedSubscription = subscriptionRepository.save(subscription);
             log.info("Subscription activated successfully: {}", subscriptionId);
 
+            // CRITICAL FIX: Gửi email thông báo provider khi subscription được kích hoạt
+            emailService.sendSubscriptionActivatedEmail(
+                    subscription.getProvider().getEmail(),
+                    subscription.getPlanName(),
+                    subscription.getEndDate().toString()
+            );
+
             return mapToResponse(updatedSubscription);
         } catch (Exception e) {
             log.error("Error activating subscription: {}", subscriptionId, e);
@@ -150,7 +167,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     @Override
     @Transactional
     public SubscriptionResponse cancelSubscription(UUID subscriptionId, String ownerEmail) {
-        log.info("Cancelling (suspending) subscription: {}", subscriptionId);
+        log.info("Cancelling subscription: {}", subscriptionId);
         
         try {
             Subscription subscription = subscriptionRepository.findByIdWithLock(subscriptionId)
@@ -160,14 +177,23 @@ public class SubscriptionServiceImpl implements SubscriptionService {
                 throw new IllegalArgumentException("Subscription not found: " + subscriptionId);
             }
 
-            // In SubscriptionStatus enum, SUSPENDED is used for cancellation
             if (subscription.getStatus() == SubscriptionStatus.SUSPENDED || subscription.getStatus() == SubscriptionStatus.EXPIRED) {
                 throw new IllegalStateException("Subscription is already cancelled or expired");
             }
 
-            subscription.transitionStatus(SubscriptionStatus.SUSPENDED);
+            // Xác định target status dựa trên current status
+            // PENDING_PAYMENT → EXPIRED (reject/cancel request trước khi thanh toán)
+            // ACTIVE → SUSPENDED (tạm khóa gói đang active)
+            SubscriptionStatus targetStatus;
+            if (subscription.getStatus() == SubscriptionStatus.PENDING_PAYMENT) {
+                targetStatus = SubscriptionStatus.EXPIRED; // Cancel trước khi activate = reject request
+            } else {
+                targetStatus = SubscriptionStatus.SUSPENDED; // Cancel sau khi activate = suspend
+            }
+
+            subscription.transitionStatus(targetStatus);
             Subscription updatedSubscription = subscriptionRepository.save(subscription);
-            log.info("Subscription cancelled (suspended) successfully: {}", subscriptionId);
+            log.info("Subscription cancelled successfully: {} -> {}", subscriptionId, targetStatus);
 
             return mapToResponse(updatedSubscription);
         } catch (Exception e) {
