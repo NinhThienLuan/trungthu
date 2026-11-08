@@ -35,30 +35,20 @@ public class ProviderSubscriptionController {
     }
 
     @PostMapping
-    @Operation(summary = "Create subscription request")
+    @Operation(summary = "Reserve a subscription payment")
     public ResponseEntity<ApiResponseDTO<SubscriptionResponse>> createSubscription(
             @Valid @RequestBody CreateSubscriptionRequest request) {
-        
-        log.info("Provider creating subscription request");
-        
-        try {
-            String providerEmail = getCurrentUserEmail();
-            SubscriptionResponse response = subscriptionService.createSubscription(providerEmail, request);
-            
-            return ResponseEntity
-                    .status(HttpStatus.CREATED)
-                    .body(ApiResponseDTO.success("Subscription request created successfully", response));
-        } catch (IllegalArgumentException e) {
-            log.error("Invalid subscription request", e);
-            return ResponseEntity
-                    .status(HttpStatus.BAD_REQUEST)
-                    .body(ApiResponseDTO.error(HttpStatus.BAD_REQUEST, e.getMessage()));
-        } catch (Exception e) {
-            log.error("Error creating subscription", e);
-            return ResponseEntity
-                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponseDTO.error(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to create subscription: " + e.getMessage()));
-        }
+        return ResponseEntity.ok(ApiResponseDTO.success(subscriptionService.createSubscription(getCurrentUserEmail(), request)));
+    }
+
+    @PostMapping("/{subscriptionId}/checkout")
+    public ResponseEntity<ApiResponseDTO<SubscriptionResponse>> openCheckout(@PathVariable UUID subscriptionId) {
+        return ResponseEntity.ok(ApiResponseDTO.success(subscriptionService.openCheckout(subscriptionId, getCurrentUserEmail())));
+    }
+
+    @PostMapping("/{subscriptionId}/payment/refresh")
+    public ResponseEntity<ApiResponseDTO<SubscriptionResponse>> refreshPayment(@PathVariable UUID subscriptionId) {
+        return ResponseEntity.ok(ApiResponseDTO.success(subscriptionService.refreshPayment(subscriptionId, getCurrentUserEmail())));
     }
 
     public record PlanView(SubscriptionPlan code, String name, java.math.BigDecimal price, int maxProducts) {}
@@ -121,23 +111,6 @@ public class ProviderSubscriptionController {
     @Operation(summary = "Cancel subscription")
     public ResponseEntity<ApiResponseDTO<SubscriptionResponse>> cancelSubscription(
             @PathVariable UUID subscriptionId) {
-        
-        log.info("Provider cancelling subscription: {}", subscriptionId);
-        
-        try {
-            SubscriptionResponse response = subscriptionService.cancelSubscription(subscriptionId, getCurrentUserEmail());
-            
-            return ResponseEntity.ok(ApiResponseDTO.success("Subscription cancelled successfully", response));
-        } catch (IllegalStateException e) {
-            log.error("Invalid cancellation request", e);
-            return ResponseEntity
-                    .status(HttpStatus.BAD_REQUEST)
-                    .body(ApiResponseDTO.error(HttpStatus.BAD_REQUEST, e.getMessage()));
-        } catch (Exception e) {
-            log.error("Error cancelling subscription", e);
-            return ResponseEntity
-                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponseDTO.error(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to cancel subscription: " + e.getMessage()));
-        }
+        return ResponseEntity.ok(ApiResponseDTO.success(subscriptionService.cancelSubscription(subscriptionId, getCurrentUserEmail())));
     }
 }

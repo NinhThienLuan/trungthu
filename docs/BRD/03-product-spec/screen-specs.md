@@ -410,17 +410,17 @@
 ## 18. `/seller/subscription` - Đăng Ký & Thanh Toán Gói SaaS
 
 ### 18.1 Mục Tiêu & URL
-- URL: `/seller/subscription`; Seller nạp phí để Admin kích hoạt quyền bán, không có ví số dư hay lựa chọn phân hạng quảng cáo.
+- Seller đăng ký và thanh toán phí gói tại `/seller/subscription`.
 
 ### 18.2 Thành phần giao diện
 - Hiển thị phí/thời hạn/giới hạn SKU do BE1 cấu hình, tình trạng KYC và quyền bán.
-- Thông tin tài khoản sàn/QR nạp phí, nội dung `SUB-[SellerId]`.
-- Sau chuyển khoản hiển thị chờ đối soát; Admin xác nhận thực nhận mới ACTIVE. Không dùng webhook.
+- Hiển thị VietQR riêng cho yêu cầu và liên kết mở trang payOS trên thiết bị đang dùng.
+- Tự cập nhật trạng thái gói sau khi backend xác minh thanh toán. Có thao tác kiểm tra với payOS khi cần.
 
 ### 18.3 Trạng thái giao diện
 - Loading: tải cấu hình/trạng thái quyền bán.
 - Empty: chưa có yêu cầu nạp phí.
-- Success: chờ Admin hoặc đã ACTIVE theo API; không suy ra thành công từ việc mở QR.
+- Trạng thái theo API gồm chờ thanh toán, cần đối soát, đã kích hoạt, hết hạn và đã hủy.
 - Error: lỗi gửi yêu cầu/tải trạng thái, giữ thông tin để thử lại.
 
 

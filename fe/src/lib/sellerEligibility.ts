@@ -1,5 +1,4 @@
 import type { ComplianceDoc, ComplianceDocType, Subscription } from '../services/sellerService'
-import { toIsoDate } from './format'
 
 export const REQUIRED_DOCUMENTS: ComplianceDocType[] = ['FOOD_SAFETY_CERT', 'BUSINESS_LICENSE', 'IDENTITY_KYC']
 
@@ -7,7 +6,9 @@ export const REQUIRED_DOCUMENTS: ComplianceDocType[] = ['FOOD_SAFETY_CERT', 'BUS
 export const hasApprovedCompliance = (documents: ComplianceDoc[]) =>
   REQUIRED_DOCUMENTS.every((type) => documents.some((doc) => doc.documentType === type && doc.verificationStatus === 'APPROVED'))
 
-export const isSubscriptionActive = (subscription: Subscription, today = toIsoDate(new Date())) =>
+const vietnamDate = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Ho_Chi_Minh', dateStyle: 'short' })
+
+export const isSubscriptionActive = (subscription: Subscription, today = vietnamDate.format(new Date())) =>
   subscription.status === 'ACTIVE' && !!subscription.startDate && !!subscription.endDate
   && subscription.startDate <= today && subscription.endDate >= today
 

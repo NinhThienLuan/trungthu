@@ -30,14 +30,16 @@ export function SellerStatusBanner() {
   const complianceApproved = hasApprovedCompliance(data.documents)
   const active = data.subscriptions.some((s) => isSubscriptionActive(s))
   if (complianceApproved && active) return null
-  const pending = data.subscriptions.some((s) => s.status === 'PENDING_PAYMENT')
+  const pending = data.subscriptions.find((s) => s.status === 'PENDING_PAYMENT')
+  const subscriptionMessage = pending?.paymentCode ? 'Gói bán hàng đang chờ xác nhận thanh toán.'
+    : pending ? 'Gói bán hàng đang chờ admin đối soát chuyển khoản.' : 'Gian hàng chưa có gói bán hàng còn hiệu lực.'
 
   return (
     <div className={wrapper} aria-label="Hồ sơ và gói bán hàng">
       <Notice>
         <div className="flex flex-col gap-2">
           {!complianceApproved && <p>Gian hàng đang chờ duyệt hồ sơ KYC. Cần đủ giấy ATTP, giấy phép kinh doanh và CCCD được duyệt. <Link to="/seller/profile" className="font-semibold underline">Kiểm tra hồ sơ</Link></p>}
-          {!active && <p>{pending ? 'Gói bán hàng đang chờ admin xác nhận thanh toán.' : 'Gian hàng chưa có gói bán hàng còn hiệu lực.'} <Link to="/seller/subscription" className="font-semibold underline">{pending ? 'Xem yêu cầu gói' : 'Chọn gói bán hàng'}</Link></p>}
+          {!active && <p>{subscriptionMessage} <Link to="/seller/subscription" className="font-semibold underline">{pending ? 'Xem yêu cầu gói' : 'Chọn gói bán hàng'}</Link></p>}
         </div>
       </Notice>
     </div>

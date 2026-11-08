@@ -6,6 +6,7 @@ import fpt.sba.trungthu.dto.response.SubscriptionResponse;
 import fpt.sba.trungthu.entity.enumeration.SubscriptionStatus;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -16,6 +17,12 @@ public interface SubscriptionService {
     
     // Provider creates subscription
     SubscriptionResponse createSubscription(String providerEmail, CreateSubscriptionRequest request);
+
+    SubscriptionResponse openCheckout(UUID subscriptionId, String providerEmail);
+
+    SubscriptionResponse refreshPayment(UUID subscriptionId, String providerEmail);
+
+    void handlePaymentWebhook(Map<String, Object> payload);
     
     // Admin activates subscription
     SubscriptionResponse activateSubscription(UUID subscriptionId, ActivateSubscriptionRequest request);

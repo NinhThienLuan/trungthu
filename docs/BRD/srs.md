@@ -93,8 +93,8 @@ Nền tảng đóng vai trò là phần mềm trung gian dịch vụ (Pure SaaS 
 
 - **`[REQ-SAAS-01]` `[MVP]` Nạp phí kích hoạt quyền bán**:
   - BE1 quản lý phí/thời hạn/quyền bán bằng cấu hình; MVP không bắt buộc phân hạng STANDARD/VIP hay ví có số dư.
-- **`[REQ-SAAS-02]` `[MVP]` Đối soát thủ công**:
-  - Provider chuyển phí tới sàn, giao dịch `SUBSCRIPTION_FEE`/`PENDING`; Admin xác nhận thực nhận và kích hoạt Subscription `ACTIVE`. BE1 sở hữu nghiệp vụ, BE4 thống nhất persistence giao dịch dùng chung.
+- **`[REQ-SAAS-02]` `[MVP]` Thanh toán và đối soát tự động**:
+  - Provider thanh toán phí cho sàn qua VietQR payOS ngay trên trang gói. Backend xác minh webhook và đối chiếu giao dịch với payOS. Khi nhận đúng số tiền, backend ghi `SUBSCRIPTION_FEE` thành `SUCCESS` và kích hoạt gói trong cùng transaction. Admin tiếp tục đối soát các yêu cầu chuyển khoản cũ.
 
 - **`[REQ-SAAS-03]` `[Phase 2]` Tự động kiểm tra hết hạn gói SaaS**:
   - Tiến trình Cron quét hàng ngày chuyển gói hết hạn sang `SUSPENDED`.
