@@ -18,11 +18,15 @@ class RfqSchemaCompatibilityTest {
         try (Connection connection = source.getConnection(); Statement statement = connection.createStatement()) {
             statement.execute("CREATE TABLE bulk_request (id INTEGER PRIMARY KEY)");
             statement.execute("INSERT INTO bulk_request (id) VALUES (1)");
+            statement.execute("CREATE TABLE provider_quotation (id INTEGER PRIMARY KEY)");
+            statement.execute("INSERT INTO provider_quotation (id) VALUES (1)");
             RfqSchemaCompatibility.ensureCakesPerBox(connection);
             RfqSchemaCompatibility.ensureCakesPerBox(connection);
-            try (ResultSet result = statement.executeQuery("SELECT cakes_per_box FROM bulk_request WHERE id = 1")) {
-                assertThat(result.next()).isTrue();
-                assertThat(result.getInt(1)).isEqualTo(1);
+            for (String table : RfqSchemaCompatibility.TABLES) {
+                try (ResultSet result = statement.executeQuery("SELECT cakes_per_box FROM " + table + " WHERE id = 1")) {
+                    assertThat(result.next()).isTrue();
+                    assertThat(result.getInt(1)).isEqualTo(1);
+                }
             }
         }
     }

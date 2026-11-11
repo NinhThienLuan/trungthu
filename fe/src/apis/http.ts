@@ -56,7 +56,8 @@ export async function unwrap<T>(request: Promise<{ data: ApiResponse<T> }>): Pro
 export function errorMessage(error: unknown, fallback = 'Đã có lỗi xảy ra, vui lòng thử lại.'): string {
   if (axios.isAxiosError(error)) {
     if (!error.response) return 'Không kết nối được máy chủ.'
-    if (error.response.status >= 500) return 'Máy chủ đang gặp sự cố. Vui lòng thử lại sau.'
+    // 503 = BE cố ý báo dịch vụ chưa sẵn sàng (vd thanh toán gói chưa cấu hình): giữ câu của BE
+    if (error.response.status >= 500 && error.response.status !== 503) return 'Máy chủ đang gặp sự cố. Vui lòng thử lại sau.'
     const message = (error.response.data as Partial<ApiResponse<unknown>> | undefined)?.message
     if (message) return message
   }

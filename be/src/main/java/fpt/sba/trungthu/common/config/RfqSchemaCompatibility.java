@@ -32,22 +32,33 @@ public class RfqSchemaCompatibility implements ApplicationRunner {
         }
     }
 
+    /** Cả yêu cầu báo giá lẫn báo giá đều có cakes_per_box NOT NULL; thiếu ở bảng nào cũng làm RFQ trả 500 */
+    static final String[] TABLES = {"bulk_request", "provider_quotation"};
+
     static void ensureCakesPerBox(Connection connection) throws Exception {
+        for (String table : TABLES) {
+            ensureCakesPerBox(connection, table);
+        }
+    }
+
+    static void ensureCakesPerBox(Connection connection, String table) throws Exception {
         try (Statement statement = connection.createStatement();
-                ResultSet result = statement.executeQuery("SELECT * FROM bulk_request WHERE 1 = 0")) {
+                ResultSet result = statement.executeQuery("SELECT * FROM " + table + " WHERE 1 = 0")) {
             ResultSetMetaData columns = result.getMetaData();
             for (int i = 1; i <= columns.getColumnCount(); i++) {
                 if ("cakes_per_box".equalsIgnoreCase(columns.getColumnName(i))) return;
             }
+        } catch (java.sql.SQLException missingTable) {
+            return; // Bảng chưa tạo (DB mới): Hibernate/Flyway sẽ tạo kèm cột
         }
         String database = connection.getMetaData().getDatabaseProductName().toLowerCase();
         String sql = database.contains("sql server")
-                ? "IF COL_LENGTH('bulk_request', 'cakes_per_box') IS NULL "
-                        + "ALTER TABLE bulk_request ADD cakes_per_box INT NOT NULL DEFAULT 1"
-                : "ALTER TABLE bulk_request ADD COLUMN IF NOT EXISTS cakes_per_box INTEGER NOT NULL DEFAULT 1";
+                ? "IF COL_LENGTH('" + table + "', 'cakes_per_box') IS NULL "
+                        + "ALTER TABLE " + table + " ADD cakes_per_box INT NOT NULL DEFAULT 1"
+                : "ALTER TABLE " + table + " ADD COLUMN IF NOT EXISTS cakes_per_box INTEGER NOT NULL DEFAULT 1";
         try (Statement statement = connection.createStatement()) {
             statement.execute(sql);
         }
-        log.warn("Added missing bulk_request.cakes_per_box column for pre-Flyway database");
+        log.warn("Added missing {}.cakes_per_box column for pre-Flyway database", table);
     }
 }
