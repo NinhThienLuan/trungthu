@@ -15,6 +15,8 @@ import fpt.sba.trungthu.repository.SubscriptionRepository;
 import fpt.sba.trungthu.repository.UserRepository;
 import fpt.sba.trungthu.service.SubscriptionService;
 import fpt.sba.trungthu.service.impl.PayosSubscriptionGateway;
+import fpt.sba.trungthu.service.EmailService;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -70,6 +72,7 @@ class SubscriptionFlowTests {
     @Autowired private UserRepository users;
     @Autowired private MockMvc mvc;
     @MockitoSpyBean private PayosSubscriptionGateway gateway;
+    @MockitoBean private EmailService emailService;
 
     @Test
     void checkoutAndSignedWebhookActivateExactlyOnceAndReplaceOldPlan() throws Exception {
@@ -115,6 +118,8 @@ class SubscriptionFlowTests {
         sendWebhook(code, timestamp, validSignature, 200);
         verify(gateway, times(1)).find(code);
         assertThat(subscriptions.getActiveSubscription(seller.getEmail()).getId()).isEqualTo(premium.getId());
+        // Webhook lặp lại vẫn chỉ báo seller một lần
+        verify(emailService, times(1)).sendSubscriptionActivatedEmail(eq(seller.getEmail()), eq(premium.getPlanName()), any());
         assertThat(subscriptions.mySubscriptions(seller.getEmail())).extracting(SubscriptionResponse::getStatus)
                 .containsExactlyInAnyOrder(SubscriptionStatus.ACTIVE, SubscriptionStatus.EXPIRED);
         var recorded = payments.findBySubscriptionIdOrderByCreatedAtAsc(premium.getId());

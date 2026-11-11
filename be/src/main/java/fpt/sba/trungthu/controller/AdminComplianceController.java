@@ -28,25 +28,6 @@ public class AdminComplianceController {
 
     private final ComplianceService complianceService;
 
-    @GetMapping("/pending")
-    @Operation(summary = "Get pending compliance documents")
-    public ResponseEntity<ApiResponseDTO<List<ComplianceDocResponse>>> getPendingDocuments() {
-        log.info("Admin getting pending compliance documents");
-
-        try {
-            List<ComplianceDocResponse> documents = complianceService
-                    .getDocumentsByStatus(ComplianceDocStatus.PENDING);
-
-            return ResponseEntity.ok(ApiResponseDTO.success("Pending documents retrieved successfully", documents));
-        } catch (Exception e) {
-            log.error("Error getting pending documents", e);
-            return ResponseEntity
-                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponseDTO.error(HttpStatus.INTERNAL_SERVER_ERROR,
-                            "Failed to retrieve documents: " + e.getMessage()));
-        }
-    }
-
     @GetMapping("/status/{status}")
     @Operation(summary = "Get compliance documents by status")
     public ResponseEntity<ApiResponseDTO<List<ComplianceDocResponse>>> getDocumentsByStatus(
@@ -64,32 +45,6 @@ public class AdminComplianceController {
                     .status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponseDTO.error(HttpStatus.INTERNAL_SERVER_ERROR,
                             "Failed to retrieve documents: " + e.getMessage()));
-        }
-    }
-
-    @PutMapping("/{docId}/review")
-    @Operation(summary = "Review compliance document")
-    public ResponseEntity<ApiResponseDTO<ComplianceDocResponse>> reviewDocument(
-            @PathVariable UUID docId,
-            @Valid @RequestBody ReviewComplianceDocRequest request) {
-
-        log.info("Admin reviewing compliance document: {}", docId);
-
-        try {
-            ComplianceDocResponse response = complianceService.reviewDocument(docId, request);
-
-            return ResponseEntity.ok(ApiResponseDTO.success("Document reviewed successfully", response));
-        } catch (IllegalArgumentException e) {
-            log.error("Invalid request for document review", e);
-            return ResponseEntity
-                    .status(HttpStatus.BAD_REQUEST)
-                    .body(ApiResponseDTO.error(HttpStatus.BAD_REQUEST, e.getMessage()));
-        } catch (Exception e) {
-            log.error("Error reviewing document", e);
-            return ResponseEntity
-                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponseDTO.error(HttpStatus.INTERNAL_SERVER_ERROR,
-                            "Failed to review document: " + e.getMessage()));
         }
     }
 
