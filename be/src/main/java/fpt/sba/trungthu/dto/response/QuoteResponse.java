@@ -11,4 +11,6 @@ public record QuoteResponse(UUID id, UUID requestId, UUID providerId, String pro
         BigDecimal unitPrice, int offeredQuantity, LocalDate estimatedDeliveryDate,
         LocalDate validUntil, String note, QuoteStatus status, LocalDateTime createdAt,
         /** Liên hệ xưởng: chỉ có khi báo giá đã được khách chấp nhận (để hai bên chốt hợp đồng) */
-        String providerPhone, String providerEmail, String providerAddress) {}
+        String providerPhone, String providerEmail, String providerAddress,
+        int cakesPerBox, BigDecimal grossAmount, BigDecimal discountAmount, BigDecimal totalAmount,
+        BigDecimal depositAmount) {}

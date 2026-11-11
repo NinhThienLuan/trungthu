@@ -4,6 +4,7 @@ import { useApi } from '../../hooks/useApi'
 import { errorMessage } from '../../apis/http'
 import { addDays, formatDate, formatVnd, toIsoDate } from '../../lib/format'
 import { printRfqConfirmation } from '../../lib/printRfqConfirmation'
+import { BulkOrdersPanel } from '../../components/BulkOrdersPanel'
 
 export function SellerRfqPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -22,22 +23,26 @@ export function SellerRfqPage() {
     const data = new FormData(event.currentTarget)
     const unitPrice = Number(data.get('unitPrice'))
     const offeredQuantity = Number(data.get('offeredQuantity'))
+    const cakesPerBox = Number(data.get('cakesPerBox'))
     if (!Number.isFinite(unitPrice) || unitPrice <= 0 || !Number.isInteger(offeredQuantity)
-      || offeredQuantity < selected.requestedQuantity) {
+      || offeredQuantity < selected.requestedQuantity || !Number.isInteger(cakesPerBox) || cakesPerBox < 1) {
       setMessage('Đơn giá phải lớn hơn 0 và số lượng phải đáp ứng yêu cầu của khách.')
       return
     }
     setBusy(true)
     setMessage(null)
     try {
-      await rfqService.submitQuote(selected.id, {
+      const body = {
         unitPrice,
         offeredQuantity,
+        cakesPerBox,
         estimatedDeliveryDate: String(data.get('estimatedDeliveryDate')),
         validUntil: String(data.get('validUntil')),
         note: String(data.get('note') ?? '').trim() || undefined,
-      })
-      setMessage('Đã gửi báo giá cho khách hàng.')
+      }
+      if (ownQuote?.status === 'SUBMITTED') await rfqService.reviseQuote(selected.id, ownQuote.id, body)
+      else await rfqService.submitQuote(selected.id, body)
+      setMessage(ownQuote ? 'Đã cập nhật báo giá.' : 'Đã gửi báo giá cho khách hàng.')
       setVersion((value) => value + 1)
     } catch (error) {
       setMessage(errorMessage(error))
@@ -92,33 +97,38 @@ export function SellerRfqPage() {
                 <button type="button" className="btn btn-outline btn-sm mt-2" onClick={() => printRfqConfirmation(selected, ownQuote)}>In phiếu xác nhận đơn sỉ</button>
               </div>
             )}
-            {ownQuote ? (
+            {ownQuote && ownQuote.status !== 'SUBMITTED' ? (
               <div className="mt-5 rounded-sm bg-champagne-light p-4 text-small">
                 <p className="font-semibold text-primary">Báo giá của xưởng: {formatVnd(ownQuote.unitPrice)}/hộp</p>
-                <p>{ownQuote.offeredQuantity} hộp · trạng thái {ownQuote.status}</p>
+                <p>{ownQuote.offeredQuantity} hộp × {ownQuote.cakesPerBox} bánh · giảm 30%: {formatVnd(ownQuote.discountAmount)} · cần thanh toán {formatVnd(ownQuote.totalAmount)}</p>
+                <p>Trạng thái {ownQuote.status}</p>
               </div>
             ) : (
-              <form key={selected.id} onSubmit={submit} className="mt-5 grid gap-3 sm:grid-cols-2">
+              <form key={`${selected.id}-${ownQuote?.id ?? 'new'}`} onSubmit={submit} className="mt-5 grid gap-3 sm:grid-cols-2">
+                {ownQuote && <p className="sm:col-span-2 text-small">Đã chào: {formatVnd(ownQuote.grossAmount)} · giảm 30% {formatVnd(ownQuote.discountAmount)} · sau chiết khấu {formatVnd(ownQuote.totalAmount)}. Có thể sửa trước khi khách chấp nhận.</p>}
                 <label className="text-small font-semibold">Đơn giá mỗi hộp (đ)
-                  <input className="input mt-1" name="unitPrice" type="number" min="1" required />
+                  <input className="input mt-1" name="unitPrice" type="number" min="1" defaultValue={ownQuote?.unitPrice} required />
                 </label>
                 <label className="text-small font-semibold">Số lượng chào
                   <input className="input mt-1" name="offeredQuantity" type="number" min={selected.requestedQuantity}
-                    defaultValue={selected.requestedQuantity} required />
+                    defaultValue={ownQuote?.offeredQuantity ?? selected.requestedQuantity} required />
+                </label>
+                <label className="text-small font-semibold">Số bánh trong mỗi hộp
+                  <input className="input mt-1" name="cakesPerBox" type="number" min="1" defaultValue={ownQuote?.cakesPerBox ?? 1} required />
                 </label>
                 <label className="text-small font-semibold">Ngày giao dự kiến
                   <input className="input mt-1" name="estimatedDeliveryDate" type="date"
-                    min={toIsoDate(new Date())} defaultValue={selected.expectedDeliveryDate} required />
+                    min={toIsoDate(new Date())} defaultValue={ownQuote?.estimatedDeliveryDate ?? selected.expectedDeliveryDate} required />
                 </label>
                 <label className="text-small font-semibold">Báo giá có hiệu lực đến
                   <input className="input mt-1" name="validUntil" type="date" min={toIsoDate(new Date())}
-                    defaultValue={toIsoDate(addDays(new Date(), 7))} required />
+                    defaultValue={ownQuote?.validUntil ?? toIsoDate(addDays(new Date(), 7))} required />
                 </label>
                 <label className="text-small font-semibold sm:col-span-2">Ghi chú
-                  <textarea className="input mt-1 h-auto py-2" name="note" rows={3} maxLength={2000} />
+                  <textarea className="input mt-1 h-auto py-2" name="note" rows={3} maxLength={2000} defaultValue={ownQuote?.note ?? ''} />
                 </label>
                 <button className="btn btn-primary sm:col-span-2" type="submit" disabled={busy}>
-                  {busy ? 'Đang gửi...' : 'Nộp báo giá'}
+                  {busy ? 'Đang gửi...' : ownQuote ? 'Cập nhật báo giá' : 'Nộp báo giá'}
                 </button>
               </form>
             )}
@@ -126,6 +136,7 @@ export function SellerRfqPage() {
           </section>}
         </div>
       )}
+      <BulkOrdersPanel role="provider" />
     </main>
   )
 }

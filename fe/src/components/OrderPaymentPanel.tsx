@@ -69,8 +69,8 @@ function VietQrPanel({ order, seconds, expired }: { order: OrderDetail; seconds:
   if (error || !pay) return <Notice tone="danger">Không lấy được mã VietQR: {error ?? 'Không có thông tin thanh toán'} <button type="button" className="underline" onClick={reload}>Thử lại</button></Notice>
 
   return (
-    <div className="grid gap-5 md:grid-cols-[11rem_1fr]">
-      <div className="flex aspect-square items-center justify-center rounded-sm border border-line bg-ivory">
+    <div className="grid gap-5 md:grid-cols-[18rem_minmax(0,1fr)]">
+      <div className="flex aspect-square w-full max-w-72 items-center justify-center justify-self-center rounded-sm border border-line bg-ivory md:justify-self-start">
         {pay.imageUrl ? (
           <img src={pay.imageUrl} alt={`Mã VietQR đơn ${order.code}`} className="size-full object-contain p-2" />
         ) : (

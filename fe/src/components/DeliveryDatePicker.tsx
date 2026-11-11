@@ -98,7 +98,7 @@ export function DeliveryDatePicker({ providerId, value, onChange, minLeadDays = 
       {error ? (
         <p className="field-error">{error}</p>
       ) : (
-        <p className="mt-2 text-small text-muted">Ngày bị gạch: chưa đủ {minLeadDays} ngày chuẩn bị hoặc xưởng đã kín lịch.</p>
+        <p className="mt-2 text-small text-muted">Ngày bị gạch: chưa đủ {minLeadDays} ngày chuẩn bị hoặc xưởng đã kín lịch. Chọn ngày còn chỗ sau đó để đặt trước.</p>
       )}
     </div>
   )

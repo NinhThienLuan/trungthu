@@ -5,6 +5,7 @@ import fpt.sba.trungthu.common.security.SecurityContextService;
 import fpt.sba.trungthu.dto.request.CreateRfqRequest;
 import fpt.sba.trungthu.dto.request.SubmitQuoteRequest;
 import fpt.sba.trungthu.entity.Subscription;
+import fpt.sba.trungthu.entity.DailyCapacity;
 import fpt.sba.trungthu.entity.User;
 import fpt.sba.trungthu.entity.enumeration.BulkRequestStatus;
 import fpt.sba.trungthu.entity.enumeration.QuoteStatus;
@@ -14,7 +15,11 @@ import fpt.sba.trungthu.repository.BulkRequestRepository;
 import fpt.sba.trungthu.repository.ProviderQuotationRepository;
 import fpt.sba.trungthu.repository.SubscriptionRepository;
 import fpt.sba.trungthu.repository.UserRepository;
+import fpt.sba.trungthu.repository.DailyCapacityRepository;
+import fpt.sba.trungthu.repository.BulkOrderRepository;
 import fpt.sba.trungthu.service.RfqService;
+import fpt.sba.trungthu.service.impl.BulkOrderService;
+import fpt.sba.trungthu.entity.enumeration.BulkOrderStatus;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -46,6 +51,9 @@ class RfqFlowTests {
     @Autowired private SubscriptionRepository subscriptions;
     @Autowired private BulkRequestRepository requests;
     @Autowired private ProviderQuotationRepository quotations;
+    @Autowired private DailyCapacityRepository capacities;
+    @Autowired private BulkOrderRepository bulkOrders;
+    @Autowired private BulkOrderService bulkOrderService;
     @MockitoBean private SecurityContextService security;
 
     @Test
@@ -57,6 +65,7 @@ class RfqFlowTests {
         User otherSeller = createUser(UserRole.PROVIDER, true);
         subscribe(seller, today);
         subscribe(otherSeller, today);
+        capacity(seller, today.plusDays(6), 100);
 
         as(buyer);
         var request = rfq.create(new CreateRfqRequest("Công ty Mặt Trăng", "0123456789", "Lan",
@@ -78,6 +87,8 @@ class RfqFlowTests {
         as(otherSeller);
         var second = rfq.submitQuote(request.id(), new SubmitQuoteRequest(new BigDecimal("410000"),
                 100, today.plusDays(7), today.plusDays(5), null));
+        assertThat(rfq.reviseQuote(request.id(), second.id(), new SubmitQuoteRequest(new BigDecimal("400000"),
+                100, 2, today.plusDays(7), today.plusDays(5), "Đã chỉnh giá")).cakesPerBox()).isEqualTo(2);
 
         as(otherBuyer);
         assertThat(rfq.mine()).doesNotContain(request);
@@ -89,6 +100,10 @@ class RfqFlowTests {
         // Chưa chọn: khách chưa thấy liên hệ xưởng
         assertThat(rfq.quotes(request.id())).extracting("providerEmail").containsOnlyNulls();
         assertThat(rfq.acceptQuote(request.id(), first.id()).status()).isEqualTo(QuoteStatus.ACCEPTED);
+        assertThat(bulkOrders.findByQuoteId(first.id()).orElseThrow().getTotalAmount())
+                .isEqualByComparingTo("29400000");
+        assertThat(capacities.findByProviderIdAndCapacityDate(seller.getId(), today.plusDays(6))
+                .orElseThrow().getReservedQuantity()).isEqualTo(100);
         // Đã chọn: báo giá thắng có liên hệ xưởng, báo giá bị từ chối thì không
         assertThat(rfq.quotes(request.id())).filteredOn(q -> q.id().equals(first.id()))
                 .extracting("providerEmail").containsExactly(seller.getEmail());
@@ -97,6 +112,9 @@ class RfqFlowTests {
         assertThat(requests.findById(request.id()).orElseThrow().getStatus()).isEqualTo(BulkRequestStatus.WON);
         assertThat(quotations.findById(second.id()).orElseThrow().getStatus()).isEqualTo(QuoteStatus.REJECTED);
         assertThatThrownBy(() -> rfq.acceptQuote(request.id(), second.id())).isInstanceOf(ResponseStatusException.class);
+        as(otherSeller);
+        assertThatThrownBy(() -> rfq.reviseQuote(request.id(), second.id(), new SubmitQuoteRequest(new BigDecimal("390000"),
+                100, today.plusDays(7), today.plusDays(5), null))).isInstanceOf(ResponseStatusException.class);
 
         as(seller);
         assertThat(rfq.providerQuotes()).extracting("status").contains(QuoteStatus.ACCEPTED);
@@ -105,11 +123,70 @@ class RfqFlowTests {
     }
 
     @Test
+    void largeOrderReservesFourBakeDaysAndReleasesThemWhenCancelled() {
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh"));
+        User buyer = createUser(UserRole.CUSTOMER, false);
+        User seller = createUser(UserRole.PROVIDER, true);
+        subscribe(seller, today);
+        for (int i = 3; i <= 6; i++) capacity(seller, today.plusDays(i), 500);
+
+        as(buyer);
+        var request = rfq.create(new CreateRfqRequest("Công ty Mặt Trăng", "0123456789", "Lan",
+                "Thu mua", "0901234567", "lan@example.com", 2000, today.plusDays(7),
+                null, null, null, seller.getId(), null));
+        as(seller);
+        var quote = rfq.submitQuote(request.id(), new SubmitQuoteRequest(new BigDecimal("100000"),
+                2000, 1, today.plusDays(7), today.plusDays(5), null));
+        assertThat(quote.grossAmount()).isEqualByComparingTo("200000000");
+        assertThat(quote.discountAmount()).isEqualByComparingTo("60000000");
+        assertThat(quote.totalAmount()).isEqualByComparingTo("140000000");
+
+        as(buyer);
+        rfq.acceptQuote(request.id(), quote.id());
+        var order = bulkOrderService.mine().stream().filter(item -> item.quoteId().equals(quote.id())).findFirst().orElseThrow();
+        assertThat(order.status()).isEqualTo(BulkOrderStatus.WAITING_DEPOSIT);
+        assertThat(order.productionDays()).hasSize(4).extracting("cakes").containsOnly(500);
+        for (int i = 3; i <= 6; i++) assertThat(capacities.findByProviderIdAndCapacityDate(seller.getId(), today.plusDays(i))
+                .orElseThrow().getReservedQuantity()).isEqualTo(500);
+        assertThatThrownBy(() -> rfq.acceptQuote(request.id(), quote.id())).isInstanceOf(ResponseStatusException.class);
+
+        bulkOrderService.cancel(order.id());
+        assertThat(bulkOrderService.mine().stream().filter(item -> item.id().equals(order.id()))
+                .findFirst().orElseThrow().status()).isEqualTo(BulkOrderStatus.CANCELLED);
+        for (int i = 3; i <= 6; i++) assertThat(capacities.findByProviderIdAndCapacityDate(seller.getId(), today.plusDays(i))
+                .orElseThrow().getReservedQuantity()).isZero();
+    }
+
+    @Test
+    void acceptanceFailsWithoutEnoughCakesAndLeavesQuoteOpen() {
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh"));
+        User buyer = createUser(UserRole.CUSTOMER, false);
+        User seller = createUser(UserRole.PROVIDER, true);
+        subscribe(seller, today);
+        capacity(seller, today.plusDays(6), 500);
+        as(buyer);
+        var request = rfq.create(new CreateRfqRequest("Công ty Mặt Trăng", "0123456789", "Lan",
+                "Thu mua", "0901234567", "lan@example.com", 1000, today.plusDays(7),
+                null, null, null, seller.getId(), null));
+        as(seller);
+        var quote = rfq.submitQuote(request.id(), new SubmitQuoteRequest(new BigDecimal("100000"),
+                1000, 4, today.plusDays(7), today.plusDays(5), null));
+        as(buyer);
+        assertThatThrownBy(() -> rfq.acceptQuote(request.id(), quote.id()))
+                .isInstanceOf(ResponseStatusException.class);
+        assertThat(quotations.findById(quote.id()).orElseThrow().getStatus()).isEqualTo(QuoteStatus.SUBMITTED);
+        assertThat(bulkOrders.findByQuoteId(quote.id())).isEmpty();
+        assertThat(capacities.findByProviderIdAndCapacityDate(seller.getId(), today.plusDays(6))
+                .orElseThrow().getReservedQuantity()).isZero();
+    }
+
+    @Test
     void httpEndpointsConnectBuyerAndProviderWithRoleChecks() throws Exception {
         LocalDate today = LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh"));
         User buyer = createUser(UserRole.CUSTOMER, false);
         User seller = createUser(UserRole.PROVIDER, true);
         subscribe(seller, today);
+        capacity(seller, today.plusDays(6), 50);
 
         as(buyer);
         String body = """
@@ -131,7 +208,7 @@ class RfqFlowTests {
         mvc.perform(get("/api/provider/rfqs").with(user("seller").roles("PROVIDER")))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data[0].contactEmail").doesNotExist());
         String quoteBody = """
-                {"unitPrice":420000,"offeredQuantity":50,"estimatedDeliveryDate":"%s","validUntil":"%s"}
+                {"unitPrice":420000,"offeredQuantity":50,"cakesPerBox":1,"estimatedDeliveryDate":"%s","validUntil":"%s"}
                 """.formatted(today.plusDays(7), today.plusDays(5));
         String quoted = mvc.perform(post("/api/provider/rfqs/{requestId}/quotes", id)
                         .with(user("seller").roles("PROVIDER"))
@@ -150,6 +227,13 @@ class RfqFlowTests {
         mvc.perform(post("/api/rfqs/{requestId}/quotes/{quoteId}/accept", id, quoteId)
                         .with(user("buyer").roles("CUSTOMER")))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.status").value("ACCEPTED"));
+        mvc.perform(get("/api/bulk-orders/me").with(user("buyer").roles("CUSTOMER")))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data[0].totalAmount").value(14700000));
+        mvc.perform(get("/api/provider/bulk-orders").with(user("buyer").roles("CUSTOMER")))
+                .andExpect(status().isForbidden());
+        as(seller);
+        mvc.perform(get("/api/provider/bulk-orders").with(user("seller").roles("PROVIDER")))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data[0].status").value("WAITING_DEPOSIT"));
     }
 
     @Test
@@ -273,6 +357,11 @@ class RfqFlowTests {
         subscriptions.saveAndFlush(Subscription.builder().provider(provider).planName("Test")
                 .price(BigDecimal.ZERO).startDate(today.minusDays(1)).endDate(today.plusDays(30))
                 .status(SubscriptionStatus.ACTIVE).build());
+    }
+
+    private void capacity(User provider, LocalDate date, int count) {
+        capacities.saveAndFlush(DailyCapacity.builder().provider(provider).capacityDate(date)
+                .maxQuantity(count).reservedQuantity(0).build());
     }
 
     private void as(User user) {

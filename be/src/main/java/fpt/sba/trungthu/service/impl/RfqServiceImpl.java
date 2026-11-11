@@ -34,6 +34,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 @Service
 @RequiredArgsConstructor
@@ -46,6 +48,7 @@ public class RfqServiceImpl implements RfqService {
     private final SubscriptionRepository subscriptions;
     private final UserRepository users;
     private final ProductRepository products;
+    private final BulkOrderService bulkOrders;
 
     @Override
     @Transactional
@@ -136,6 +139,42 @@ public class RfqServiceImpl implements RfqService {
         if (quotations.existsByRequestIdAndProviderId(requestId, provider.getId())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Xưởng đã gửi báo giá cho RFQ này");
         }
+        validateQuote(request, input);
+        ProviderQuotation quote = quotations.saveAndFlush(ProviderQuotation.builder()
+                .request(request).provider(provider).quotedPrice(input.unitPrice())
+                .offeredQuantity(input.offeredQuantity()).cakesPerBox(input.cakesPerBox())
+                .estimatedDeliveryDate(input.estimatedDeliveryDate())
+                .validUntil(input.validUntil()).note(input.note()).status(QuoteStatus.SUBMITTED).build());
+        if (request.getStatus() == BulkRequestStatus.DISTRIBUTED) {
+            request.transitionStatus(BulkRequestStatus.QUOTES_RECEIVED);
+        }
+        return toQuoteResponse(quote);
+    }
+
+    @Override
+    @Transactional
+    public QuoteResponse reviseQuote(UUID requestId, UUID quoteId, SubmitQuoteRequest input) {
+        User provider = requireEligibleProvider();
+        BulkRequest request = requests.findForUpdateById(requestId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy RFQ"));
+        ProviderQuotation quote = quotations.findById(quoteId)
+                .filter(item -> item.getRequest().getId().equals(requestId)
+                        && item.getProvider().getId().equals(provider.getId()))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy báo giá"));
+        if (request.getStatus() != BulkRequestStatus.QUOTES_RECEIVED || quote.getStatus() != QuoteStatus.SUBMITTED) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Báo giá đã chốt, không thể sửa");
+        }
+        validateQuote(request, input);
+        quote.setQuotedPrice(input.unitPrice());
+        quote.setOfferedQuantity(input.offeredQuantity());
+        quote.setCakesPerBox(input.cakesPerBox());
+        quote.setEstimatedDeliveryDate(input.estimatedDeliveryDate());
+        quote.setValidUntil(input.validUntil());
+        quote.setNote(input.note());
+        return toQuoteResponse(quote);
+    }
+
+    private void validateQuote(BulkRequest request, SubmitQuoteRequest input) {
         LocalDate today = LocalDate.now(VIETNAM);
         if (input.validUntil().isBefore(today) || input.estimatedDeliveryDate().isBefore(today)) {
             throw badRequest("Ngày hiệu lực và ngày giao dự kiến không được ở quá khứ");
@@ -143,14 +182,15 @@ public class RfqServiceImpl implements RfqService {
         if (input.offeredQuantity() < request.getRequestedQuantity()) {
             throw badRequest("Số lượng chào giá phải đáp ứng yêu cầu của khách");
         }
-        ProviderQuotation quote = quotations.saveAndFlush(ProviderQuotation.builder()
-                .request(request).provider(provider).quotedPrice(input.unitPrice())
-                .offeredQuantity(input.offeredQuantity()).estimatedDeliveryDate(input.estimatedDeliveryDate())
-                .validUntil(input.validUntil()).note(input.note()).status(QuoteStatus.SUBMITTED).build());
-        if (request.getStatus() == BulkRequestStatus.DISTRIBUTED) {
-            request.transitionStatus(BulkRequestStatus.QUOTES_RECEIVED);
+        BigDecimal gross = input.unitPrice().multiply(BigDecimal.valueOf(input.offeredQuantity()));
+        if (gross.precision() - gross.scale() > 16) {
+            throw badRequest("Tổng tiền vượt giới hạn hệ thống");
         }
-        return toQuoteResponse(quote);
+        try {
+            Math.multiplyExact(input.offeredQuantity(), input.cakesPerBox());
+        } catch (ArithmeticException e) {
+            throw badRequest("Số bánh vượt giới hạn hệ thống");
+        }
     }
 
     @Override
@@ -177,6 +217,7 @@ public class RfqServiceImpl implements RfqService {
                 || selected.getValidUntil() != null && selected.getValidUntil().isBefore(LocalDate.now(VIETNAM))) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Báo giá đã hết hiệu lực");
         }
+        bulkOrders.createForAcceptedQuote(selected);
         selected.transitionStatus(QuoteStatus.ACCEPTED);
         for (ProviderQuotation quote : quotations.findByRequestIdOrderByQuotedPriceAsc(requestId)) {
             if (!quote.getId().equals(quoteId) && quote.getStatus() == QuoteStatus.SUBMITTED) {
@@ -235,13 +276,17 @@ public class RfqServiceImpl implements RfqService {
 
     private QuoteResponse toQuoteResponse(ProviderQuotation quote) {
         boolean accepted = quote.getStatus() == QuoteStatus.ACCEPTED;
+        BigDecimal gross = quote.getQuotedPrice().multiply(BigDecimal.valueOf(quote.getOfferedQuantity()));
+        BigDecimal discount = gross.multiply(new BigDecimal("0.30")).setScale(2, RoundingMode.HALF_UP);
         return new QuoteResponse(quote.getId(), quote.getRequest().getId(), quote.getProvider().getId(),
                 quote.getProvider().getStoreName(), quote.getQuotedPrice(), quote.getOfferedQuantity(),
                 quote.getEstimatedDeliveryDate(), quote.getValidUntil(), quote.getNote(),
                 quote.getStatus(), quote.getCreatedAt(),
                 accepted ? quote.getProvider().getPhone() : null,
                 accepted ? quote.getProvider().getEmail() : null,
-                accepted ? quote.getProvider().getAddress() : null);
+                accepted ? quote.getProvider().getAddress() : null,
+                quote.getCakesPerBox(), gross, discount, gross.subtract(discount),
+                gross.subtract(discount).multiply(new BigDecimal("0.50")).setScale(2, RoundingMode.HALF_UP));
     }
 
     private ResponseStatusException badRequest(String reason) {

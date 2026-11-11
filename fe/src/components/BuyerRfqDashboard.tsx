@@ -8,6 +8,7 @@ import { formatDate, formatVnd, toIsoDate } from '../lib/format'
 import { printRfqConfirmation } from '../lib/printRfqConfirmation'
 import type { RfqResponse } from '../types/order'
 import { Icon } from './Icon'
+import { BulkOrdersPanel } from './BulkOrdersPanel'
 import { EmptyState, Notice, Spinner } from './ui/States'
 import { ROUTES } from '../constants'
 
@@ -39,7 +40,7 @@ export function BuyerRfqDashboard({ created }: { created?: RfqResponse | null })
     setMessage(null)
     try {
       await rfqService.acceptQuote(requestId, quoteId)
-      setMessage('Đã chọn báo giá thành công. Xưởng sẽ liên hệ để hoàn tất hợp đồng và đặt cọc.')
+      setMessage('Đã tạo đơn sỉ và giữ lịch nướng. Vui lòng bổ sung địa chỉ giao và chuyển cọc theo hướng dẫn của xưởng.')
       setVersion((value) => value + 1)
     } catch (error) {
       setMessage(errorMessage(error))
@@ -199,10 +200,12 @@ export function BuyerRfqDashboard({ created }: { created?: RfqResponse | null })
                           <span className="font-bold text-secondary text-base">{formatVnd(quote.unitPrice)}</span>
                           <span className="text-xs text-muted block">/ hộp</span>
                           <span className="text-xs text-muted block mt-0.5">
-                            Tổng dự kiến: <b>{formatVnd(quote.unitPrice * quote.offeredQuantity)}</b>
+                            Tổng sau giảm 30%: <b>{formatVnd(quote.totalAmount)}</b>
                           </span>
                         </div>
                       </div>
+                      <p className="mt-1 text-xs text-muted">{quote.offeredQuantity * quote.cakesPerBox} bánh · Thành tiền {formatVnd(quote.grossAmount)} · Chiết khấu {formatVnd(quote.discountAmount)} · Cọc 50% {formatVnd(quote.depositAmount)}</p>
+                      {canAccept && <p className="mt-1 text-xs text-muted">Suất nướng được giữ khi chấp nhận; cọc cần được xác nhận trong 48 giờ hoặc trước ngày bắt đầu nướng.</p>}
 
                       {quote.note && (
                         <div className="mt-2.5 rounded bg-white p-2.5 border border-line/60 text-small text-ink">
@@ -215,7 +218,7 @@ export function BuyerRfqDashboard({ created }: { created?: RfqResponse | null })
                         <div className="mt-3 rounded border border-emerald-500/40 bg-emerald-50 p-3 text-small text-emerald-950 flex flex-col gap-1.5">
                           <p className="font-bold flex items-center gap-1.5 text-emerald-800">
                             <Icon name="check_circle" className="text-[16px]" aria-hidden />
-                            Bạn đã chọn báo giá này — hãy liên hệ xưởng để ký kết hợp đồng:
+                            Đã tạo đơn sỉ. Hãy cung cấp địa chỉ giao và trao đổi với xưởng về chuyển cọc:
                           </p>
                           <p className="text-xs text-emerald-900">
                             Điện thoại: <b>{quote.providerPhone ?? '—'}</b> · Email: <b>{quote.providerEmail ?? '—'}</b>
@@ -256,6 +259,7 @@ export function BuyerRfqDashboard({ created }: { created?: RfqResponse | null })
           </div>
         </div>
       )}
+      <BulkOrdersPanel role="buyer" />
     </div>
   )
 }

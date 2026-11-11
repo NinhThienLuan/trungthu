@@ -202,6 +202,7 @@ export interface RfqResponse {
 export interface SubmitQuoteRequest {
   unitPrice: number
   offeredQuantity: number
+  cakesPerBox: number
   estimatedDeliveryDate: string
   validUntil: string
   note?: string
@@ -223,4 +224,34 @@ export interface QuoteResponse {
   providerPhone: string | null
   providerEmail: string | null
   providerAddress: string | null
+  cakesPerBox: number
+  grossAmount: number
+  discountAmount: number
+  totalAmount: number
+  depositAmount: number
+}
+
+export type BulkOrderStatus = 'WAITING_DEPOSIT' | 'PRODUCTION' | 'READY_TO_SHIP' | 'DELIVERING'
+  | 'WAITING_BALANCE' | 'COMPLETED' | 'CANCELLED'
+
+export interface BulkOrderResponse {
+  id: string
+  requestId: string
+  quoteId: string
+  requestCode: string
+  providerName: string
+  quantity: number
+  cakesPerBox: number
+  unitPrice: number
+  grossAmount: number
+  discountAmount: number
+  totalAmount: number
+  depositAmount: number
+  deliveryDate: string
+  depositDeadline: string
+  recipientName: string | null
+  recipientPhone: string | null
+  deliveryAddress: string | null
+  status: BulkOrderStatus
+  productionDays: { id: string; date: string; cakes: number; completed: boolean }[]
 }

@@ -13,6 +13,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -53,6 +54,13 @@ public class RfqController {
     public ResponseEntity<ApiResponseDTO<QuoteResponse>> submitQuote(@PathVariable UUID requestId,
             @Valid @RequestBody SubmitQuoteRequest input) {
         return ResponseEntity.ok(ApiResponseDTO.success(rfqService.submitQuote(requestId, input)));
+    }
+
+    @PutMapping("/api/provider/rfqs/{requestId}/quotes/{quoteId}")
+    @PreAuthorize("hasRole('PROVIDER')")
+    public ResponseEntity<ApiResponseDTO<QuoteResponse>> reviseQuote(@PathVariable UUID requestId,
+            @PathVariable UUID quoteId, @Valid @RequestBody SubmitQuoteRequest input) {
+        return ResponseEntity.ok(ApiResponseDTO.success(rfqService.reviseQuote(requestId, quoteId, input)));
     }
 
     @GetMapping("/api/rfqs/{requestId}/quotes")

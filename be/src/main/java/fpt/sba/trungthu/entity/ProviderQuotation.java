@@ -17,7 +17,8 @@ import java.time.LocalDate;
         @Index(name = "IX_PROVIDER_QUOTATION_request_id", columnList = "request_id"),
         @Index(name = "IX_PROVIDER_QUOTATION_provider_id", columnList = "provider_id") })
 @Checks({ @Check(name = "CK_PROVIDER_QUOTATION_quoted_price", constraints = "quoted_price >= 0"),
-        @Check(name = "CK_PROVIDER_QUOTATION_offered_quantity", constraints = "offered_quantity > 0") })
+        @Check(name = "CK_PROVIDER_QUOTATION_offered_quantity", constraints = "offered_quantity > 0"),
+        @Check(name = "CK_PROVIDER_QUOTATION_cakes_per_box", constraints = "cakes_per_box > 0") })
 @Getter
 @Setter
 @SuperBuilder
@@ -38,6 +39,9 @@ public class ProviderQuotation extends BaseEntity {
 
     @Column(name = "offered_quantity", nullable = false)
     private Integer offeredQuantity;
+
+    @Column(name = "cakes_per_box", nullable = false)
+    private Integer cakesPerBox;
 
     @Column(name = "estimated_delivery_date")
     private LocalDate estimatedDeliveryDate;
