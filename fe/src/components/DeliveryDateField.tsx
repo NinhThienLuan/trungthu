@@ -8,13 +8,14 @@ interface Props {
   value?: string
   onChange: (date: string) => void
   minLeadDays?: number
+  bakeQuantity?: number
 }
 
 /**
  * Ô chọn ngày nhận dạng thu gọn: chỉ hiện nút, bấm mới sổ lịch xuống.
  * Lịch đóng khi chọn xong, bấm ra ngoài hoặc nhấn Esc.
  */
-export function DeliveryDateField({ providerId, value, onChange, minLeadDays }: Props) {
+export function DeliveryDateField({ providerId, value, onChange, minLeadDays, bakeQuantity }: Props) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const panelId = useId()
@@ -60,6 +61,7 @@ export function DeliveryDateField({ providerId, value, onChange, minLeadDays }: 
             providerId={providerId}
             value={value}
             minLeadDays={minLeadDays}
+            bakeQuantity={bakeQuantity}
             onChange={(d) => {
               onChange(d)
               setOpen(false)

@@ -12,7 +12,7 @@ import type { LeadTime } from '../../types/product'
 import { errorMessage } from '../../apis/http'
 import { BULK_LEAD_DAYS, BULK_ORDER_QUANTITY, DEPOSIT_RATE, MIN_LEAD_DAYS, ROUTES } from '../../constants'
 import { addDays, cn, formatVnd, toIsoDate } from '../../lib/format'
-import { leadDaysForItems, toCheckoutGroups } from '../../lib/checkoutGroups'
+import { bakeUnitsOf, leadDaysForItems, toCheckoutGroups } from '../../lib/checkoutGroups'
 import { DeliveryDateField } from '../../components/DeliveryDateField'
 import { BoxItemDetails } from '../../components/OrderItemsSummary'
 import { PageHeader } from '../../components/ui/PageHeader'
@@ -296,6 +296,7 @@ export function CartPage() {
                   providerId={group.providerId}
                   value={deliveryDates[group.providerId]}
                   minLeadDays={leadDays(group)}
+                  bakeQuantity={bakeUnitsOf(group.items)}
                   onChange={(d) => setDeliveryDate(group.providerId, d)}
                 />
               </div>

@@ -115,6 +115,9 @@ class GiftSetCheckoutTests {
                 .andExpect(jsonPath("$.data.code").value("INSUFFICIENT_CAPACITY"))
                 .andExpect(jsonPath("$.data.bakeDate").value(delivery.minusDays(1).toString()))
                 .andExpect(jsonPath("$.data.remainingCapacity").value(1))
+                // Câu báo ghi ngày nhận khách đã chọn (dd/MM/yyyy), không phải ngày nướng
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString(
+                        "đơn nhận ngày " + delivery.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")))))
                 .andExpect(jsonPath("$.data.requestedQuantity").value(2));
     }
 

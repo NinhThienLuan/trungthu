@@ -12,13 +12,15 @@ interface Props {
   value?: string
   onChange: (date: string) => void
   minLeadDays?: number
+  /** Số bánh cần nướng của xưởng này trong giỏ: ngày không đủ suất nướng bị khoá */
+  bakeQuantity?: number
 }
 
 /**
  * Lịch chọn ngày nhận cho 1 Provider.
  * Ngày < hôm nay + MIN_LEAD_DAYS hoặc đã kín hạn ngạch thì bị khoá (dữ liệu từ capacityService).
  */
-export function DeliveryDatePicker({ providerId, value, onChange, minLeadDays = MIN_LEAD_DAYS }: Props) {
+export function DeliveryDatePicker({ providerId, value, onChange, minLeadDays = MIN_LEAD_DAYS, bakeQuantity = 1 }: Props) {
   const minDate = useMemo(() => addDays(new Date(), minLeadDays), [minLeadDays])
   const minIso = toIsoDate(minDate)
   const [month, setMonth] = useState(() => {
@@ -28,7 +30,8 @@ export function DeliveryDatePicker({ providerId, value, onChange, minLeadDays = 
 
   const first = toIsoDate(month)
   const last = toIsoDate(new Date(month.getFullYear(), month.getMonth() + 1, 0))
-  const { data, loading, error } = useApi(() => capacityService.availableDates(providerId, first, last), [providerId, first])
+  const { data, loading, error } = useApi(() => capacityService.availableDates(providerId, first, last, bakeQuantity),
+    [providerId, first, bakeQuantity])
   const availability = useMemo(() => new Map(data?.map((d) => [d.date, d.available])), [data])
 
   // Ô trống đầu tháng để ngày 1 rơi đúng thứ (tuần bắt đầu từ T2)
@@ -98,7 +101,7 @@ export function DeliveryDatePicker({ providerId, value, onChange, minLeadDays = 
       {error ? (
         <p className="field-error">{error}</p>
       ) : (
-        <p className="mt-2 text-small text-muted">Ngày bị gạch: chưa đủ {minLeadDays} ngày chuẩn bị hoặc xưởng đã kín lịch. Chọn ngày còn chỗ sau đó để đặt trước.</p>
+        <p className="mt-2 text-small text-muted">Ngày bị gạch: chưa đủ {minLeadDays} ngày chuẩn bị hoặc xưởng không còn đủ suất nướng cho số bánh này. Chọn ngày còn chỗ sau đó để đặt trước.</p>
       )}
     </div>
   )

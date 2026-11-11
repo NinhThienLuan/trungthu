@@ -12,6 +12,11 @@ export const leadDaysForItems = (items: CartItem[]) =>
     || items.some((item) => item.canPreorder && item.quantity > item.stock)
     ? BULK_LEAD_DAYS : MIN_LEAD_DAYS
 
+/** Số bánh phải nướng nếu cả nhóm nướng theo đơn: bánh lẻ + bánh trong từng ô hộp (set quà BE tự tính) */
+export const bakeUnitsOf = (items: CartItem[]) =>
+  items.reduce((total, item) => total + (item.kind === 'box' ? (item.slots?.length ?? 0) * item.quantity
+    : item.canPreorder && !item.setProductId ? item.quantity : 0), 0)
+
 export const toCheckoutGroups = (cart: CartItem[], dates: Record<string, string>,
   choices: Record<string, PayChoice>): CheckoutGroup[] =>
   groupByProvider(cart).map((group) => {

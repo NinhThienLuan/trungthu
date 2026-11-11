@@ -58,8 +58,10 @@ public class InventoryConflictException extends ResponseStatusException {
 
     public static InventoryConflictException capacity(UUID providerId, LocalDate bakeDate,
             int remainingCapacity, int requestedQuantity) {
-        String message = "Xưởng chỉ còn " + Math.max(0, remainingCapacity) + " suất nướng cho ngày " + bakeDate
-                + ", không đủ " + requestedQuantity + " suất yêu cầu. Vui lòng giảm số lượng hoặc chọn ngày khác.";
+        // Khách chọn ngày nhận; bánh nướng hôm trước nên ngày nhận = ngày nướng + 1
+        String message = "Xưởng chỉ còn " + Math.max(0, remainingCapacity) + " suất nướng cho đơn nhận ngày "
+                + bakeDate.plusDays(1).format(DAY) + " (đơn cần " + requestedQuantity
+                + " suất). Vui lòng giảm số lượng hoặc chọn ngày nhận khác.";
         return new InventoryConflictException("INSUFFICIENT_CAPACITY", providerId, null, bakeDate,
                 message, null, requestedQuantity, Math.max(0, remainingCapacity));
     }

@@ -55,8 +55,13 @@ public class CapacityController {
     @Transactional(readOnly = true)
     public ResponseEntity<ApiResponseDTO<List<DayAvailability>>> availableDates(@PathVariable UUID providerId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            // Số bánh giỏ cần nướng cho xưởng này: ngày nướng theo đơn phải còn đủ chừng ấy suất
+            @RequestParam(defaultValue = "1") int quantity) {
         checkRange(from, to);
+        if (quantity < 1 || quantity > 10_000) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "quantity must be 1 to 10000");
+        }
         Map<LocalDate, DailyCapacity> byBakeDate = byDate(providerId, from.minusDays(1), to.minusDays(1));
         LocalDate today = LocalDate.now(VIETNAM);
         LocalDate earliest = today.plusDays(CheckoutLeadTime.READY_DAYS);
@@ -66,7 +71,7 @@ public class CapacityController {
             // Trước mốc nướng theo đơn: giao từ kho, không cần suất nướng (tồn kho kiểm khi đặt)
             boolean fromStock = !CheckoutLeadTime.canBakeToOrder(d, today);
             days.add(new DayAvailability(d, !d.isBefore(earliest) && (fromStock || bake != null
-                    && bake.getReservedQuantity() < bake.getMaxQuantity())));
+                    && bake.getMaxQuantity() - bake.getReservedQuantity() >= quantity)));
         }
         return ResponseEntity.ok(ApiResponseDTO.success(days));
     }

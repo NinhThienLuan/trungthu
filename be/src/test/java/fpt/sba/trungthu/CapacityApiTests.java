@@ -76,6 +76,25 @@ class CapacityApiTests {
     }
 
     @Test
+    void bakeToOrderDayClosesWhenFewerSlotsLeftThanTheCartNeeds() throws Exception {
+        LocalDate d = today.plusDays(8);
+        capacities.saveAndFlush(DailyCapacity.builder().provider(provider).capacityDate(d.minusDays(1))
+                .maxQuantity(10).reservedQuantity(3).build());
+        // Còn 7 suất: giỏ cần 7 thì chọn được, cần 9 thì ngày bị khoá
+        mvc.perform(get("/api/providers/{id}/available-dates", provider.getId())
+                        .param("from", d.toString()).param("to", d.toString()).param("quantity", "7"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data[0].available").value(true));
+        mvc.perform(get("/api/providers/{id}/available-dates", provider.getId())
+                        .param("from", d.toString()).param("to", d.toString()).param("quantity", "9"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data[0].available").value(false));
+        // Ngày giao từ kho không phụ thuộc suất nướng
+        mvc.perform(get("/api/providers/{id}/available-dates", provider.getId())
+                        .param("from", today.plusDays(2).toString()).param("to", today.plusDays(2).toString())
+                        .param("quantity", "9"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data[0].available").value(true));
+    }
+
+    @Test
     void providerSetsRangeButCannotGoBelowReserved() throws Exception {
         LocalDate from = today.plusDays(2);
         capacities.saveAndFlush(DailyCapacity.builder().provider(provider).capacityDate(from)
