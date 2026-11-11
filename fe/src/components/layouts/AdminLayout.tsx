@@ -23,6 +23,7 @@ const NAV = [
 ]
 const ADMIN_NAV = [
   { to: '/admin', icon: 'dashboard', label: 'Bảng Điều Khiển', end: true },
+  { to: '/admin/orders', icon: 'local_shipping', label: 'Đơn Hàng' },
   { to: '/admin/kyc', icon: 'biotech', label: 'Thẩm Định Chất Lượng' },
   { to: '/admin/subscriptions', icon: 'receipt_long', label: 'Gói Bán Hàng' },
   { to: '/admin/complaints', icon: 'report_problem', label: 'Khiếu Nại' },

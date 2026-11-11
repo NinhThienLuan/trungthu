@@ -3,16 +3,19 @@ package fpt.sba.trungthu.controller;
 import fpt.sba.trungthu.dto.response.ApiResponseDTO;
 import fpt.sba.trungthu.dto.request.ReviewComplianceDocRequest;
 import fpt.sba.trungthu.dto.response.ComplianceDocResponse;
+import fpt.sba.trungthu.dto.response.PageResponse;
 import fpt.sba.trungthu.entity.enumeration.ComplianceDocStatus;
 import fpt.sba.trungthu.service.ComplianceService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,11 +25,21 @@ import java.util.UUID;
 @RequestMapping("/api/admin/compliance")
 @RequiredArgsConstructor
 @Slf4j
+@Validated
 @Tag(name = "Admin Compliance", description = "Admin compliance document review")
 @PreAuthorize("hasRole('PLATFORM_ADMIN')")
 public class AdminComplianceController {
 
     private final ComplianceService complianceService;
+
+    @GetMapping
+    @Operation(summary = "List compliance documents by status with pagination")
+    public ApiResponseDTO<PageResponse<ComplianceDocResponse>> listDocuments(
+            @RequestParam ComplianceDocStatus status,
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "10") @Min(1) @Max(100) int size) {
+        return ApiResponseDTO.success(complianceService.getDocumentsPage(status, page, size));
+    }
 
     @GetMapping("/status/{status}")
     @Operation(summary = "Get compliance documents by status")

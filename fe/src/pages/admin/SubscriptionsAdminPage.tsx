@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { errorMessage } from '../../apis/http'
-import { useApi } from '../../hooks/useApi'
+import { useAdminList } from '../../hooks/useAdminList'
 import { useDocumentTitle } from '../../hooks/useDocumentTitle'
 import { cn, formatDate, formatDateTime, formatVnd, toIsoDate } from '../../lib/format'
 import { SUBSCRIPTION_STATUS, subscriptionService, type Subscription } from '../../services/sellerService'
 import { PageHeader } from '../../components/ui/PageHeader'
+import { AdminListPagination } from '../../components/AdminListPagination'
 import { EmptyState, ErrorState, Notice, Spinner } from '../../components/ui/States'
 
 const TABS: Subscription['status'][] = ['PENDING_PAYMENT', 'ACTIVE', 'EXPIRED', 'CANCELLED', 'SUSPENDED']
@@ -13,8 +14,8 @@ const endOfYear = () => toIsoDate(new Date(new Date().getFullYear(), 11, 31))
 /** Admin sàn: xác nhận đã nhận phí gói rồi kích hoạt (chọn ngày hết hạn), hoặc huỷ */
 export function SubscriptionsAdminPage() {
   useDocumentTitle('Gói bán hàng')
-  const [status, setStatus] = useState<Subscription['status']>('PENDING_PAYMENT')
-  const { data, loading, error, reload } = useApi(() => subscriptionService.byStatus(status), [status])
+  const { status, setStatus, page, setPage, pagination, data, loading, error, reload } =
+    useAdminList('PENDING_PAYMENT', subscriptionService.byStatus)
   const [endDates, setEndDates] = useState<Record<string, string>>({})
   const [notice, setNotice] = useState<{ ok: boolean; text: string }>()
 
@@ -35,15 +36,16 @@ export function SubscriptionsAdminPage() {
         description="Theo dõi thanh toán payOS và đối soát các yêu cầu chuyển khoản đã gửi trước đây." />
       <div className="flex flex-wrap gap-2">
         {TABS.map((t) => (
-          <button key={t} type="button" className={cn('chip', status === t && 'chip-active')}
+          <button key={t} type="button" aria-pressed={status === t} className={cn('chip', status === t && 'chip-active')}
             onClick={() => { setNotice(undefined); setStatus(t) }}>{SUBSCRIPTION_STATUS[t].text}</button>
         ))}
       </div>
+      <AdminListPagination data={pagination} page={page} loading={loading} error={error} noun="gói bán hàng" onChange={setPage} />
       {notice && <Notice tone={notice.ok ? 'success' : 'danger'}>{notice.text}</Notice>}
-      {loading && !data ? <Spinner /> : error ? <ErrorState message={error} onRetry={reload} />
-        : !data?.length ? <EmptyState title="Không có gói nào" /> : (
+      {loading ? <Spinner /> : error ? <ErrorState message={error} onRetry={reload} />
+        : !data?.content.length ? <EmptyState title="Không có gói nào" /> : (
           <div className="flex flex-col gap-4">
-            {data.map((s) => (
+            {data.content.map((s) => (
               <article key={s.id} className="card flex flex-wrap items-end justify-between gap-4 p-5">
                 <div className="text-small">
                   <h2 className="text-h3">{s.storeName ?? s.providerName} · {s.planName}</h2>

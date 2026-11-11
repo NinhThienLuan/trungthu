@@ -2,6 +2,9 @@ package fpt.sba.trungthu.repository;
 
 import fpt.sba.trungthu.entity.Subscription;
 import fpt.sba.trungthu.entity.enumeration.SubscriptionStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
@@ -38,6 +41,9 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, UUID
      * Tìm tất cả subscription theo trạng thái (cho Admin)
      */
     List<Subscription> findByStatusOrderByCreatedAtDesc(SubscriptionStatus status);
+
+    @EntityGraph(attributePaths = "provider")
+    Page<Subscription> findByStatusOrderByCreatedAtDescIdDesc(SubscriptionStatus status, Pageable pageable);
 
     List<Subscription> findByProviderIdOrderByCreatedAtDesc(UUID providerId);
 

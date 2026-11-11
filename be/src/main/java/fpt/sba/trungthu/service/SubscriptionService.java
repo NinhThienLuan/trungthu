@@ -2,6 +2,7 @@ package fpt.sba.trungthu.service;
 
 import fpt.sba.trungthu.dto.request.ActivateSubscriptionRequest;
 import fpt.sba.trungthu.dto.request.CreateSubscriptionRequest;
+import fpt.sba.trungthu.dto.response.PageResponse;
 import fpt.sba.trungthu.dto.response.SubscriptionResponse;
 import fpt.sba.trungthu.entity.enumeration.SubscriptionStatus;
 
@@ -44,4 +45,6 @@ public interface SubscriptionService {
     
     // Admin gets all subscriptions by status
     List<SubscriptionResponse> getAllSubscriptionsByStatus(SubscriptionStatus status);
+
+    PageResponse<SubscriptionResponse> getSubscriptionsPage(SubscriptionStatus status, int page, int size);
 }

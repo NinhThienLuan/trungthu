@@ -3,6 +3,7 @@ package fpt.sba.trungthu.service;
 import fpt.sba.trungthu.dto.request.ReviewComplianceDocRequest;
 import fpt.sba.trungthu.dto.request.UploadComplianceDocRequest;
 import fpt.sba.trungthu.dto.response.ComplianceDocResponse;
+import fpt.sba.trungthu.dto.response.PageResponse;
 import fpt.sba.trungthu.entity.enumeration.ComplianceDocStatus;
 
 import java.util.List;
@@ -25,6 +26,8 @@ public interface ComplianceService {
     
     // Admin gets documents by status
     List<ComplianceDocResponse> getDocumentsByStatus(ComplianceDocStatus status);
+
+    PageResponse<ComplianceDocResponse> getDocumentsPage(ComplianceDocStatus status, int page, int size);
     
     // Admin reviews (approve/reject) document
     ComplianceDocResponse reviewDocument(UUID docId, ReviewComplianceDocRequest request);
