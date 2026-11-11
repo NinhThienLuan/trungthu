@@ -20,7 +20,7 @@
      getBakeSheet: (date: string) =>
        unwrap(http.get<ApiResponse<BakeLineItem[]>>('/provider/bake-sheet', { params: { date } }))
      ```
-  2. **Giao diện (`fe/src/pages/admin/OrdersPage.tsx`):**
+  2. **Giao diện (`fe/src/pages/seller/OrdersPage.tsx`):**
      * Thêm nút hoặc Tab: **"Phiếu nướng hôm nay"** cạnh danh sách đơn hàng.
      * Cung cấp bộ chọn ngày (`DatePicker`, mặc định chọn ngày hiện tại hoặc ngày mai).
      * Bảng tổng hợp: Tên sản phẩm, Tên biến thể bánh, Tổng số cái cần nướng (`bake_quantity`), Danh sách các mã đơn hàng tương ứng.
@@ -30,7 +30,7 @@
 
 ---
 
-### Nhiệm vụ 2: Dọn dẹp trang "Menu & kho" ([`BakeBatchPage.tsx`](file:///d:/GitHub/trungthu/fe/src/pages/admin/BakeBatchPage.tsx)) khớp Scope MVP — [ƯU TIÊN 2]
+### Nhiệm vụ 2: Dọn dẹp trang "Menu & kho" ([`BakeBatchPage.tsx`](file:///d:/GitHub/trungthu/fe/src/pages/seller/BakeBatchPage.tsx)) khớp Scope MVP — [ƯU TIÊN 2]
 * **Bối cảnh:** Trang này đang chứa các form gọi vào API Set quà động và Sổ kho over-engineering (`/composition`, `/stock`, `/release`, `/terminate`). Backend chuẩn bị dọn dẹp các API này sang Phase 2; nếu không ẩn đi, FE sẽ bị lỗi mạng `404`.
 * **Các bước triển khai:**
   1. Tạm ẩn/disable các form và nút bấm sau:
@@ -48,7 +48,7 @@
 
 ### Nhiệm vụ 3: Hoàn thiện luồng KYC & Gói Bán Hàng SaaS — [ƯU TIÊN 3]
 * **Cập nhật 2026-11-03:** Đã triển khai FE trên nhánh `feat/fe2-kyc-saas`: banner KYC/gói tại layout Seller, kiểm tra đủ 3 loại giấy tờ được duyệt và ngày hiệu lực gói, modal xem ảnh/PDF có phóng to ảnh, báo lỗi khi thiếu lý do từ chối. Giữ các luồng đã có: hiển thị lý do, nộp lại giấy tờ, mã giao dịch và kích hoạt gói. Build/lint đạt; đã kiểm tra giao diện với API giả lập, chưa kiểm thử tích hợp backend thực tế.
-* **Giao diện Seller ([`ProfilePage.tsx`](file:///d:/GitHub/trungthu/fe/src/pages/admin/ProfilePage.tsx) & [`SubscriptionPage.tsx`](file:///d:/GitHub/trungthu/fe/src/pages/admin/SubscriptionPage.tsx)):**
+* **Giao diện Seller ([`ProfilePage.tsx`](file:///d:/GitHub/trungthu/fe/src/pages/seller/ProfilePage.tsx) & [`SubscriptionPage.tsx`](file:///d:/GitHub/trungthu/fe/src/pages/seller/SubscriptionPage.tsx)):**
   1. Hiển thị rõ lý do từ chối duyệt: Nếu chứng từ nào bị `REJECTED`, hiển thị `rejectionReason` từ Backend để Seller biết nguyên nhân và bấm nút tải lại file mới.
   2. Bổ sung **Banner cảnh báo quyền bán** ở đầu trang Seller:
      * Nếu chưa nộp đủ 3 loại giấy tờ (ATTP, GPKD, CCCD) hoặc đang chờ duyệt: Hiển thị cảnh báo *"Gian hàng đang chờ duyệt hồ sơ KYC"*.
@@ -142,7 +142,7 @@ Dưới đây là 4 hiệu ứng animation được đúc kết từ concept thi
     1. `PERCENT_OFF`: Giảm % đơn giá khi mua từ `minQuantity` cái trở lên (áp dụng cho từng dòng bánh lẻ).
     2. `BUY_X_GET_Y`: Mua X tặng Y (ví dụ mua 3 tặng 1). Lặp lại theo từng bộ số lượng.
   - Cơ chế tự động tính trong Checkout (`CheckoutServiceImpl.java`): Quét các khuyến mãi đang chạy của xưởng, chọn khuyến mãi có mức giảm lớn nhất (`bestDiscount`) để trừ trực tiếp vào đơn giá từng dòng hàng.
-  - Phân hệ Seller: Đã có trang quản trị `/seller/promotions` ([`PromotionsPage.tsx`](file:///d:/GitHub/trungthu/fe/src/pages/admin/PromotionsPage.tsx)) đầy đủ chức năng tạo, bật/tắt, xóa.
+  - Phân hệ Seller: Đã có trang quản trị `/seller/promotions` ([`PromotionsPage.tsx`](file:///d:/GitHub/trungthu/fe/src/pages/seller/PromotionsPage.tsx)) đầy đủ chức năng tạo, bật/tắt, xóa.
 - **Điểm nghẽn ở Storefront (Phía Khách Hàng - Buyer)**:
   - Khách vào Catalog và trang chi tiết sản phẩm hoàn toàn **không thấy nhãn/badge khuyến mãi** dù API `GET /api/public/promotions` đã sẵn sàng.
   - Giỏ hàng (`CartPage`) không có thanh tiến trình nhắc nhở tăng số lượng để nhận ưu đãi (Upsell Nudge).
