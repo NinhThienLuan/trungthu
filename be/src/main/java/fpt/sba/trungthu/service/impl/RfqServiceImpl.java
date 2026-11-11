@@ -20,6 +20,7 @@ import fpt.sba.trungthu.repository.ProviderQuotationRepository;
 import fpt.sba.trungthu.repository.SubscriptionRepository;
 import fpt.sba.trungthu.repository.UserRepository;
 import fpt.sba.trungthu.service.RfqService;
+import fpt.sba.trungthu.service.RfqDeliveryEstimator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -49,6 +50,7 @@ public class RfqServiceImpl implements RfqService {
     private final UserRepository users;
     private final ProductRepository products;
     private final BulkOrderService bulkOrders;
+    private final RfqDeliveryEstimator deliveryEstimator;
 
     @Override
     @Transactional
@@ -58,9 +60,6 @@ public class RfqServiceImpl implements RfqService {
         String companyName = input.companyName().trim();
         if (companyName.length() < 3) {
             throw badRequest("Tên doanh nghiệp phải có ít nhất 3 ký tự");
-        }
-        if (input.expectedDeliveryDate().isBefore(today.plusDays(3))) {
-            throw badRequest("Ngày nhận hàng phải cách ít nhất 3 ngày");
         }
         // Chọn sản phẩm thì gửi cho xưởng của sản phẩm đó; chọn cả hai thì sản phẩm phải thuộc xưởng đã chọn
         // Hàng sỉ xưởng nướng theo đơn: sản phẩm đang hiện công khai (kể cả hết tồn bán lẻ) đều nhận RFQ
@@ -75,6 +74,12 @@ public class RfqServiceImpl implements RfqService {
             }
             target = product.getProvider();
         }
+        int cakesPerBox = input.cakesPerBox() == null ? 1 : input.cakesPerBox();
+        LocalDate earliest = deliveryEstimator.estimate(input.requestedQuantity(), cakesPerBox,
+                target == null ? null : target.getId()).earliestDeliveryDate();
+        if (input.expectedDeliveryDate().isBefore(earliest)) {
+            throw badRequest("Ngày nhận sớm nhất theo suất nướng hiện tại là " + earliest);
+        }
         String prefix = "RFQ-" + today.format(DateTimeFormatter.BASIC_ISO_DATE) + "-";
         String code = null;
         for (int i = 0; i < 100; i++) {
@@ -86,7 +91,8 @@ public class RfqServiceImpl implements RfqService {
                 .companyName(companyName).taxCode(input.taxCode().trim())
                 .contactName(input.contactName().trim()).contactPosition(input.contactPosition().trim())
                 .contactPhone(input.contactPhone().trim()).contactEmail(input.contactEmail().trim())
-                .requestedQuantity(input.requestedQuantity()).expectedDate(input.expectedDeliveryDate())
+                .requestedQuantity(input.requestedQuantity()).cakesPerBox(cakesPerBox)
+                .expectedDate(input.expectedDeliveryDate())
                 .expectedBudget(input.expectedBudget()).description(input.description()).logoUrl(input.logoUrl())
                 .targetProvider(target).product(product)
                 .status(BulkRequestStatus.DISTRIBUTED).build());
@@ -139,7 +145,7 @@ public class RfqServiceImpl implements RfqService {
         if (quotations.existsByRequestIdAndProviderId(requestId, provider.getId())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Xưởng đã gửi báo giá cho RFQ này");
         }
-        validateQuote(request, input);
+        validateQuote(request, input, provider.getId());
         ProviderQuotation quote = quotations.saveAndFlush(ProviderQuotation.builder()
                 .request(request).provider(provider).quotedPrice(input.unitPrice())
                 .offeredQuantity(input.offeredQuantity()).cakesPerBox(input.cakesPerBox())
@@ -164,7 +170,7 @@ public class RfqServiceImpl implements RfqService {
         if (request.getStatus() != BulkRequestStatus.QUOTES_RECEIVED || quote.getStatus() != QuoteStatus.SUBMITTED) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Báo giá đã chốt, không thể sửa");
         }
-        validateQuote(request, input);
+        validateQuote(request, input, provider.getId());
         quote.setQuotedPrice(input.unitPrice());
         quote.setOfferedQuantity(input.offeredQuantity());
         quote.setCakesPerBox(input.cakesPerBox());
@@ -174,8 +180,11 @@ public class RfqServiceImpl implements RfqService {
         return toQuoteResponse(quote);
     }
 
-    private void validateQuote(BulkRequest request, SubmitQuoteRequest input) {
+    private void validateQuote(BulkRequest request, SubmitQuoteRequest input, UUID providerId) {
         LocalDate today = LocalDate.now(VIETNAM);
+        if (!input.cakesPerBox().equals(request.getCakesPerBox())) {
+            throw badRequest("Số bánh mỗi hộp phải đúng với yêu cầu báo giá");
+        }
         if (input.validUntil().isBefore(today) || input.estimatedDeliveryDate().isBefore(today)) {
             throw badRequest("Ngày hiệu lực và ngày giao dự kiến không được ở quá khứ");
         }
@@ -190,6 +199,11 @@ public class RfqServiceImpl implements RfqService {
             Math.multiplyExact(input.offeredQuantity(), input.cakesPerBox());
         } catch (ArithmeticException e) {
             throw badRequest("Số bánh vượt giới hạn hệ thống");
+        }
+        LocalDate earliest = deliveryEstimator.estimate(input.offeredQuantity(), input.cakesPerBox(),
+                providerId).earliestDeliveryDate();
+        if (input.estimatedDeliveryDate().isBefore(earliest)) {
+            throw badRequest("Ngày giao sớm nhất theo suất nướng hiện tại là " + earliest);
         }
     }
 
@@ -255,6 +269,7 @@ public class RfqServiceImpl implements RfqService {
         return new RfqResponse(request.getId(), request.getRequestCode(), request.getCompanyName(),
                 request.getTaxCode(), request.getContactName(), request.getContactPosition(),
                 request.getContactPhone(), request.getContactEmail(), request.getRequestedQuantity(),
+                request.getCakesPerBox(),
                 request.getExpectedDate(), request.getExpectedBudget(), request.getDescription(),
                 request.getLogoUrl(), request.getStatus(),
                 request.getTargetProvider() == null ? null : request.getTargetProvider().getId(),
@@ -265,7 +280,7 @@ public class RfqServiceImpl implements RfqService {
 
     private RfqResponse toProviderRfqResponse(BulkRequest request) {
         return new RfqResponse(request.getId(), request.getRequestCode(), "Khách doanh nghiệp",
-                null, null, null, null, null, request.getRequestedQuantity(),
+                null, null, null, null, null, request.getRequestedQuantity(), request.getCakesPerBox(),
                 request.getExpectedDate(), request.getExpectedBudget(), request.getDescription(),
                 request.getLogoUrl(), request.getStatus(),
                 request.getTargetProvider() == null ? null : request.getTargetProvider().getId(),

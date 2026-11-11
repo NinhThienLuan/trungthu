@@ -71,6 +71,9 @@ public class BulkRequest extends BaseEntity {
     @Column(name = "requested_quantity", nullable = false)
     private Integer requestedQuantity;
 
+    @Column(name = "cakes_per_box", nullable = false)
+    private Integer cakesPerBox;
+
     @Column(name = "expected_date")
     private LocalDate expectedDate;
 

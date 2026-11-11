@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { BANK_CODES, RFQ_LEAD_DAYS, RFQ_MIN_QUANTITY } from '../constants'
+import { BANK_CODES, RFQ_MIN_QUANTITY } from '../constants'
 import { addDays, toIsoDate } from '../lib/format'
 
 // Giống regex của RegisterRequest bên BE
@@ -100,11 +100,12 @@ export const rfqSchema = z.object({
   expectedDeliveryDate: z
     .string()
     .min(1, 'Vui lòng chọn ngày nhận')
-    .refine((d) => d >= toIsoDate(addDays(new Date(), RFQ_LEAD_DAYS)), `Ngày nhận phải sau hôm nay ít nhất ${RFQ_LEAD_DAYS} ngày`),
+    .refine((d) => d >= toIsoDate(addDays(new Date(), 1)), 'Ngày nhận phải sau hôm nay'),
   requestedQuantity: z.coerce
     .number({ invalid_type_error: 'Vui lòng nhập số lượng' })
     .int('Số lượng phải là số nguyên')
     .min(RFQ_MIN_QUANTITY, `Báo giá sỉ áp dụng từ ${RFQ_MIN_QUANTITY} hộp`),
+  cakesPerBox: z.coerce.number().int('Số bánh mỗi hộp phải là số nguyên').min(1).max(100),
   expectedBudget: z.preprocess((v) => (v === '' ? undefined : v), z.coerce.number().min(0, 'Ngân sách không được âm').optional()),
   description: z.string().trim().max(100000).optional().transform((v) => v || undefined),
   // Ô chọn để trống = gửi mọi xưởng / chưa chọn sản phẩm

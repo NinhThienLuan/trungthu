@@ -166,6 +166,7 @@ export interface RfqRequest {
   contactPhone: string
   contactEmail: string
   requestedQuantity: number
+  cakesPerBox: number
   expectedDeliveryDate: string
   description?: string
   expectedBudget?: number
@@ -188,6 +189,7 @@ export interface RfqResponse {
   contactPhone: string | null
   contactEmail: string | null
   requestedQuantity: number
+  cakesPerBox: number
   expectedDeliveryDate: string
   status: RfqStatus
   expectedBudget: number | null

@@ -6,7 +6,6 @@ export const BRAND = 'Nguyệt Viên Đài'
 
 // Quy tắc nghiệp vụ (SRS) — đổi ở đây, không viết số cứng trong component
 export const MIN_LEAD_DAYS = 1 // bánh có sẵn trong kho: nhận từ ngày mai
-export const RFQ_LEAD_DAYS = 3 // RFQ sỉ: ngày nhận >= hôm nay + 3 (RfqServiceImpl)
 export const BULK_ORDER_QUANTITY = 20 // từ 20 sản phẩm/xưởng cần chuẩn bị lâu hơn
 export const MAX_LINE_QUANTITY = 10_000 // trần mỗi dòng như BE (CheckoutServiceImpl); từ BULK_ORDER_QUANTITY cần BULK_LEAD_DAYS ngày
 export const BULK_LEAD_DAYS = 7

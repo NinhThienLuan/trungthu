@@ -1,10 +1,11 @@
 // Tự sinh từ bản thiết kế Stitch — giữ nguyên nội dung. Sửa logic ở trang bọc ngoài.
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Icon } from '../../components/Icon'
-import { RFQ_LEAD_DAYS, RFQ_MIN_QUANTITY } from '../../constants'
-import { addDays, toIsoDate } from '../../lib/format'
+import { RFQ_MIN_QUANTITY } from '../../constants'
+import { formatDate } from '../../lib/format'
 import { useApi } from '../../hooks/useApi'
 import { productService } from '../../services/productService'
+import { rfqService } from '../../services/rfqService'
 import { BudgetCalculator, ProviderProductPicker, type B2bCatalog, type RfqDraft } from './B2bRfqTools'
 
 /** Bánh lẻ và set quà đang bán (BE đã bỏ vỏ hộp khỏi danh sách); danh sách xưởng lấy từ chính sản phẩm */
@@ -19,9 +20,26 @@ function useB2bCatalog(): B2bCatalog {
 
 export function B2bPortalView() {
   const catalog = useB2bCatalog()
-  const earliestDeliveryDate = toIsoDate(addDays(new Date(), RFQ_LEAD_DAYS))
   // Bảng tính và form RFQ dùng chung lựa chọn xưởng / bánh / số lượng
-  const [draft, setDraft] = useState<RfqDraft>({ providerId: '', productId: '', quantity: 100 })
+  const [draft, setDraft] = useState<RfqDraft>({ providerId: '', productId: '', quantity: 100, cakesPerBox: 4 })
+  const [expectedDeliveryDate, setExpectedDeliveryDate] = useState('')
+  const [dateTouched, setDateTouched] = useState(false)
+  const deliveryEstimate = useApi(
+    () => draft.quantity >= RFQ_MIN_QUANTITY && draft.cakesPerBox > 0
+      ? rfqService.earliestDelivery(draft.quantity, draft.cakesPerBox, draft.providerId || undefined)
+      : Promise.resolve(null),
+    [draft.quantity, draft.cakesPerBox, draft.providerId],
+  )
+  const estimate = !deliveryEstimate.loading && !deliveryEstimate.error
+    && deliveryEstimate.data?.cakeQuantity === draft.quantity * draft.cakesPerBox
+    && (!draft.providerId || deliveryEstimate.data.providerId === draft.providerId)
+    ? deliveryEstimate.data : null
+  const earliestDeliveryDate = estimate?.earliestDeliveryDate ?? ''
+  useEffect(() => {
+    if (earliestDeliveryDate) setExpectedDeliveryDate((current) =>
+      !dateTouched || !current || current < earliestDeliveryDate ? earliestDeliveryDate : current)
+    else setExpectedDeliveryDate('')
+  }, [earliestDeliveryDate, dateTouched])
   /** "Điền vào yêu cầu báo giá": ghi ngân sách + dịch vụ thêm vào form rồi cuộn tới form */
   const applyEstimate = (budget: number | undefined, addons: string[]) => {
     const budgetInput = document.getElementById('rfq-budget') as HTMLInputElement | null
@@ -604,12 +622,19 @@ export function B2bPortalView() {
                     <input
                       className="w-full px-space-md py-2.5 bg-surface-container-low text-primary rounded-[0.125rem] font-body-md text-body-md focus:outline-none focus:ring-1 focus:ring-secondary aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-error"
                       name="expectedDeliveryDate"
-                      min={earliestDeliveryDate}
-                      defaultValue={earliestDeliveryDate}
+                      min={earliestDeliveryDate || undefined}
+                      value={expectedDeliveryDate}
+                      onChange={(event) => { setExpectedDeliveryDate(event.target.value); setDateTouched(true) }}
+                      disabled={!earliestDeliveryDate || deliveryEstimate.loading}
                       required
                       type="date"
                     />{' '}
-                    <p className="font-body-sm text-[11px] text-on-surface-variant">Ngày nhận dự kiến sớm nhất cho RFQ; xưởng sẽ xác nhận lịch giao theo số bánh và suất nướng còn trống.</p>
+                    <p className="font-body-sm text-[11px] text-on-surface-variant">
+                      {deliveryEstimate.loading ? 'Đang tính ngày nhận theo suất nướng…'
+                        : deliveryEstimate.error ? deliveryEstimate.error
+                          : estimate ? `${draft.quantity} hộp × ${draft.cakesPerBox} bánh = ${estimate.cakeQuantity} bánh; cần ${estimate.productionDays} ngày nướng. Sớm nhất giao ${formatDate(estimate.earliestDeliveryDate)}${draft.providerId ? '.' : ' theo xưởng có lịch phù hợp; ngày giao từng xưởng có thể khác.'}`
+                            : 'Nhập số hộp và số bánh mỗi hộp để tính ngày nhận.'}
+                    </p>
                   </div>{' '}
                   <div className="space-y-1">
                     {' '}
@@ -619,6 +644,12 @@ export function B2bPortalView() {
                     <input className="w-full px-space-md py-2.5 bg-surface-container-low text-primary rounded-[0.125rem] font-body-md text-body-md focus:outline-none focus:ring-1 focus:ring-secondary aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-error"
                       name="requestedQuantity" type="number" min={RFQ_MIN_QUANTITY} required
                       value={draft.quantity} onChange={(e) => setDraft({ ...draft, quantity: Number(e.target.value) })} />{' '}
+                  </div>{' '}
+                  <div className="space-y-1">
+                    <label className="font-label-md text-label-md text-primary uppercase block">Số bánh trong mỗi hộp *</label>
+                    <input className="w-full px-space-md py-2.5 bg-surface-container-low text-primary rounded-[0.125rem] font-body-md text-body-md focus:outline-none focus:ring-1 focus:ring-secondary"
+                      name="cakesPerBox" type="number" min={1} max={100} required
+                      value={draft.cakesPerBox} onChange={(e) => setDraft({ ...draft, cakesPerBox: Number(e.target.value) })} />
                   </div>{' '}
                 </div>{' '}
                 <div className="space-y-space-sm pt-space-xs">
@@ -641,6 +672,7 @@ export function B2bPortalView() {
                   <button
                     className="w-full py-4 bg-secondary text-on-secondary rounded-[0.125rem] font-label-lg text-label-lg tracking-widest uppercase hover:bg-primary-container hover:text-champagne-light transition-all shadow-md flex items-center justify-center gap-space-xs"
                     type="submit"
+                    disabled={!earliestDeliveryDate || deliveryEstimate.loading || !!deliveryEstimate.error}
                   >
                     {' '}
                     <Icon name="verified" className="text-[20px]" aria-hidden />{' '}

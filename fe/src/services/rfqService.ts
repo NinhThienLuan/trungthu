@@ -3,6 +3,9 @@ import type { ApiResponse } from '../types/api'
 import type { BulkOrderResponse, QuoteResponse, RfqRequest, RfqResponse, SubmitQuoteRequest } from '../types/order'
 
 export const rfqService = {
+  earliestDelivery: (boxes: number, cakesPerBox: number, providerId?: string) =>
+    unwrap(http.get<ApiResponse<{ earliestDeliveryDate: string; providerId: string; cakeQuantity: number; productionDays: number }>>(
+      '/rfqs/earliest-delivery', { params: { boxes, cakesPerBox, ...(providerId ? { providerId } : {}) } })),
   /** BE3: POST /api/rfqs (CUSTOMER) */
   submit: (body: RfqRequest) => unwrap(http.post<ApiResponse<RfqResponse>>('/rfqs', body)),
   mine: () => unwrap(http.get<ApiResponse<RfqResponse[]>>('/rfqs/me')),

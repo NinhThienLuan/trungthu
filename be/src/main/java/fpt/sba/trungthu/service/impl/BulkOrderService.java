@@ -44,7 +44,7 @@ public class BulkOrderService {
             throw conflict("Số bánh vượt giới hạn");
         }
         List<DailyCapacity> available = capacities.findByProviderIdAndCapacityDateBetweenOrderByCapacityDateAsc(
-                quote.getProvider().getId(), today, delivery.minusDays(1));
+                quote.getProvider().getId(), today.plusDays(1), delivery.minusDays(1));
         List<DailyCapacity> selected = new ArrayList<>();
         // Prefer the freshest possible production dates. A configured closed day has no free capacity.
         for (int i = available.size() - 1; i >= 0 && remaining > 0; i--) {
@@ -59,9 +59,9 @@ public class BulkOrderService {
 
         LocalDateTime now = LocalDateTime.now(VIETNAM);
         LocalDateTime firstBake = selected.stream().map(DailyCapacity::getCapacityDate)
-                .min(LocalDate::compareTo).orElseThrow().atStartOfDay();
+                .min(LocalDate::compareTo).orElseThrow().atTime(8, 0);
         LocalDateTime depositDeadline = now.plusHours(48);
-        if (!depositDeadline.isBefore(firstBake)) depositDeadline = firstBake.minusHours(2);
+        if (!depositDeadline.isBefore(firstBake)) depositDeadline = firstBake;
         if (!depositDeadline.isAfter(now)) throw conflict("Không đủ thời gian xác nhận cọc trước ngày nướng đầu tiên");
 
         BigDecimal gross = quote.getQuotedPrice().multiply(BigDecimal.valueOf(quote.getOfferedQuantity()));

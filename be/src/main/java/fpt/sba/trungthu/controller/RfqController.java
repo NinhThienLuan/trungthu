@@ -6,6 +6,7 @@ import fpt.sba.trungthu.dto.response.ApiResponseDTO;
 import fpt.sba.trungthu.dto.response.QuoteResponse;
 import fpt.sba.trungthu.dto.response.RfqResponse;
 import fpt.sba.trungthu.service.RfqService;
+import fpt.sba.trungthu.service.RfqDeliveryEstimator;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +17,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestParam;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Max;
 
 import java.util.List;
 import java.util.UUID;
@@ -24,6 +28,14 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class RfqController {
     private final RfqService rfqService;
+    private final RfqDeliveryEstimator deliveryEstimator;
+
+    @GetMapping("/api/rfqs/earliest-delivery")
+    public ResponseEntity<ApiResponseDTO<RfqDeliveryEstimator.Estimate>> earliestDelivery(
+            @RequestParam @Min(20) int boxes, @RequestParam @Min(1) @Max(100) int cakesPerBox,
+            @RequestParam(required = false) UUID providerId) {
+        return ResponseEntity.ok(ApiResponseDTO.success(deliveryEstimator.estimate(boxes, cakesPerBox, providerId)));
+    }
 
     @PostMapping("/api/rfqs")
     @PreAuthorize("hasRole('CUSTOMER')")

@@ -127,7 +127,7 @@ export function BuyerRfqDashboard({ created }: { created?: RfqResponse | null })
                       </span>
                     </div>
                     <p className="mt-1 text-small text-ink">
-                      <b>{rfq.companyName}</b> · {rfq.requestedQuantity} hộp quà
+                      <b>{rfq.companyName}</b> · {rfq.requestedQuantity} hộp × {rfq.cakesPerBox} bánh
                     </p>
                     <div className="mt-2 flex items-center justify-between text-xs text-muted">
                       <span>Dự kiến nhận: <b>{formatDate(rfq.expectedDeliveryDate)}</b></span>
@@ -205,7 +205,7 @@ export function BuyerRfqDashboard({ created }: { created?: RfqResponse | null })
                         </div>
                       </div>
                       <p className="mt-1 text-xs text-muted">{quote.offeredQuantity * quote.cakesPerBox} bánh · Thành tiền {formatVnd(quote.grossAmount)} · Chiết khấu {formatVnd(quote.discountAmount)} · Cọc 50% {formatVnd(quote.depositAmount)}</p>
-                      {canAccept && <p className="mt-1 text-xs text-muted">Suất nướng được giữ khi chấp nhận; cọc cần được xác nhận trong 48 giờ hoặc trước ngày bắt đầu nướng.</p>}
+                      {canAccept && <p className="mt-1 text-xs text-muted">Suất nướng được giữ khi chấp nhận; cọc cần được xác nhận trong 48 giờ hoặc trước khi bắt đầu nướng.</p>}
 
                       {quote.note && (
                         <div className="mt-2.5 rounded bg-white p-2.5 border border-line/60 text-small text-ink">

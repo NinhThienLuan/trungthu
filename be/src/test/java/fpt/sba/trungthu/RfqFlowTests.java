@@ -18,6 +18,7 @@ import fpt.sba.trungthu.repository.UserRepository;
 import fpt.sba.trungthu.repository.DailyCapacityRepository;
 import fpt.sba.trungthu.repository.BulkOrderRepository;
 import fpt.sba.trungthu.service.RfqService;
+import fpt.sba.trungthu.service.RfqDeliveryEstimator;
 import fpt.sba.trungthu.service.impl.BulkOrderService;
 import fpt.sba.trungthu.entity.enumeration.BulkOrderStatus;
 import org.junit.jupiter.api.Test;
@@ -54,7 +55,45 @@ class RfqFlowTests {
     @Autowired private DailyCapacityRepository capacities;
     @Autowired private BulkOrderRepository bulkOrders;
     @Autowired private BulkOrderService bulkOrderService;
+    @Autowired private RfqDeliveryEstimator deliveryEstimator;
     @MockitoBean private SecurityContextService security;
+
+    @Test
+    void hundredBoxesOfFourCakesNeedTwoBakeDaysBeforeDelivery() throws Exception {
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh"));
+        User buyer = createUser(UserRole.CUSTOMER, false);
+        User seller = createUser(UserRole.PROVIDER, true);
+        subscribe(seller, today);
+        capacity(seller, today.plusDays(1), 200);
+        capacity(seller, today.plusDays(2), 200);
+
+        var estimate = deliveryEstimator.estimate(100, 4, seller.getId());
+        assertThat(estimate.cakeQuantity()).isEqualTo(400);
+        assertThat(estimate.productionDays()).isEqualTo(2);
+        assertThat(estimate.earliestDeliveryDate()).isEqualTo(today.plusDays(3));
+        mvc.perform(get("/api/rfqs/earliest-delivery")
+                        .param("boxes", "100").param("cakesPerBox", "4").param("providerId", seller.getId().toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.productionDays").value(2))
+                .andExpect(jsonPath("$.data.earliestDeliveryDate").value(today.plusDays(3).toString()));
+
+        as(buyer);
+        assertThatThrownBy(() -> rfq.create(new CreateRfqRequest("Công ty Mặt Trăng", "0123456789", "Lan",
+                "Thu mua", "0901234567", "lan@example.com", 100, 4, today.plusDays(2),
+                null, null, null, seller.getId(), null))).isInstanceOf(ResponseStatusException.class);
+        var request = rfq.create(new CreateRfqRequest("Công ty Mặt Trăng", "0123456789", "Lan",
+                "Thu mua", "0901234567", "lan@example.com", 100, 4, today.plusDays(3),
+                null, null, null, seller.getId(), null));
+        assertThat(request.cakesPerBox()).isEqualTo(4);
+        assertThat(request.expectedDeliveryDate()).isEqualTo(today.plusDays(3));
+
+        var firstDay = capacities.findByProviderIdAndCapacityDate(seller.getId(), today.plusDays(1)).orElseThrow();
+        firstDay.setReservedQuantity(100);
+        capacities.saveAndFlush(firstDay);
+        capacity(seller, today.plusDays(3), 200);
+        assertThat(deliveryEstimator.estimate(100, 4, seller.getId()).earliestDeliveryDate())
+                .isEqualTo(today.plusDays(4));
+    }
 
     @Test
     void customerCreatesProviderQuotesAndCustomerAcceptsOnlyOwnQuote() {
@@ -66,6 +105,7 @@ class RfqFlowTests {
         subscribe(seller, today);
         subscribe(otherSeller, today);
         capacity(seller, today.plusDays(6), 100);
+        capacity(otherSeller, today.plusDays(6), 100);
 
         as(buyer);
         var request = rfq.create(new CreateRfqRequest("Công ty Mặt Trăng", "0123456789", "Lan",
@@ -88,7 +128,7 @@ class RfqFlowTests {
         var second = rfq.submitQuote(request.id(), new SubmitQuoteRequest(new BigDecimal("410000"),
                 100, today.plusDays(7), today.plusDays(5), null));
         assertThat(rfq.reviseQuote(request.id(), second.id(), new SubmitQuoteRequest(new BigDecimal("400000"),
-                100, 2, today.plusDays(7), today.plusDays(5), "Đã chỉnh giá")).cakesPerBox()).isEqualTo(2);
+                100, 1, today.plusDays(7), today.plusDays(5), "Đã chỉnh giá")).cakesPerBox()).isEqualTo(1);
 
         as(otherBuyer);
         assertThat(rfq.mine()).doesNotContain(request);
@@ -163,14 +203,17 @@ class RfqFlowTests {
         User buyer = createUser(UserRole.CUSTOMER, false);
         User seller = createUser(UserRole.PROVIDER, true);
         subscribe(seller, today);
-        capacity(seller, today.plusDays(6), 500);
+        capacity(seller, today.plusDays(6), 4000);
         as(buyer);
         var request = rfq.create(new CreateRfqRequest("Công ty Mặt Trăng", "0123456789", "Lan",
-                "Thu mua", "0901234567", "lan@example.com", 1000, today.plusDays(7),
+                "Thu mua", "0901234567", "lan@example.com", 1000, 4, today.plusDays(7),
                 null, null, null, seller.getId(), null));
         as(seller);
         var quote = rfq.submitQuote(request.id(), new SubmitQuoteRequest(new BigDecimal("100000"),
                 1000, 4, today.plusDays(7), today.plusDays(5), null));
+        var changed = capacities.findByProviderIdAndCapacityDate(seller.getId(), today.plusDays(6)).orElseThrow();
+        changed.setMaxQuantity(500);
+        capacities.saveAndFlush(changed);
         as(buyer);
         assertThatThrownBy(() -> rfq.acceptQuote(request.id(), quote.id()))
                 .isInstanceOf(ResponseStatusException.class);
@@ -331,6 +374,7 @@ class RfqFlowTests {
         User otherSeller = createUser(UserRole.PROVIDER, true);
         subscribe(seller, today);
         subscribe(otherSeller, today);
+        capacity(seller, today.plusDays(6), 100);
 
         as(buyer);
         var request = rfq.create(new CreateRfqRequest("Công ty Mặt Trăng", "0123456789", "Lan",

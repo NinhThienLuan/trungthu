@@ -8,6 +8,7 @@ export interface RfqDraft {
   providerId: string
   productId: string
   quantity: number
+  cakesPerBox: number
 }
 
 const INPUT =

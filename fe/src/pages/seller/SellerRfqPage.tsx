@@ -84,7 +84,7 @@ export function SellerRfqPage() {
             <h2 className="text-h3 text-primary">{selected.code}</h2>
             <dl className="mt-3 grid gap-2 text-small sm:grid-cols-2">
               <div><dt className="text-muted">Doanh nghiệp</dt><dd>{selected.companyName}</dd></div>
-              <div><dt className="text-muted">Số lượng</dt><dd>{selected.requestedQuantity} hộp</dd></div>
+              <div><dt className="text-muted">Số lượng</dt><dd>{selected.requestedQuantity} hộp × {selected.cakesPerBox} bánh</dd></div>
               <div><dt className="text-muted">Sản phẩm</dt><dd>{selected.productName ?? 'Theo mô tả của khách'}</dd></div>
               <div><dt className="text-muted">Ngày nhận mong muốn</dt><dd>{formatDate(selected.expectedDeliveryDate)}</dd></div>
               <div><dt className="text-muted">Ngân sách</dt><dd>{selected.expectedBudget == null ? 'Chưa cung cấp' : formatVnd(selected.expectedBudget)}</dd></div>
@@ -114,7 +114,7 @@ export function SellerRfqPage() {
                     defaultValue={ownQuote?.offeredQuantity ?? selected.requestedQuantity} required />
                 </label>
                 <label className="text-small font-semibold">Số bánh trong mỗi hộp
-                  <input className="input mt-1" name="cakesPerBox" type="number" min="1" defaultValue={ownQuote?.cakesPerBox ?? 1} required />
+                  <input className="input mt-1" name="cakesPerBox" type="number" min="1" value={selected.cakesPerBox} readOnly required />
                 </label>
                 <label className="text-small font-semibold">Ngày giao dự kiến
                   <input className="input mt-1" name="estimatedDeliveryDate" type="date"

@@ -14,10 +14,18 @@ public record CreateRfqRequest(
         @NotBlank @Size(max = 20) @Pattern(regexp = VnFormats.PHONE, message = VnFormats.PHONE_MESSAGE) String contactPhone,
         @NotBlank @Email @Size(max = 254) String contactEmail,
         @NotNull @Min(20) Integer requestedQuantity,
+        @Min(1) @Max(100) Integer cakesPerBox,
         @NotNull LocalDate expectedDeliveryDate,
         @DecimalMin("0") @Digits(integer = 16, fraction = 2) BigDecimal expectedBudget,
         @Size(max = 100000) String description,
         @Size(max = 2048) String logoUrl,
         // Tuỳ chọn: gửi riêng một xưởng / báo giá cho một sản phẩm (sản phẩm kéo theo xưởng của nó)
         UUID providerId,
-        UUID productId) {}
+        UUID productId) {
+    public CreateRfqRequest(String companyName, String taxCode, String contactName, String contactPosition,
+            String contactPhone, String contactEmail, Integer requestedQuantity, LocalDate expectedDeliveryDate,
+            BigDecimal expectedBudget, String description, String logoUrl, UUID providerId, UUID productId) {
+        this(companyName, taxCode, contactName, contactPosition, contactPhone, contactEmail,
+                requestedQuantity, 1, expectedDeliveryDate, expectedBudget, description, logoUrl, providerId, productId);
+    }
+}
