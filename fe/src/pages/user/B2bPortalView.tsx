@@ -19,6 +19,7 @@ function useB2bCatalog(): B2bCatalog {
 
 export function B2bPortalView() {
   const catalog = useB2bCatalog()
+  const earliestDeliveryDate = toIsoDate(addDays(new Date(), RFQ_LEAD_DAYS))
   // Bảng tính và form RFQ dùng chung lựa chọn xưởng / bánh / số lượng
   const [draft, setDraft] = useState<RfqDraft>({ providerId: '', productId: '', quantity: 100 })
   /** "Điền vào yêu cầu báo giá": ghi ngân sách + dịch vụ thêm vào form rồi cuộn tới form */
@@ -603,10 +604,12 @@ export function B2bPortalView() {
                     <input
                       className="w-full px-space-md py-2.5 bg-surface-container-low text-primary rounded-[0.125rem] font-body-md text-body-md focus:outline-none focus:ring-1 focus:ring-secondary aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-error"
                       name="expectedDeliveryDate"
-                      min={toIsoDate(addDays(new Date(), RFQ_LEAD_DAYS))}
+                      min={earliestDeliveryDate}
+                      defaultValue={earliestDeliveryDate}
                       required
                       type="date"
                     />{' '}
+                    <p className="font-body-sm text-[11px] text-on-surface-variant">Ngày nhận dự kiến sớm nhất cho RFQ; xưởng sẽ xác nhận lịch giao theo số bánh và suất nướng còn trống.</p>
                   </div>{' '}
                   <div className="space-y-1">
                     {' '}
