@@ -35,9 +35,9 @@ public class AdminSubscriptionController {
     private final SubscriptionService subscriptionService;
 
     @GetMapping
-    @Operation(summary = "List subscriptions by status with pagination")
+    @Operation(summary = "List subscriptions with pagination and an optional status filter")
     public ApiResponseDTO<PageResponse<SubscriptionResponse>> listSubscriptions(
-            @RequestParam SubscriptionStatus status,
+            @RequestParam(required = false) SubscriptionStatus status,
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "10") @Min(1) @Max(100) int size) {
         return ApiResponseDTO.success(subscriptionService.getSubscriptionsPage(status, page, size));

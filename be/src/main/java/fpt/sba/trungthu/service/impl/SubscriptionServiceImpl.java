@@ -437,7 +437,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     @Transactional(readOnly = true)
     public PageResponse<SubscriptionResponse> getSubscriptionsPage(SubscriptionStatus status, int page, int size) {
         var subscriptions = subscriptionRepository
-                .findByStatusOrderByCreatedAtDescIdDesc(status, PageRequest.of(page, size));
+                .findAdminSubscriptions(status, PageRequest.of(page, size));
         var online = findOnlinePayments(subscriptions.getContent());
         return PageResponse.from(subscriptions, subscription -> mapToResponse(subscription, online.get(subscription.getId())));
     }

@@ -43,7 +43,12 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, UUID
     List<Subscription> findByStatusOrderByCreatedAtDesc(SubscriptionStatus status);
 
     @EntityGraph(attributePaths = "provider")
-    Page<Subscription> findByStatusOrderByCreatedAtDescIdDesc(SubscriptionStatus status, Pageable pageable);
+    @Query("""
+            SELECT s FROM Subscription s
+            WHERE (:#{#status == null} = true OR s.status = :status)
+            ORDER BY s.createdAt DESC, s.id DESC
+            """)
+    Page<Subscription> findAdminSubscriptions(@Param("status") SubscriptionStatus status, Pageable pageable);
 
     List<Subscription> findByProviderIdOrderByCreatedAtDesc(UUID providerId);
 

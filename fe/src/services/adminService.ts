@@ -75,7 +75,7 @@ export const adminService = {
   dashboard: () => unwrap(http.get<ApiResponse<AdminDashboardData>>('/admin/dashboard')),
   orders: (status: OrderStatus | undefined, page: number, size: number) =>
     unwrap(http.get<ApiResponse<Page<AdminOrder>>>('/admin/orders', { params: { status, page, size } })),
-  documents: (status: ComplianceStatus, page: number, size: number) =>
+  documents: (status: ComplianceStatus | undefined, page: number, size: number) =>
     unwrap(http.get<ApiResponse<Page<AdminComplianceDoc>>>('/admin/compliance', { params: { status, page, size } })),
   approve: (id: string) => unwrap(http.put<ApiResponse<AdminComplianceDoc>>(`/admin/compliance/${id}/approve`)),
   reject: (id: string, reason: string) =>

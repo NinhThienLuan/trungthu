@@ -33,9 +33,9 @@ public class AdminComplianceController {
     private final ComplianceService complianceService;
 
     @GetMapping
-    @Operation(summary = "List compliance documents by status with pagination")
+    @Operation(summary = "List compliance documents with pagination and an optional status filter")
     public ApiResponseDTO<PageResponse<ComplianceDocResponse>> listDocuments(
-            @RequestParam ComplianceDocStatus status,
+            @RequestParam(required = false) ComplianceDocStatus status,
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "10") @Min(1) @Max(100) int size) {
         return ApiResponseDTO.success(complianceService.getDocumentsPage(status, page, size));

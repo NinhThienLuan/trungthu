@@ -148,7 +148,7 @@ public class ComplianceServiceImpl implements ComplianceService {
     @Transactional(readOnly = true)
     public PageResponse<ComplianceDocResponse> getDocumentsPage(ComplianceDocStatus status, int page, int size) {
         var documents = complianceDocRepository
-                .findByVerificationStatusOrderBySubmittedAtAscIdAsc(status, PageRequest.of(page, size));
+                .findAdminDocuments(status, PageRequest.of(page, size));
         return PageResponse.from(documents, this::mapToResponse);
     }
 
