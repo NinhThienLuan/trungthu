@@ -17,6 +17,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
@@ -37,6 +38,16 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         log.warn("ResponseStatusException: status={}, reason={}", ex.getStatusCode(), ex.getReason());
         return ResponseEntity.status(ex.getStatusCode())
                 .body(ApiResponseDTO.error(ex.getStatusCode().value(), ex.getReason() != null ? ex.getReason() : ex.getMessage()));
+    }
+
+    /** File vượt spring.servlet.multipart.max-file-size: báo tiếng Việt thay cho ProblemDetail mặc định */
+    @Override
+    protected ResponseEntity<Object> handleMaxUploadSizeExceededException(
+            MaxUploadSizeExceededException ex,
+            HttpHeaders headers,
+            HttpStatusCode status,
+            WebRequest request) {
+        return new ResponseEntity<>(ApiResponseDTO.error(status.value(), "Tệp quá lớn. Vui lòng chọn tệp tối đa 10 MB."), status);
     }
 
     @Override
