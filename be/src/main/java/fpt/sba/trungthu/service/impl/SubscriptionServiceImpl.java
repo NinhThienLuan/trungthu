@@ -15,6 +15,7 @@ import fpt.sba.trungthu.entity.enumeration.UserStatus;
 import fpt.sba.trungthu.repository.PaymentTransactionRepository;
 import fpt.sba.trungthu.repository.SubscriptionRepository;
 import fpt.sba.trungthu.repository.UserRepository;
+import fpt.sba.trungthu.service.EmailService;
 import fpt.sba.trungthu.service.SubscriptionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -56,6 +57,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     private final UserRepository userRepository;
     private final PaymentTransactionRepository payments;
     private final PayosSubscriptionGateway gateway;
+    private final EmailService emailService; // CRITICAL FIX: Thêm email service
 
     @Override
     @Transactional
@@ -306,6 +308,9 @@ public class SubscriptionServiceImpl implements SubscriptionService {
                 .filter(s -> s.getStatus() == SubscriptionStatus.ACTIVE && !s.getId().equals(subscription.getId()))
                 .forEach(s -> s.transitionStatus(SubscriptionStatus.EXPIRED));
         subscription.transitionStatus(SubscriptionStatus.ACTIVE);
+        // Báo seller gói đã chạy, cả khi payOS xác nhận lẫn khi admin kích hoạt tay (gửi bất đồng bộ)
+        emailService.sendSubscriptionActivatedEmail(subscription.getProvider().getEmail(),
+                subscription.getPlanName(), subscription.getEndDate().toString());
     }
 
     @Override

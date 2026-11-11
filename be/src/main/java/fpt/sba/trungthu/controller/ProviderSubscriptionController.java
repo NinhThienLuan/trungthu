@@ -55,6 +55,7 @@ public class ProviderSubscriptionController {
 
     /** Bảng giá gói của sàn (seller chọn một mã gói khi đăng ký) */
     @GetMapping("/plans")
+    @Operation(summary = "Get subscription plans", description = "Lấy bảng giá các gói dịch vụ của sàn")
     public ResponseEntity<ApiResponseDTO<List<PlanView>>> plans() {
         return ResponseEntity.ok(ApiResponseDTO.success(java.util.Arrays.stream(SubscriptionPlan.values())
                 .map(p -> new PlanView(p, p.label(), p.price(), p.maxProducts())).toList()));
@@ -62,49 +63,9 @@ public class ProviderSubscriptionController {
 
     /** Mọi gói của tôi (đang chờ, đang chạy, đã hết hạn), mới nhất trước */
     @GetMapping
+    @Operation(summary = "Get my subscriptions", description = "Lấy danh sách tất cả gói đăng ký của tôi (pending, active, expired)")
     public ResponseEntity<ApiResponseDTO<List<SubscriptionResponse>>> mine() {
         return ResponseEntity.ok(ApiResponseDTO.success(subscriptionService.mySubscriptions(getCurrentUserEmail())));
-    }
-
-    @GetMapping("/active")
-    @Operation(summary = "Get my active subscription")
-    public ResponseEntity<ApiResponseDTO<SubscriptionResponse>> getActiveSubscription() {
-        log.info("Provider getting active subscription");
-        
-        try {
-            String providerEmail = getCurrentUserEmail();
-            SubscriptionResponse subscription = subscriptionService.getActiveSubscription(providerEmail);
-            
-            return ResponseEntity.ok(ApiResponseDTO.success("Active subscription retrieved successfully", subscription));
-        } catch (IllegalArgumentException e) {
-            log.error("No active subscription found", e);
-            return ResponseEntity
-                    .status(HttpStatus.NOT_FOUND)
-                    .body(ApiResponseDTO.error(HttpStatus.NOT_FOUND, e.getMessage()));
-        } catch (Exception e) {
-            log.error("Error getting active subscription", e);
-            return ResponseEntity
-                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponseDTO.error(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to retrieve subscription: " + e.getMessage()));
-        }
-    }
-
-    @GetMapping("/status")
-    @Operation(summary = "Check if I have active subscription")
-    public ResponseEntity<ApiResponseDTO<Boolean>> checkSubscriptionStatus() {
-        log.info("Provider checking subscription status");
-        
-        try {
-            String providerEmail = getCurrentUserEmail();
-            boolean hasActive = subscriptionService.hasActiveSubscription(providerEmail);
-            
-            return ResponseEntity.ok(ApiResponseDTO.success("Subscription status checked", hasActive));
-        } catch (Exception e) {
-            log.error("Error checking subscription status", e);
-            return ResponseEntity
-                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponseDTO.error(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to check status: " + e.getMessage()));
-        }
     }
 
     @PutMapping("/{subscriptionId}/cancel")
