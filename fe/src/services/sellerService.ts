@@ -136,7 +136,7 @@ export const sellerService = {
   },
 }
 
-export type PromotionType = 'PERCENT_OFF' | 'BUY_X_GET_Y'
+export type PromotionType = 'PERCENT_OFF' | 'BUY_X_GET_Y' | 'BUY_X_PAY_Y'
 
 /** PromotionController.PromotionResponse */
 export interface Promotion {

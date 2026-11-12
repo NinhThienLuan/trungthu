@@ -13,6 +13,7 @@ import { OrderStatusChip } from '../../components/OrderStatusChip'
 import { ErrorState, Notice, Spinner } from '../../components/ui/States'
 import { Field, TextArea, TextInput } from '../../components/ui/Field'
 import { COMPLAINT_STATUS, COMPLAINT_TYPE_LABEL, complaintService, type ComplaintType } from '../../services/complaintService'
+import { ProductReviews } from '../../components/ProductReviews'
 
 /** GET /api/orders/{id} + huỷ đơn (POST /api/orders/{id}/cancel) khi còn được phép */
 export function OrderDetailPage() {
@@ -124,7 +125,7 @@ export function OrderDetailPage() {
             <h2 className="text-h3">Người nhận</h2>
             <p className="mt-3 text-small text-ink">{order.receiverName}</p>
             <p className="text-small text-muted">{order.receiverPhone}</p>
-            <p className="mt-1 text-small text-muted">{order.shippingAddress}</p>
+            <p className="mt-1 whitespace-pre-line text-small text-muted">{order.shippingAddress}</p>
           </section>
 
           {CANCELLABLE_STATUSES.includes(order.status) && (
@@ -142,6 +143,9 @@ export function OrderDetailPage() {
           {(order.status === 'DELIVERING' || order.status === 'COMPLETED') && <OrderComplaint orderId={order.id} />}
         </aside>
       </div>
+      {order.status === 'COMPLETED' && <div className="mt-6 card p-5">
+        <ProductReviews providerId={order.providerId} storeName={order.storeName} completedOrder={order} />
+      </div>}
     </div>
   )
 }
@@ -157,12 +161,17 @@ function OrderComplaint({ orderId }: { orderId: string }) {
 
   const submit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    const f = Object.fromEntries(new FormData(e.currentTarget)) as Record<string, string>
+    const form = new FormData(e.currentTarget)
+    const f = Object.fromEntries(form) as Record<string, string>
     if (!f.subject?.trim()) return setMessage({ ok: false, text: 'Vui lòng nhập tiêu đề khiếu nại.' })
     setBusy(true)
     setMessage(undefined)
     try {
-      await complaintService.create({ orderId, type: f.type as ComplaintType, subject: f.subject, description: f.description || undefined })
+      const files = (form.getAll('images') as File[]).filter((file) => file.size > 0)
+      if (files.length > 3) throw new Error('Tối đa 3 ảnh minh chứng.')
+      const imageUrls = await Promise.all(files.map(complaintService.uploadImage))
+      await complaintService.create({ orderId, type: f.type as ComplaintType, subject: f.subject,
+        description: f.description || undefined, imageUrls })
       setMessage({ ok: true, text: 'Đã gửi khiếu nại. Xưởng sẽ liên hệ xử lý.' })
       setOpen(false)
       reload()
@@ -181,6 +190,8 @@ function OrderComplaint({ orderId }: { orderId: string }) {
           <p className="font-semibold">{c.subject} · <span className={COMPLAINT_STATUS[c.status].tone}>{COMPLAINT_STATUS[c.status].text}</span></p>
           <p className="text-muted">{COMPLAINT_TYPE_LABEL[c.type]} · gửi {formatDateTime(c.createdAt)}</p>
           {c.resolution && <p className="mt-1">Xưởng phản hồi: {c.resolution}</p>}
+          {c.imageUrls?.length > 0 && <div className="mt-2 flex gap-2">{c.imageUrls.map((url) =>
+            <a href={url} target="_blank" rel="noreferrer" key={url}><img src={url} alt="Ảnh minh chứng khiếu nại" className="h-20 w-20 rounded object-cover" /></a>)}</div>}
         </div>
       ))}
       {message && <Notice tone={message.ok ? 'success' : 'danger'}>{message.text}</Notice>}
@@ -193,6 +204,9 @@ function OrderComplaint({ orderId }: { orderId: string }) {
           </Field>
           <TextInput label="Tiêu đề" name="subject" maxLength={255} placeholder="2 bánh bị vỡ khi nhận" />
           <TextArea label="Mô tả (nên kèm thời điểm nhận, tình trạng hộp)" name="description" rows={3} maxLength={5000} />
+          <Field label="Ảnh minh chứng (tối đa 3 ảnh, mỗi ảnh 5 MB)" name="images">
+            <input id="images" name="images" type="file" accept="image/png,image/jpeg" multiple className="input" />
+          </Field>
           <div className="flex gap-2">
             <button type="submit" className="btn btn-primary btn-sm" disabled={busy}>{busy ? 'Đang gửi...' : 'Gửi khiếu nại'}</button>
             <button type="button" className="btn btn-ghost btn-sm" onClick={() => setOpen(false)}>Thôi</button>

@@ -3,6 +3,7 @@ import { Navigate, useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import { Plus, Trash2 } from 'lucide-react'
 import { orderService } from '../../services/orderService'
+import { promotionService } from '../../services/sellerService'
 import { errorMessage } from '../../apis/http'
 import { groupByProvider, useCartStore, type CartItem } from '../../stores/cartStore'
 import { useAuthStore } from '../../stores/authStore'
@@ -75,6 +76,8 @@ export function CheckoutPage() {
   const navigate = useNavigate()
   const [wantVat, setWantVat] = useState(false)
   const [choices, setChoices] = useState<Record<string, PayChoice>>({})
+  const [promotionChoices, setPromotionChoices] = useState<Record<string, string>>({})
+  const [deliveryWindows, setDeliveryWindows] = useState<Record<string, string>>({})
   const [recipients, setRecipients] = useState<Recipient[]>(() => [newRecipient(user?.fullName ?? '', user?.phone ?? '')])
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitError, setSubmitError] = useState<string>()
@@ -83,6 +86,7 @@ export function CheckoutPage() {
   const placed = useRef(false)
 
   const groups = groupByProvider(items)
+  const { data: runningPromotions } = useApi(() => promotionService.running(), [])
   const { leadDays } = useLeadTimes(items)
   const ready = groups.length > 0 && groups.every((group) => deliveryDates[group.providerId]
     && deliveryDates[group.providerId] >= toIsoDate(addDays(new Date(), leadDays(group))))
@@ -97,9 +101,10 @@ export function CheckoutPage() {
   const { data: previews, loading: previewLoading, error: previewError } = useApi(
     (): Promise<CheckoutPreview[] | null> => ready && overAllocated.length === 0
       ? Promise.all(active.map(({ cart }) => orderService.preview(
-          { receiverName: '', receiverPhone: '', shippingAddress: '', groups: toCheckoutGroups(cart, deliveryDates, {}) })))
+          { receiverName: '', receiverPhone: '', shippingAddress: '', groups: toCheckoutGroups(cart, deliveryDates, {})
+            .map((g) => ({ ...g, promotionSelection: promotionChoices[g.providerId] ?? 'AUTO' })) })))
       : Promise.resolve(null),
-    [items, deliveryDates, allocationKey],
+    [items, deliveryDates, allocationKey, promotionChoices],
   )
 
   // Đã đặt xong thì giỏ trống là bình thường: đừng chuyển về /cart, chờ sang trang QR
@@ -157,7 +162,9 @@ export function CheckoutPage() {
         shippingAddress: '',
         vat: vatCheck.success ? vatCheck.data.vat : undefined,
         groups: active.flatMap(({ r, cart }) => toCheckoutGroups(cart, deliveryDates, effectiveChoices).map((g) => ({
-          ...g, receiverName: r.name.trim(), receiverPhone: r.phone.trim(), shippingAddress: fullAddress(r),
+          ...g, promotionSelection: promotionChoices[g.providerId] ?? 'AUTO',
+          receiverName: r.name.trim(), receiverPhone: r.phone.trim(),
+          shippingAddress: `${fullAddress(r)}\nKhung giờ nhận dự kiến: ${deliveryWindows[g.providerId] ?? '08:00–12:00'}`,
         }))),
       })
     } catch (err) {
@@ -289,6 +296,15 @@ export function CheckoutPage() {
                           </label>
                         ))}
                       </div>
+                      <label className="mt-3 block text-small font-semibold text-navy">
+                        Khung giờ nhận dự kiến ngày đã chọn
+                        <select className="input mt-1" value={deliveryWindows[g.providerId] ?? '08:00–12:00'}
+                          onChange={(e) => setDeliveryWindows((current) => ({ ...current, [g.providerId]: e.target.value }))}>
+                          <option value="08:00–12:00">08:00–12:00</option>
+                          <option value="12:00–16:00">12:00–16:00</option>
+                          <option value="16:00–20:00">16:00–20:00</option>
+                        </select>
+                      </label>
                     </fieldset>
                   )
                 })}
@@ -317,11 +333,28 @@ export function CheckoutPage() {
           <div className="mt-4">
             <OrderItemsSummary groups={groups} deliveryDates={deliveryDates} />
           </div>
+          {groups.some((g) => runningPromotions?.some((p) => p.providerId === g.providerId)) && (
+            <div className="mt-4 space-y-2">
+              {groups.map((g) => {
+                const offers = runningPromotions?.filter((p) => p.providerId === g.providerId) ?? []
+                if (!offers.length) return null
+                return <label key={g.providerId} className="block text-small font-semibold text-navy">
+                  Ưu đãi của {g.storeName}
+                  <select className="input mt-1" value={promotionChoices[g.providerId] ?? 'AUTO'}
+                    onChange={(e) => setPromotionChoices((current) => ({ ...current, [g.providerId]: e.target.value }))}>
+                    <option value="AUTO">Tự chọn ưu đãi tốt nhất</option>
+                    <option value="NONE">Không dùng ưu đãi</option>
+                    {offers.map((p) => <option key={p.id} value={p.id}>{p.name} · {p.label}</option>)}
+                  </select>
+                </label>
+              })}
+            </div>
+          )}
           {promoLines.length > 0 && (
             <ul className="mt-4 flex flex-col gap-1 rounded-sm bg-success-soft p-3 text-small text-success">
               {promoLines.map((l, i) => (
                 <li key={i} className="flex justify-between gap-3">
-                  <span>{l.productName} · {l.promotion}</span>
+                  <span>{l.productName} · {l.promotion}{l.freeQuantity > 0 && ` · tặng ${l.freeQuantity} bánh`}</span>
                   <span className="shrink-0">−{formatVnd(l.listAmount - l.subtotal)}</span>
                 </li>
               ))}

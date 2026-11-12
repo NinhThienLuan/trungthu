@@ -30,10 +30,17 @@ public record CheckoutRequest(
             /** Gửi nhiều người nhận trong một lần đặt: người nhận riêng của nhóm (trống = dùng người nhận chung) */
             @Size(max = 255) String receiverName,
             @Size(max = 20) String receiverPhone,
-            @Size(max = 2000) String shippingAddress) {
+            @Size(max = 2000) String shippingAddress,
+            String promotionSelection) {
+        public Group(UUID providerId, LocalDate deliveryDate, String province, String district, String wardCode,
+                PaymentMethod paymentMethod, Boolean payInFull, String depositOption, List<Item> items,
+                List<?> boxes, String receiverName, String receiverPhone, String shippingAddress) {
+            this(providerId, deliveryDate, province, district, wardCode, paymentMethod, payInFull, depositOption,
+                    items, boxes, receiverName, receiverPhone, shippingAddress, null);
+        }
         public Group(LocalDate deliveryDate, String province, String district, PaymentMethod paymentMethod,
                 boolean payInFull, List<Item> items) {
-            this(null, deliveryDate, province, district, null, paymentMethod, payInFull, null, items, null, null, null, null);
+            this(null, deliveryDate, province, district, null, paymentMethod, payInFull, null, items, null, null, null, null, null);
         }
     }
 

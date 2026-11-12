@@ -212,6 +212,12 @@ export function Header() {
                             </div>
                           </Link>
 
+                          <Link to="/complaints" onClick={() => setProfilePopupOpen(false)}
+                            className="flex items-center gap-3 px-3.5 py-2 text-body rounded-md hover:bg-champagne/30 transition-colors">
+                            <Icon name="support_agent" className="text-navy text-[18px]" aria-hidden />
+                            <span className="font-medium text-navy text-[13px]">Khiếu nại / đổi trả</span>
+                          </Link>
+
                           <Link
                             to="/orders?tab=rfq"
                             onClick={() => setProfilePopupOpen(false)}
@@ -358,6 +364,9 @@ export function Header() {
                   <>
                     <NavLink to={ROUTES.orders} className={navClass} onClick={() => setMobileMenuOpen(false)}>
                       Đơn hàng của tôi
+                    </NavLink>
+                    <NavLink to="/complaints" className={navClass} onClick={() => setMobileMenuOpen(false)}>
+                      Khiếu nại / đổi trả
                     </NavLink>
                     <NavLink to="/orders?tab=rfq" className={navClass} onClick={() => setMobileMenuOpen(false)}>
                       Đơn lớn & Báo giá B2B

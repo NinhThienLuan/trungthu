@@ -5,5 +5,7 @@ public enum PromotionType {
     /** Giảm percentOff% đơn giá khi mua từ minQuantity cái trở lên (cùng một phân loại) */
     PERCENT_OFF,
     /** Mua buyQuantity tặng freeQuantity (cùng một phân loại), lặp lại theo từng bộ */
-    BUY_X_GET_Y
+    BUY_X_GET_Y,
+    /** Lấy buyQuantity cái, chỉ trả tiền freeQuantity cái trong mỗi bộ */
+    BUY_X_PAY_Y
 }

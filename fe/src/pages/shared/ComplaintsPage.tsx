@@ -78,7 +78,9 @@ function ComplaintCard({ complaint: c, scope, run }: {
         <span className={cn('font-semibold', COMPLAINT_STATUS[c.status].tone)}>{COMPLAINT_STATUS[c.status].text}</span>
       </div>
       {c.description && <p className="whitespace-pre-line">{c.description}</p>}
-      <p className="text-muted">Khách: {c.customerName}{c.customerPhone && ` · ${c.customerPhone}`}</p>
+      {c.imageUrls?.length > 0 && <div className="flex gap-2">{c.imageUrls.map((url) =>
+        <a href={url} target="_blank" rel="noreferrer" key={url}><img src={url} alt="Ảnh minh chứng khiếu nại" className="h-20 w-20 rounded object-cover" /></a>)}</div>}
+      <p className="text-muted">Khách: {c.customerName}{c.customerPhone && <> · <a href={`tel:${c.customerPhone}`} className="text-navy underline">{c.customerPhone}</a></>}</p>
       {c.resolution && <Notice tone={c.status === 'REJECTED' ? 'danger' : 'success'}>{c.status === 'REJECTED' ? 'Lý do từ chối' : 'Cách xử lý'}: {c.resolution}</Notice>}
       {!done && (closing ? (
         <div className="flex flex-col gap-2 border-t border-line pt-3">

@@ -10,6 +10,7 @@ import fpt.sba.trungthu.entity.enumeration.ComplaintType;
 import fpt.sba.trungthu.entity.enumeration.OrderStatus;
 import fpt.sba.trungthu.repository.ComplaintRepository;
 import fpt.sba.trungthu.repository.OrderRepository;
+import fpt.sba.trungthu.service.StorageService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -21,6 +22,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.EnumSet;
@@ -40,15 +42,33 @@ public class ComplaintController {
     private final SecurityContextService security;
     private final ComplaintRepository complaints;
     private final OrderRepository orders;
+    private final StorageService storage;
+    private static final String IMAGE_MARKER = "\n[COMPLAINT_IMAGE]";
 
     public record CreateComplaintRequest(@NotNull UUID orderId, @NotNull ComplaintType type,
-            @NotBlank @Size(max = 255) String subject, @Size(max = 5000) String description) {}
+            @NotBlank @Size(max = 255) String subject, @Size(max = 5000) String description,
+            List<String> imageUrls) {
+        public CreateComplaintRequest(UUID orderId, ComplaintType type, String subject, String description) {
+            this(orderId, type, subject, description, null);
+        }
+    }
 
     public record UpdateComplaintRequest(@NotNull ComplaintStatus status, @Size(max = 2000) String resolution) {}
 
     public record ComplaintResponse(UUID id, UUID orderId, String orderCode, String storeName, String customerName,
             String customerPhone, ComplaintType type, String subject, String description, ComplaintStatus status,
-            String resolution, LocalDateTime createdAt, LocalDateTime resolvedAt) {}
+            String resolution, LocalDateTime createdAt, LocalDateTime resolvedAt, List<String> imageUrls) {}
+
+    @PostMapping("/api/complaints/images")
+    @PreAuthorize("hasRole('CUSTOMER')")
+    public ResponseEntity<ApiResponseDTO<String>> uploadImage(@RequestParam("file") MultipartFile file) {
+        try {
+            storage.validateFile(file, new String[]{"image/png", "image/jpeg"}, 5);
+        } catch (IllegalArgumentException ex) {
+            throw badRequest("Chỉ nhận ảnh PNG/JPEG tối đa 5 MB");
+        }
+        return ResponseEntity.ok(ApiResponseDTO.success(storage.uploadFile(file, "complaints")));
+    }
 
     @PostMapping("/api/complaints")
     @PreAuthorize("hasRole('CUSTOMER')")
@@ -64,9 +84,18 @@ public class ComplaintController {
         if (complaints.existsByOrderIdAndStatusIn(order.getId(), ACTIVE)) {
             throw badRequest("Đơn này đã có khiếu nại đang được xử lý");
         }
+        List<String> images = request.imageUrls() == null ? List.of() : request.imageUrls();
+        if (images.size() > 3 || images.stream().anyMatch(url -> url == null ||
+                !url.matches("/uploads/complaints/[a-zA-Z0-9._-]+"))) {
+            throw badRequest("Ảnh minh chứng không hợp lệ (tối đa 3 ảnh)");
+        }
+        String description = request.description() == null ? "" : request.description().trim();
+        if (description.contains(IMAGE_MARKER)) throw badRequest("Mô tả chứa ký tự không hợp lệ");
+        String storedDescription = description + images.stream().map(url -> IMAGE_MARKER + url)
+                .reduce("", String::concat);
         Complaint complaint = complaints.save(Complaint.builder().customer(customer).order(order)
                 .provider(order.getProvider()).complaintType(request.type()).subject(request.subject().trim())
-                .description(request.description() == null ? null : request.description().trim())
+                .description(storedDescription.isBlank() ? null : storedDescription)
                 .status(ComplaintStatus.OPEN).build());
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponseDTO.success(toResponse(complaint)));
     }
@@ -130,10 +159,13 @@ public class ComplaintController {
     }
 
     private ComplaintResponse toResponse(Complaint c) {
+        String stored = c.getDescription() == null ? "" : c.getDescription();
+        String[] parts = stored.split("\\n\\[COMPLAINT_IMAGE\\]");
+        List<String> images = java.util.Arrays.stream(parts).skip(1).toList();
         return new ComplaintResponse(c.getId(), c.getOrder().getId(), c.getOrder().getOrderCode(),
                 c.getProvider().getStoreName(), c.getCustomer().getFullName(), c.getCustomer().getPhone(),
-                c.getComplaintType(), c.getSubject(), c.getDescription(), c.getStatus(), c.getResolution(),
-                c.getCreatedAt(), c.getResolvedAt());
+                c.getComplaintType(), c.getSubject(), parts[0].isBlank() ? null : parts[0], c.getStatus(), c.getResolution(),
+                c.getCreatedAt(), c.getResolvedAt(), images);
     }
 
     private static ResponseStatusException badRequest(String message) {

@@ -75,6 +75,8 @@ public class Promotion extends BaseEntity {
                             .divide(BigDecimal.valueOf(100), 0, RoundingMode.FLOOR);
             case BUY_X_GET_Y -> unitPrice.multiply(
                     BigDecimal.valueOf((long) (quantity / (buyQuantity + freeQuantity)) * freeQuantity));
+            case BUY_X_PAY_Y -> unitPrice.multiply(
+                    BigDecimal.valueOf((long) (quantity / buyQuantity) * (buyQuantity - freeQuantity)));
         };
     }
 
@@ -83,6 +85,7 @@ public class Promotion extends BaseEntity {
         return switch (type) {
             case PERCENT_OFF -> "Giảm " + percentOff + "% từ " + minQuantity + " cái";
             case BUY_X_GET_Y -> "Mua " + buyQuantity + " tặng " + freeQuantity;
+            case BUY_X_PAY_Y -> "Lấy " + buyQuantity + " trả tiền " + freeQuantity;
         };
     }
 }

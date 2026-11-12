@@ -188,8 +188,8 @@ public class RfqServiceImpl implements RfqService {
         if (input.validUntil().isBefore(today) || input.estimatedDeliveryDate().isBefore(today)) {
             throw badRequest("Ngày hiệu lực và ngày giao dự kiến không được ở quá khứ");
         }
-        if (input.offeredQuantity() < request.getRequestedQuantity()) {
-            throw badRequest("Số lượng chào giá phải đáp ứng yêu cầu của khách");
+        if (!input.validUntil().isAfter(input.estimatedDeliveryDate())) {
+            throw badRequest("Ngày hết hiệu lực báo giá phải sau ngày giao dự kiến");
         }
         BigDecimal gross = input.unitPrice().multiply(BigDecimal.valueOf(input.offeredQuantity()));
         if (gross.precision() - gross.scale() > 16) {

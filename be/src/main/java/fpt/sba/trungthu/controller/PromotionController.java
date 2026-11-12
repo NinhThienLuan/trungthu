@@ -116,6 +116,9 @@ public class PromotionController {
         } else if (request.buyQuantity() == null || request.freeQuantity() == null) {
             throw badRequest("Mua X tặng Y cần số lượng mua và số lượng tặng");
         }
+        if (request.type() == PromotionType.BUY_X_PAY_Y && request.freeQuantity() >= request.buyQuantity()) {
+            throw badRequest("Số bánh tính tiền phải ít hơn số bánh nhận");
+        }
         Product product = null;
         if (request.productId() != null) {
             product = products.findById(request.productId())

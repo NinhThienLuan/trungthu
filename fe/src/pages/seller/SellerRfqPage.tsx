@@ -25,8 +25,12 @@ export function SellerRfqPage() {
     const offeredQuantity = Number(data.get('offeredQuantity'))
     const cakesPerBox = Number(data.get('cakesPerBox'))
     if (!Number.isFinite(unitPrice) || unitPrice <= 0 || !Number.isInteger(offeredQuantity)
-      || offeredQuantity < selected.requestedQuantity || !Number.isInteger(cakesPerBox) || cakesPerBox < 1) {
-      setMessage('Đơn giá phải lớn hơn 0 và số lượng phải đáp ứng yêu cầu của khách.')
+      || offeredQuantity < 1 || !Number.isInteger(cakesPerBox) || cakesPerBox < 1) {
+      setMessage('Đơn giá và số lượng chào phải lớn hơn 0.')
+      return
+    }
+    if (String(data.get('validUntil')) <= String(data.get('estimatedDeliveryDate'))) {
+      setMessage('Ngày hết hiệu lực báo giá phải sau ngày giao dự kiến.')
       return
     }
     setBusy(true)
@@ -110,7 +114,7 @@ export function SellerRfqPage() {
                   <input className="input mt-1" name="unitPrice" type="number" min="1" defaultValue={ownQuote?.unitPrice} required />
                 </label>
                 <label className="text-small font-semibold">Số lượng chào
-                  <input className="input mt-1" name="offeredQuantity" type="number" min={selected.requestedQuantity}
+                  <input className="input mt-1" name="offeredQuantity" type="number" min={1}
                     defaultValue={ownQuote?.offeredQuantity ?? selected.requestedQuantity} required />
                 </label>
                 <label className="text-small font-semibold">Số bánh trong mỗi hộp
@@ -121,7 +125,7 @@ export function SellerRfqPage() {
                     min={toIsoDate(new Date())} defaultValue={ownQuote?.estimatedDeliveryDate ?? selected.expectedDeliveryDate} required />
                 </label>
                 <label className="text-small font-semibold">Báo giá có hiệu lực đến
-                  <input className="input mt-1" name="validUntil" type="date" min={toIsoDate(new Date())}
+                  <input className="input mt-1" name="validUntil" type="date" min={ownQuote?.estimatedDeliveryDate ?? selected.expectedDeliveryDate}
                     defaultValue={ownQuote?.validUntil ?? toIsoDate(addDays(new Date(), 7))} required />
                 </label>
                 <label className="text-small font-semibold sm:col-span-2">Ghi chú

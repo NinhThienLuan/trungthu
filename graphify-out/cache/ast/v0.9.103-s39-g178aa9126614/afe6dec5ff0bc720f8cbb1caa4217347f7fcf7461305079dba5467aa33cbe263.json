@@ -1,0 +1,1 @@
+{"nodes": [{"id": "pkg_fpt_sba_trungthu_deploy", "label": "fpt.sba:trungthu-deploy", "file_type": "code", "type": "package", "ecosystem": "maven", "source_file": "pom.xml", "source_location": "L1", "version": "0.0.1-SNAPSHOT"}], "edges": []}

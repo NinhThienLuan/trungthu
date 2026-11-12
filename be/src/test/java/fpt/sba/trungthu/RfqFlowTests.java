@@ -119,16 +119,16 @@ class RfqFlowTests {
         assertThat(feed).extracting("id").contains(request.id());
         assertThat(feed.stream().filter(item -> item.id().equals(request.id())).findFirst().orElseThrow().contactEmail()).isNull();
         var first = rfq.submitQuote(request.id(), new SubmitQuoteRequest(new BigDecimal("420000"),
-                100, today.plusDays(7), today.plusDays(5), "Giao một đợt"));
+                100, today.plusDays(7), today.plusDays(8), "Giao một đợt"));
         assertThat(first.status()).isEqualTo(QuoteStatus.SUBMITTED);
         assertThatThrownBy(() -> rfq.submitQuote(request.id(), new SubmitQuoteRequest(new BigDecimal("400000"),
-                100, today.plusDays(7), today.plusDays(5), null))).isInstanceOf(ResponseStatusException.class);
+                100, today.plusDays(7), today.plusDays(8), null))).isInstanceOf(ResponseStatusException.class);
 
         as(otherSeller);
         var second = rfq.submitQuote(request.id(), new SubmitQuoteRequest(new BigDecimal("410000"),
-                100, today.plusDays(7), today.plusDays(5), null));
+                100, today.plusDays(7), today.plusDays(8), null));
         assertThat(rfq.reviseQuote(request.id(), second.id(), new SubmitQuoteRequest(new BigDecimal("400000"),
-                100, 1, today.plusDays(7), today.plusDays(5), "Đã chỉnh giá")).cakesPerBox()).isEqualTo(1);
+                100, 1, today.plusDays(7), today.plusDays(8), "Đã chỉnh giá")).cakesPerBox()).isEqualTo(1);
 
         as(otherBuyer);
         assertThat(rfq.mine()).doesNotContain(request);
@@ -154,7 +154,7 @@ class RfqFlowTests {
         assertThatThrownBy(() -> rfq.acceptQuote(request.id(), second.id())).isInstanceOf(ResponseStatusException.class);
         as(otherSeller);
         assertThatThrownBy(() -> rfq.reviseQuote(request.id(), second.id(), new SubmitQuoteRequest(new BigDecimal("390000"),
-                100, today.plusDays(7), today.plusDays(5), null))).isInstanceOf(ResponseStatusException.class);
+                100, today.plusDays(7), today.plusDays(8), null))).isInstanceOf(ResponseStatusException.class);
 
         as(seller);
         assertThat(rfq.providerQuotes()).extracting("status").contains(QuoteStatus.ACCEPTED);
@@ -176,7 +176,7 @@ class RfqFlowTests {
                 null, null, null, seller.getId(), null));
         as(seller);
         var quote = rfq.submitQuote(request.id(), new SubmitQuoteRequest(new BigDecimal("100000"),
-                2000, 1, today.plusDays(7), today.plusDays(5), null));
+                2000, 1, today.plusDays(7), today.plusDays(8), null));
         assertThat(quote.grossAmount()).isEqualByComparingTo("200000000");
         assertThat(quote.discountAmount()).isEqualByComparingTo("60000000");
         assertThat(quote.totalAmount()).isEqualByComparingTo("140000000");
@@ -210,7 +210,7 @@ class RfqFlowTests {
                 null, null, null, seller.getId(), null));
         as(seller);
         var quote = rfq.submitQuote(request.id(), new SubmitQuoteRequest(new BigDecimal("100000"),
-                1000, 4, today.plusDays(7), today.plusDays(5), null));
+                1000, 4, today.plusDays(7), today.plusDays(8), null));
         var changed = capacities.findByProviderIdAndCapacityDate(seller.getId(), today.plusDays(6)).orElseThrow();
         changed.setMaxQuantity(500);
         capacities.saveAndFlush(changed);
@@ -252,7 +252,7 @@ class RfqFlowTests {
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data[0].contactEmail").doesNotExist());
         String quoteBody = """
                 {"unitPrice":420000,"offeredQuantity":50,"cakesPerBox":1,"estimatedDeliveryDate":"%s","validUntil":"%s"}
-                """.formatted(today.plusDays(7), today.plusDays(5));
+                """.formatted(today.plusDays(7), today.plusDays(8));
         String quoted = mvc.perform(post("/api/provider/rfqs/{requestId}/quotes", id)
                         .with(user("seller").roles("PROVIDER"))
                         .contentType(MediaType.APPLICATION_JSON).content(quoteBody))
@@ -352,7 +352,7 @@ class RfqFlowTests {
         String invalidQuote = """
                 {"unitPrice":123.456,"offeredQuantity":100,
                  "estimatedDeliveryDate":"%s","validUntil":"%s"}
-                """.formatted(today.plusDays(7), today.plusDays(5));
+                """.formatted(today.plusDays(7), today.plusDays(8));
         mvc.perform(post("/api/provider/rfqs/{requestId}/quotes", request.id())
                         .with(user("seller").roles("PROVIDER"))
                         .contentType(MediaType.APPLICATION_JSON).content(invalidQuote))
@@ -389,12 +389,36 @@ class RfqFlowTests {
         as(otherSeller);
         assertThat(rfq.providerFeed()).extracting("id").doesNotContain(request.id());
         assertThatThrownBy(() -> rfq.submitQuote(request.id(), new SubmitQuoteRequest(new BigDecimal("410000"),
-                100, today.plusDays(7), today.plusDays(5), null))).isInstanceOf(ResponseStatusException.class);
+                100, today.plusDays(7), today.plusDays(8), null))).isInstanceOf(ResponseStatusException.class);
 
         as(seller);
         assertThat(rfq.providerFeed()).extracting("id").contains(request.id());
         assertThat(rfq.submitQuote(request.id(), new SubmitQuoteRequest(new BigDecimal("420000"),
-                100, today.plusDays(7), today.plusDays(5), null)).status()).isEqualTo(QuoteStatus.SUBMITTED);
+                100, today.plusDays(7), today.plusDays(8), null)).status()).isEqualTo(QuoteStatus.SUBMITTED);
+    }
+
+    @Test
+    void providerCanOfferFewerBoxesWhenQuoteExpiresAfterDelivery() {
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh"));
+        User buyer = createUser(UserRole.CUSTOMER, false);
+        User seller = createUser(UserRole.PROVIDER, true);
+        subscribe(seller, today);
+        capacity(seller, today.plusDays(6), 100);
+        as(buyer);
+        var request = rfq.create(new CreateRfqRequest("Công ty Mặt Trăng", "0123456789", "Lan",
+                "Thu mua", "0901234567", "lan@example.com", 100, today.plusDays(7),
+                null, null, null, seller.getId(), null));
+
+        as(seller);
+        assertThatThrownBy(() -> rfq.submitQuote(request.id(), new SubmitQuoteRequest(
+                new BigDecimal("420000"), 50, today.plusDays(7), today.plusDays(7), null)))
+                .isInstanceOf(ResponseStatusException.class);
+        var quote = rfq.submitQuote(request.id(), new SubmitQuoteRequest(
+                new BigDecimal("420000"), 50, today.plusDays(7), today.plusDays(8), null));
+        assertThat(quote.offeredQuantity()).isEqualTo(50);
+        as(buyer);
+        rfq.acceptQuote(request.id(), quote.id());
+        assertThat(bulkOrders.findByQuoteId(quote.id()).orElseThrow().getQuantity()).isEqualTo(50);
     }
 
     private void subscribe(User provider, LocalDate today) {

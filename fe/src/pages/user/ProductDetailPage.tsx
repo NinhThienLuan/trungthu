@@ -18,7 +18,7 @@ import { cn } from '../../lib/format'
 const DETAIL_TABS = [
   { id: 'story', label: 'Câu Chuyện Sản Phẩm' },
   { id: 'nutrition', label: 'Bảng Dinh Dưỡng & Nguyên Liệu' },
-  { id: 'reviews', label: 'Đánh Giá' },
+  { id: 'reviews', label: 'Đánh Giá Gian Hàng' },
 ] as const
 type DetailTab = (typeof DETAIL_TABS)[number]['id']
 
@@ -128,7 +128,7 @@ export function ProductDetailPage() {
             </div>{' '}
             <div className="flex items-center gap-space-md">
               {' '}
-              <span className="inline-flex items-center gap-1.5 text-secondary">{product.storeName}</span>
+              <Link to={`/stores/${product.providerId}`} className="inline-flex items-center gap-1.5 text-secondary underline">{product.storeName}</Link>
               <span className="text-outline-variant hidden sm:inline">|</span>{' '}
               <span className="hidden sm:inline text-on-surface-variant">Mã: {variant?.sku}</span>{' '}
             </div>{' '}
@@ -366,7 +366,7 @@ export function ProductDetailPage() {
             )}
             {tab === 'reviews' && (
               <div className="tab-panel py-space-lg" id="tab-reviews">
-                <ProductReviews />
+                <ProductReviews providerId={product.providerId} storeName={product.storeName} />
               </div>
             )}{' '}
           </div>{' '}

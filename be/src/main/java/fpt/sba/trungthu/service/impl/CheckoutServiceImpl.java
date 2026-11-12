@@ -91,8 +91,9 @@ public class CheckoutServiceImpl implements CheckoutService {
                 reserveLines.add(new ReserveStockCommand.ReserveLine(line.variant().getId(), line.quantity(),
                         plan.deliveryDate(), null, futureBake));
                 snaps.add(new Snap(plan.provider().getId(), line.variant().getId(),
-                        line.variant().getProduct().getName(), line.variantName(), line.quantity(),
-                        line.unitPrice(), line.personalizationText(), line.personalizationFee()));
+                        line.variant().getProduct().getName(), orderVariantName(line), line.quantity(),
+                        line.promotion() == null ? line.unitPrice() : line.variant().getPrice(),
+                        line.personalizationText(), line.personalizationFee()));
             }
             List<ReservedLineResponse> reserved = inventory.reserve(new ReserveStockCommand(reserveLines));
             UUID capacityId = reserved.stream().map(ReservedLineResponse::capacityId).filter(Objects::nonNull)
@@ -292,6 +293,19 @@ public class CheckoutServiceImpl implements CheckoutService {
             UUID providerId = provider.getId();
             List<Promotion> running = promotions
                     .findByProviderIdAndActiveTrueAndStartDateLessThanEqualAndEndDateGreaterThanEqual(providerId, today, today);
+            String selection = group.promotionSelection();
+            if ("NONE".equals(selection)) {
+                running = List.of();
+            } else if (selection != null && !"AUTO".equals(selection)) {
+                UUID selectedId;
+                try {
+                    selectedId = UUID.fromString(selection);
+                } catch (IllegalArgumentException ex) {
+                    throw badRequest("Khuyến mãi không hợp lệ");
+                }
+                running = running.stream().filter(p -> p.getId().equals(selectedId)).toList();
+                if (running.isEmpty()) throw badRequest("Khuyến mãi đã hết hiệu lực hoặc không thuộc xưởng");
+            }
             BigDecimal merchandise = BigDecimal.ZERO;
             BigDecimal personalization = BigDecimal.ZERO;
             List<Line> pricedLines = new ArrayList<>();
@@ -304,6 +318,10 @@ public class CheckoutServiceImpl implements CheckoutService {
                 pricedLines.add(new Line(priced.variant(), priced.set(), priced.quantity(), priced.bakeQuantity(),
                         priced.personalizationText(), fee, priced.amount(), priced.listAmount(), priced.promotion(),
                         priced.contents()));
+            }
+            if (selection != null && !"AUTO".equals(selection) && !"NONE".equals(selection)
+                    && pricedLines.stream().noneMatch(line -> line.promotion() != null)) {
+                throw badRequest("Khuyến mãi không áp dụng cho sản phẩm hoặc số lượng đã chọn");
             }
             // Sàn không thu phí giao hàng
             BigDecimal shipping = BigDecimal.ZERO;
@@ -463,9 +481,36 @@ public class CheckoutServiceImpl implements CheckoutService {
             }
         }
         if (best == null) return line;
-        BigDecimal unit = list.subtract(bestDiscount).divide(BigDecimal.valueOf(line.quantity()), 0, RoundingMode.FLOOR);
+        BigDecimal unit = list.subtract(bestDiscount).divide(BigDecimal.valueOf(line.quantity()), 2, RoundingMode.HALF_UP);
         return new Line(line.variant(), null, line.quantity(), line.bakeQuantity(), line.personalizationText(),
-                line.personalizationFee(), unit.multiply(BigDecimal.valueOf(line.quantity())), list, best, line.contents());
+                line.personalizationFee(), list.subtract(bestDiscount), list, best, line.contents());
+    }
+
+    private static String orderVariantName(Line line) {
+        String name = line.variantName();
+        String label = promotionLabel(line);
+        if (label == null) return name;
+        String suffix = " · " + label;
+        return name.substring(0, Math.min(name.length(), 255 - suffix.length())) + suffix;
+    }
+
+    private static String promotionLabel(Line line) {
+        Promotion promo = line.promotion();
+        if (promo == null) return null;
+        int free = freeQuantity(line);
+        return promo.label() + (free > 0 ? " · tặng " + free + " bánh" : "");
+    }
+
+    private static int freeQuantity(Line line) {
+        Promotion promo = line.promotion();
+        if (promo == null) return 0;
+        return switch (promo.getType()) {
+            case PERCENT_OFF -> 0;
+            case BUY_X_GET_Y -> line.quantity() / (promo.getBuyQuantity() + promo.getFreeQuantity())
+                    * promo.getFreeQuantity();
+            case BUY_X_PAY_Y -> line.quantity() / promo.getBuyQuantity()
+                    * (promo.getBuyQuantity() - promo.getFreeQuantity());
+        };
     }
 
     /**
@@ -581,7 +626,8 @@ public class CheckoutServiceImpl implements CheckoutService {
                     paymentMethod, lines.stream().map(line -> new CheckoutPreviewResponse.Line(
                             line.id(), line.productName(), line.variantName(), line.quantity(),
                             line.unitPrice(), line.personalizationFee(), line.amount().add(line.personalizationFee()),
-                            line.listAmount(), line.promotion() == null ? null : line.promotion().label())).toList(),
+                            line.listAmount(), line.promotion() == null ? null : line.promotion().label(),
+                            freeQuantity(line))).toList(),
                     merchandise, personalization, shippingFee, total, deposit,
                     merchandise.add(personalization), minDeposit(total),
                     total.compareTo(COD_LIMIT) < 0 && personalization.signum() == 0,
