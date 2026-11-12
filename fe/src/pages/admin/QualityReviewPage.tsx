@@ -1,21 +1,23 @@
 import { useState, type FormEvent } from 'react'
 import { errorMessage } from '../../apis/http'
-import { useApi } from '../../hooks/useApi'
+import { useAdminList } from '../../hooks/useAdminList'
 import { useDocumentTitle } from '../../hooks/useDocumentTitle'
 import { cn, formatDateTime } from '../../lib/format'
 import { adminService, type AdminComplianceDoc, type ComplianceStatus } from '../../services/adminService'
 import type { ComplianceDocType } from '../../services/sellerService'
 import { TextInput } from '../../components/ui/Field'
+import { AdminListPagination } from '../../components/AdminListPagination'
 import { DocumentPreview } from '../../components/DocumentPreview'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { EmptyState, ErrorState, Notice, Spinner } from '../../components/ui/States'
 
-const TABS: Array<{ status: ComplianceStatus; label: string }> = [
-  { status: 'PENDING', label: 'Chờ duyệt' },
-  { status: 'APPROVED', label: 'Đã duyệt' },
-  { status: 'REJECTED', label: 'Bị từ chối' },
-  { status: 'EXPIRED', label: 'Hết hạn' },
-]
+const STATUS_LABEL: Record<ComplianceStatus, string> = {
+  PENDING: 'Chờ duyệt',
+  APPROVED: 'Đã duyệt',
+  REJECTED: 'Bị từ chối',
+  EXPIRED: 'Hết hạn',
+}
+const TABS = [undefined, ...Object.keys(STATUS_LABEL) as ComplianceStatus[]]
 
 const DOC_LABEL: Record<ComplianceDocType, string> = {
   FOOD_SAFETY_CERT: 'Giấy chứng nhận ATTP',
@@ -26,8 +28,8 @@ const DOC_LABEL: Record<ComplianceDocType, string> = {
 /** Admin sàn: duyệt hoặc từ chối giấy tờ seller nộp (BE1 /api/admin/compliance) */
 export function QualityReviewPage() {
   useDocumentTitle('Thẩm định hồ sơ')
-  const [status, setStatus] = useState<ComplianceStatus>('PENDING')
-  const { data, loading, error, reload } = useApi(() => adminService.documents(status), [status])
+  const { status, setStatus, page, setPage, pagination, data, loading, error, reload } =
+    useAdminList('PENDING', adminService.documents)
   const [notice, setNotice] = useState<{ ok: boolean; text: string }>()
 
   const run = async (action: () => Promise<unknown>, done: string) => {
@@ -45,20 +47,22 @@ export function QualityReviewPage() {
     <div className="page section flex flex-col gap-6">
       <PageHeader eyebrow="Quản trị sàn" title="Thẩm định hồ sơ seller" description="Xem tệp seller nộp rồi duyệt hoặc từ chối kèm lý do. Seller thấy kết quả ở trang Hồ sơ & thẩm định." />
 
-      <div className="flex flex-wrap gap-2">
+      <div role="group" aria-label="Lọc theo trạng thái hồ sơ" className="flex flex-wrap gap-2">
         {TABS.map((t) => (
-          <button key={t.status} type="button" className={cn('chip', status === t.status && 'chip-active')}
-            onClick={() => { setNotice(undefined); setStatus(t.status) }}>{t.label}</button>
+          <button key={t ?? 'all'} type="button" aria-pressed={status === t}
+            className={cn('chip', status === t && 'chip-active')}
+            onClick={() => { setNotice(undefined); setStatus(t) }}>{t ? STATUS_LABEL[t] : 'Tất cả'}</button>
         ))}
       </div>
 
+      <AdminListPagination data={pagination} page={page} loading={loading} error={error} noun="hồ sơ" onChange={setPage} />
       {notice && <Notice tone={notice.ok ? 'success' : 'danger'}>{notice.text}</Notice>}
 
-      {loading && !data ? <Spinner /> : error ? <ErrorState message={error} onRetry={reload} />
-        : !data?.length ? <EmptyState title="Không có hồ sơ nào" /> : (
+      {loading ? <Spinner /> : error ? <ErrorState message={error} onRetry={reload} />
+        : !data?.content.length ? <EmptyState title="Không có hồ sơ nào" /> : (
           <div className="flex flex-col gap-4">
-            {[...data].sort((a, b) => a.submittedAt.localeCompare(b.submittedAt)).map((doc) => (
-              <DocRow key={doc.id} doc={doc} run={run} />
+            {data.content.map((doc) => (
+              <DocRow key={doc.id} doc={doc} showStatus={status === undefined} run={run} />
             ))}
           </div>
         )}
@@ -66,7 +70,11 @@ export function QualityReviewPage() {
   )
 }
 
-function DocRow({ doc, run }: { doc: AdminComplianceDoc; run: (action: () => Promise<unknown>, done: string) => Promise<void> }) {
+function DocRow({ doc, showStatus, run }: {
+  doc: AdminComplianceDoc
+  showStatus: boolean
+  run: (action: () => Promise<unknown>, done: string) => Promise<void>
+}) {
   const [rejecting, setRejecting] = useState(false)
   const [previewing, setPreviewing] = useState(false)
   const [reasonError, setReasonError] = useState<string>()
@@ -86,6 +94,7 @@ function DocRow({ doc, run }: { doc: AdminComplianceDoc; run: (action: () => Pro
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-h3">{DOC_LABEL[doc.documentType]}</h2>
+          {showStatus && <span className="chip my-1">{STATUS_LABEL[doc.verificationStatus]}</span>}
           <p className="text-small text-muted">{who} · {doc.providerEmail}</p>
           <p className="text-small text-muted">Nộp {formatDateTime(doc.submittedAt)}
             {doc.verifiedAt && ` · Xử lý ${formatDateTime(doc.verifiedAt)}${doc.verifiedByEmail ? ` bởi ${doc.verifiedByEmail}` : ''}`}</p>

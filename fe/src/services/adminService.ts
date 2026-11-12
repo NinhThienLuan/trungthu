@@ -1,8 +1,22 @@
 import { http, unwrap } from '../apis/http'
-import type { ApiResponse } from '../types/api'
+import type { ApiResponse, Page } from '../types/api'
+import type { OrderStatus } from '../types/order'
 import type { ComplianceDoc } from './sellerService'
 
 export type ComplianceStatus = ComplianceDoc['verificationStatus']
+
+export interface AdminOrder {
+  id: string
+  code: string
+  orderedAt: string
+  status: OrderStatus
+  totalAmount: number
+  storeName: string | null
+  providerName: string | null
+  providerEmail: string
+  buyerName: string | null
+  buyerEmail: string
+}
 
 export interface AdminComplianceDoc extends ComplianceDoc {
   providerEmail: string
@@ -59,8 +73,10 @@ export interface AdminDashboardData {
 /** BE1 /api/admin/compliance & dashboard: admin duyệt giấy tờ của seller và theo dõi vận hành sàn */
 export const adminService = {
   dashboard: () => unwrap(http.get<ApiResponse<AdminDashboardData>>('/admin/dashboard')),
-  documents: (status: ComplianceStatus) =>
-    unwrap(http.get<ApiResponse<AdminComplianceDoc[]>>(`/admin/compliance/status/${status}`)),
+  orders: (status: OrderStatus | undefined, page: number, size: number) =>
+    unwrap(http.get<ApiResponse<Page<AdminOrder>>>('/admin/orders', { params: { status, page, size } })),
+  documents: (status: ComplianceStatus | undefined, page: number, size: number) =>
+    unwrap(http.get<ApiResponse<Page<AdminComplianceDoc>>>('/admin/compliance', { params: { status, page, size } })),
   approve: (id: string) => unwrap(http.put<ApiResponse<AdminComplianceDoc>>(`/admin/compliance/${id}/approve`)),
   reject: (id: string, reason: string) =>
     unwrap(http.put<ApiResponse<AdminComplianceDoc>>(`/admin/compliance/${id}/reject`, null, { params: { reason } })),

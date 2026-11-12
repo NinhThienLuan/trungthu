@@ -4,6 +4,7 @@ import fpt.sba.trungthu.common.security.SecurityContextService;
 import fpt.sba.trungthu.dto.request.ReviewComplianceDocRequest;
 import fpt.sba.trungthu.dto.request.UploadComplianceDocRequest;
 import fpt.sba.trungthu.dto.response.ComplianceDocResponse;
+import fpt.sba.trungthu.dto.response.PageResponse;
 import fpt.sba.trungthu.entity.StoreComplianceDoc;
 import fpt.sba.trungthu.entity.User;
 import fpt.sba.trungthu.entity.enumeration.ComplianceDocStatus;
@@ -16,6 +17,7 @@ import fpt.sba.trungthu.service.EmailService;
 import fpt.sba.trungthu.service.StorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -140,6 +142,14 @@ public class ComplianceServiceImpl implements ComplianceService {
         } finally {
             log.debug("Finished hasApprovedDocument for provider: {}", providerEmail);
         }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<ComplianceDocResponse> getDocumentsPage(ComplianceDocStatus status, int page, int size) {
+        var documents = complianceDocRepository
+                .findAdminDocuments(status, PageRequest.of(page, size));
+        return PageResponse.from(documents, this::mapToResponse);
     }
 
     @Override

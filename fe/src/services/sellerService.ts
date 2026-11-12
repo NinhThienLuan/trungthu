@@ -235,7 +235,8 @@ export const subscriptionService = {
     unwrap(http.post<ApiResponse<Subscription>>(`/provider/subscriptions/${id}/payment/refresh`)),
   cancel: (id: string) => unwrap(http.put<ApiResponse<Subscription>>(`/provider/subscriptions/${id}/cancel`)),
   // Admin
-  byStatus: (status: SubscriptionStatus) => unwrap(http.get<ApiResponse<Subscription[]>>(`/admin/subscriptions/status/${status}`)),
+  byStatus: (status: SubscriptionStatus | undefined, page: number, size: number) =>
+    unwrap(http.get<ApiResponse<Page<Subscription>>>('/admin/subscriptions', { params: { status, page, size } })),
   activate: (id: string, endDate: string) =>
     unwrap(http.put<ApiResponse<Subscription>>(`/admin/subscriptions/${id}/activate`, { endDate })),
   adminCancel: (id: string) => unwrap(http.put<ApiResponse<Subscription>>(`/admin/subscriptions/${id}/cancel`)),

@@ -2,17 +2,21 @@ package fpt.sba.trungthu.controller;
 
 import fpt.sba.trungthu.dto.response.ApiResponseDTO;
 import fpt.sba.trungthu.dto.request.ActivateSubscriptionRequest;
+import fpt.sba.trungthu.dto.response.PageResponse;
 import fpt.sba.trungthu.dto.response.SubscriptionResponse;
 import fpt.sba.trungthu.entity.enumeration.SubscriptionStatus;
 import fpt.sba.trungthu.service.SubscriptionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -23,11 +27,21 @@ import java.util.UUID;
 @RequestMapping("/api/admin/subscriptions")
 @RequiredArgsConstructor
 @Slf4j
+@Validated
 @Tag(name = "Admin Subscription", description = "Admin subscription management")
 @PreAuthorize("hasRole('PLATFORM_ADMIN')")
 public class AdminSubscriptionController {
 
     private final SubscriptionService subscriptionService;
+
+    @GetMapping
+    @Operation(summary = "List subscriptions with pagination and an optional status filter")
+    public ApiResponseDTO<PageResponse<SubscriptionResponse>> listSubscriptions(
+            @RequestParam(required = false) SubscriptionStatus status,
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "10") @Min(1) @Max(100) int size) {
+        return ApiResponseDTO.success(subscriptionService.getSubscriptionsPage(status, page, size));
+    }
 
     @GetMapping("/status/{status}")
     @Operation(summary = "Get subscriptions by status")

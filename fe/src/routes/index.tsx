@@ -37,6 +37,7 @@ import { MyComplaintsPage } from '../pages/user/MyComplaintsPage'
 import { StorePage } from '../pages/user/StorePage'
 import { SubscriptionPage } from '../pages/seller/SubscriptionPage'
 import { SubscriptionsAdminPage } from '../pages/admin/SubscriptionsAdminPage'
+import { AdminOrdersPage } from '../pages/admin/AdminOrdersPage'
 import { QualityReviewPage } from '../pages/admin/QualityReviewPage'
 import { DashboardPage } from '../pages/seller/DashboardPage'
 import { AdminDashboardPage } from '../pages/admin/AdminDashboardPage'
@@ -118,6 +119,7 @@ export const router = createBrowserRouter([
         children: [
           { path: '/admin', element: <AdminDashboardPage /> },
           { path: '/admin/dashboard', element: <AdminDashboardPage /> },
+          { path: '/admin/orders', element: <AdminOrdersPage /> },
           { path: '/admin/kyc', element: <QualityReviewPage /> },
           { path: '/admin/subscriptions', element: <SubscriptionsAdminPage /> },
           { path: '/admin/complaints', element: <ComplaintsPage scope="admin" /> },

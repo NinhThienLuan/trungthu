@@ -2,6 +2,7 @@ package fpt.sba.trungthu.service.impl;
 
 import fpt.sba.trungthu.dto.request.ActivateSubscriptionRequest;
 import fpt.sba.trungthu.dto.request.CreateSubscriptionRequest;
+import fpt.sba.trungthu.dto.response.PageResponse;
 import fpt.sba.trungthu.dto.response.SubscriptionResponse;
 import fpt.sba.trungthu.entity.PaymentTransaction;
 import fpt.sba.trungthu.entity.Subscription;
@@ -19,6 +20,7 @@ import fpt.sba.trungthu.service.EmailService;
 import fpt.sba.trungthu.service.SubscriptionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Transactional;
@@ -433,6 +435,15 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
     @Override
     @Transactional(readOnly = true)
+    public PageResponse<SubscriptionResponse> getSubscriptionsPage(SubscriptionStatus status, int page, int size) {
+        var subscriptions = subscriptionRepository
+                .findAdminSubscriptions(status, PageRequest.of(page, size));
+        var online = findOnlinePayments(subscriptions.getContent());
+        return PageResponse.from(subscriptions, subscription -> mapToResponse(subscription, online.get(subscription.getId())));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<SubscriptionResponse> getAllSubscriptionsByStatus(SubscriptionStatus status) {
         log.info("Getting all subscriptions with status: {}", status);
         
@@ -463,11 +474,15 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     }
 
     private List<SubscriptionResponse> mapHistory(List<Subscription> subscriptions) {
-        if (subscriptions.isEmpty()) return List.of();
-        var ids = subscriptions.stream().map(Subscription::getId).toList();
-        var online = payments.findBySubscriptionIdInAndPaymentMethod(ids, PaymentMethod.PAYOS).stream()
-                .collect(Collectors.toMap(p -> p.getSubscription().getId(), Function.identity()));
+        var online = findOnlinePayments(subscriptions);
         return subscriptions.stream().map(s -> mapToResponse(s, online.get(s.getId()))).toList();
+    }
+
+    private Map<UUID, PaymentTransaction> findOnlinePayments(List<Subscription> subscriptions) {
+        if (subscriptions.isEmpty()) return Map.of();
+        var ids = subscriptions.stream().map(Subscription::getId).toList();
+        return payments.findBySubscriptionIdInAndPaymentMethod(ids, PaymentMethod.PAYOS).stream()
+                .collect(Collectors.toMap(p -> p.getSubscription().getId(), Function.identity()));
     }
 
     private SubscriptionResponse mapToResponse(Subscription subscription, PaymentTransaction payment) {

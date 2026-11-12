@@ -5,6 +5,7 @@ import fpt.sba.trungthu.common.security.SecurityContextService;
 import fpt.sba.trungthu.dto.request.CreateOrdersCommand;
 import fpt.sba.trungthu.dto.request.CreateOrdersCommand.ProviderOrder;
 import fpt.sba.trungthu.dto.request.OrderQueryRequest;
+import fpt.sba.trungthu.dto.response.AdminOrderResponse;
 import fpt.sba.trungthu.dto.response.BakeSheetResponse;
 import fpt.sba.trungthu.dto.response.OrderDetailResponse;
 import fpt.sba.trungthu.dto.response.OrderSummaryResponse;
@@ -246,6 +247,14 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public PageResponse<AdminOrderResponse> getAdminOrders(OrderStatus status, int page, int size) {
+        requireActiveUser();
+        return PageResponse.from(orderRepository.findAdminOrders(status, orderPage(page, size)));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public PageResponse<OrderSummaryResponse> getMyOrders(OrderQueryRequest query) {
         try {
             User buyer = requireActiveUser();
@@ -380,7 +389,11 @@ public class OrderServiceImpl implements OrderService {
         if (query.getPage() < 0 || query.getSize() < 1 || query.getSize() > 100 || !query.isDateRangeValid()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid pagination or delivery date range");
         }
-        return PageRequest.of(query.getPage(), query.getSize(), Sort.by("orderedAt", "id").descending());
+        return orderPage(query.getPage(), query.getSize());
+    }
+
+    private Pageable orderPage(int page, int size) {
+        return PageRequest.of(page, size, Sort.by("orderedAt", "id").descending());
     }
 
     private PageResponse<OrderSummaryResponse> mapPage(Page<Order> page) {

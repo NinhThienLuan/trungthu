@@ -3,8 +3,13 @@ package fpt.sba.trungthu.repository;
 import fpt.sba.trungthu.entity.StoreComplianceDoc;
 import fpt.sba.trungthu.entity.enumeration.ComplianceDocStatus;
 import fpt.sba.trungthu.entity.enumeration.ComplianceDocType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import jakarta.persistence.LockModeType;
@@ -29,6 +34,14 @@ public interface StoreComplianceDocRepository extends JpaRepository<StoreComplia
      * Tìm tất cả tài liệu chờ duyệt (cho Admin)
      */
     List<StoreComplianceDoc> findByVerificationStatusOrderBySubmittedAtAsc(ComplianceDocStatus status);
+
+    @EntityGraph(attributePaths = {"provider", "verifiedBy"})
+    @Query("""
+            SELECT d FROM StoreComplianceDoc d
+            WHERE (:#{#status == null} = true OR d.verificationStatus = :status)
+            ORDER BY d.submittedAt ASC, d.id ASC
+            """)
+    Page<StoreComplianceDoc> findAdminDocuments(@Param("status") ComplianceDocStatus status, Pageable pageable);
 
     /**
      * Tìm tài liệu với pessimistic lock (để update trạng thái)

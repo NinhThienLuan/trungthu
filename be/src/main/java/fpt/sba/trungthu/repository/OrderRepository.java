@@ -1,5 +1,6 @@
 package fpt.sba.trungthu.repository;
 
+import fpt.sba.trungthu.dto.response.AdminOrderResponse;
 import fpt.sba.trungthu.entity.Order;
 import fpt.sba.trungthu.entity.enumeration.OrderStatus;
 import fpt.sba.trungthu.entity.enumeration.PaymentMethod;
@@ -25,6 +26,18 @@ import java.util.UUID;
 
 @Repository
 public interface OrderRepository extends JpaRepository<Order, UUID> {
+
+    @Query(value = """
+            SELECT new fpt.sba.trungthu.dto.response.AdminOrderResponse(
+                o.id, o.orderCode, o.orderedAt, o.orderStatus, o.totalAmount,
+                provider.storeName, provider.fullName, provider.email, buyer.fullName, buyer.email)
+            FROM Order o JOIN o.provider provider JOIN o.customer buyer
+            WHERE (:#{#status == null} = true OR o.orderStatus = :status)
+            """, countQuery = """
+            SELECT COUNT(o) FROM Order o
+            WHERE (:#{#status == null} = true OR o.orderStatus = :status)
+            """)
+    Page<AdminOrderResponse> findAdminOrders(@Param("status") OrderStatus status, Pageable pageable);
 
     @EntityGraph(attributePaths = "provider")
     @Query("""
