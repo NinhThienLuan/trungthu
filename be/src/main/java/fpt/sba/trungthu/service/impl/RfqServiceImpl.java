@@ -189,7 +189,7 @@ public class RfqServiceImpl implements RfqService {
             throw badRequest("Ngày hiệu lực và ngày giao dự kiến không được ở quá khứ");
         }
         if (!input.validUntil().isAfter(input.estimatedDeliveryDate())) {
-            throw badRequest("Báo giá phải có hiệu lực sau ngày giao dự kiến");
+            throw badRequest("Ngày hết hiệu lực báo giá phải sau ngày giao dự kiến");
         }
         BigDecimal gross = input.unitPrice().multiply(BigDecimal.valueOf(input.offeredQuantity()));
         if (gross.precision() - gross.scale() > 16) {
@@ -218,7 +218,28 @@ public class RfqServiceImpl implements RfqService {
     @Override
     @Transactional
     public QuoteResponse acceptQuote(UUID requestId, UUID quoteId) {
-        return acceptQuotes(requestId, List.of(quoteId)).getFirst();
+        BulkRequest request = requests.findForUpdateById(requestId)
+                .filter(item -> item.getCustomer().getId().equals(security.getCurrentUserId()))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy RFQ"));
+        if (request.getStatus() != BulkRequestStatus.QUOTES_RECEIVED) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "RFQ chưa thể chốt báo giá");
+        }
+        ProviderQuotation selected = quotations.findById(quoteId)
+                .filter(quote -> quote.getRequest().getId().equals(requestId))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy báo giá"));
+        if (selected.getStatus() != QuoteStatus.SUBMITTED
+                || selected.getValidUntil() != null && selected.getValidUntil().isBefore(LocalDate.now(VIETNAM))) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Báo giá đã hết hiệu lực");
+        }
+        bulkOrders.createForAcceptedQuote(selected, null);
+        selected.transitionStatus(QuoteStatus.ACCEPTED);
+        for (ProviderQuotation quote : quotations.findByRequestIdOrderByQuotedPriceAsc(requestId)) {
+            if (!quote.getId().equals(quoteId) && quote.getStatus() == QuoteStatus.SUBMITTED) {
+                quote.transitionStatus(QuoteStatus.REJECTED);
+            }
+        }
+        request.transitionStatus(BulkRequestStatus.WON);
+        return toQuoteResponse(selected);
     }
 
     @Override

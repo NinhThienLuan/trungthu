@@ -335,6 +335,24 @@ class CheckoutFlowTests {
     }
 
     @Test
+    void buyThreePayOneKeepsOriginalUnitPriceAndShowsFourFreeCakes() {
+        User provider = cake.getProduct().getProvider();
+        promotions.save(Promotion.builder().provider(provider).name("Lấy 3 trả 1")
+                .type(PromotionType.BUY_X_PAY_Y).buyQuantity(3).freeQuantity(1)
+                .startDate(LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh"))).endDate(delivery).build());
+
+        var preview = checkout.preview(cakeRequest(delivery, 6)).groups().getFirst();
+        assertThat(preview.lines().getFirst().freeQuantity()).isEqualTo(4);
+        assertThat(preview.lines().getFirst().listAmount()).isEqualByComparingTo("600000");
+        assertThat(preview.totalAmount()).isEqualByComparingTo("200000");
+
+        var detail = checkout.checkout(cakeRequest(delivery, 6)).getFirst();
+        assertThat(detail.getTotalAmount()).isEqualByComparingTo("200000");
+        assertThat(detail.getLines().getFirst().getUnitPrice()).isEqualByComparingTo("100000");
+        assertThat(detail.getLines().getFirst().getVariantName()).contains("tặng 4 bánh");
+    }
+
+    @Test
     void bulkOrderNeedsSevenDaysWhenDeliveryDateIsSelected() {
         LocalDate today = LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh"));
         CheckoutRequest tooSoon = cakeRequest(today.plusDays(6), 20);

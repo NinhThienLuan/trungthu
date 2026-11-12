@@ -30,7 +30,7 @@ export function SellerRfqPage() {
       return
     }
     if (String(data.get('validUntil')) <= String(data.get('estimatedDeliveryDate'))) {
-      setMessage('Báo giá phải có hiệu lực sau ngày giao dự kiến.')
+      setMessage('Ngày hết hiệu lực báo giá phải sau ngày giao dự kiến.')
       return
     }
     setBusy(true)
@@ -114,7 +114,7 @@ export function SellerRfqPage() {
                   <input className="input mt-1" name="unitPrice" type="number" min="1" defaultValue={ownQuote?.unitPrice} required />
                 </label>
                 <label className="text-small font-semibold">Số lượng chào
-                  <input className="input mt-1" name="offeredQuantity" type="number" min="1"
+                  <input className="input mt-1" name="offeredQuantity" type="number" min={1}
                     defaultValue={ownQuote?.offeredQuantity ?? selected.requestedQuantity} required />
                 </label>
                 <p className="text-small text-muted sm:col-span-2">Có thể chào ít hơn số lượng khách yêu cầu nếu xưởng chỉ đáp ứng được một phần.</p>
@@ -126,7 +126,7 @@ export function SellerRfqPage() {
                     min={toIsoDate(new Date())} defaultValue={ownQuote?.estimatedDeliveryDate ?? selected.expectedDeliveryDate} required />
                 </label>
                 <label className="text-small font-semibold">Báo giá có hiệu lực đến
-                  <input className="input mt-1" name="validUntil" type="date" min={toIsoDate(new Date())}
+                  <input className="input mt-1" name="validUntil" type="date" min={ownQuote?.estimatedDeliveryDate ?? selected.expectedDeliveryDate}
                     defaultValue={ownQuote?.validUntil ?? toIsoDate(addDays(new Date(), 7))} required />
                 </label>
                 <label className="text-small font-semibold sm:col-span-2">Ghi chú

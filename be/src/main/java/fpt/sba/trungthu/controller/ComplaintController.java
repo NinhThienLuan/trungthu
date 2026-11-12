@@ -17,15 +17,16 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.http.MediaType;
-import org.springframework.web.multipart.MultipartFile;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
@@ -39,6 +40,7 @@ import java.util.UUID;
 public class ComplaintController {
     private static final EnumSet<OrderStatus> COMPLAINABLE = EnumSet.of(OrderStatus.DELIVERING, OrderStatus.COMPLETED);
     private static final EnumSet<ComplaintStatus> ACTIVE = EnumSet.of(ComplaintStatus.OPEN, ComplaintStatus.IN_PROGRESS);
+    private static final String IMAGE_MARKER = "\n[COMPLAINT_IMAGE]";
 
     private final SecurityContextService security;
     private final ComplaintRepository complaints;
@@ -46,15 +48,34 @@ public class ComplaintController {
     private final StorageService storageService;
 
     public record CreateComplaintRequest(@NotNull UUID orderId, @NotNull ComplaintType type,
-            @NotBlank @Size(max = 255) String subject, @Size(max = 5000) String description) {}
+            @NotBlank @Size(max = 255) String subject, @Size(max = 5000) String description,
+            List<String> imageUrls, String imageUrl) {
+        public CreateComplaintRequest(UUID orderId, ComplaintType type, String subject, String description) {
+            this(orderId, type, subject, description, null, null);
+        }
+        public CreateComplaintRequest(UUID orderId, ComplaintType type, String subject, String description, List<String> imageUrls) {
+            this(orderId, type, subject, description, imageUrls, null);
+        }
+    }
 
     public record UpdateComplaintRequest(@NotNull ComplaintStatus status, @Size(max = 2000) String resolution) {}
 
     public record ComplaintResponse(UUID id, UUID orderId, String orderCode, String storeName, String customerName,
             String customerPhone, ComplaintType type, String subject, String description, ComplaintStatus status,
-            String resolution, LocalDateTime createdAt, LocalDateTime resolvedAt, String imageUrl) {}
+            String resolution, LocalDateTime createdAt, LocalDateTime resolvedAt, String imageUrl, List<String> imageUrls) {}
 
-    @PostMapping("/api/complaints")
+    @PostMapping("/api/complaints/images")
+    @PreAuthorize("hasRole('CUSTOMER')")
+    public ResponseEntity<ApiResponseDTO<String>> uploadImage(@RequestParam("file") MultipartFile file) {
+        try {
+            storageService.validateFile(file, new String[]{"image/png", "image/jpeg", "image/webp"}, 5);
+        } catch (IllegalArgumentException ex) {
+            throw badRequest("Chỉ nhận ảnh PNG/JPEG/WEBP tối đa 5 MB");
+        }
+        return ResponseEntity.ok(ApiResponseDTO.success(storageService.uploadFile(file, "complaints")));
+    }
+
+    @PostMapping(value = "/api/complaints", consumes = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('CUSTOMER')")
     @Transactional
     public ResponseEntity<ApiResponseDTO<ComplaintResponse>> create(@Valid @RequestBody CreateComplaintRequest request) {
@@ -81,15 +102,34 @@ public class ComplaintController {
         if (complaints.existsByOrderIdAndStatusIn(order.getId(), ACTIVE)) {
             throw badRequest("Đơn này đã có khiếu nại đang được xử lý");
         }
-        String imageUrl = null;
+
+        List<String> images = new ArrayList<>(request.imageUrls() == null ? List.of() : request.imageUrls());
+        if (request.imageUrl() != null && !request.imageUrl().isBlank() && !images.contains(request.imageUrl())) {
+            images.add(request.imageUrl());
+        }
+
         if (image != null && !image.isEmpty()) {
             storageService.validateFile(image, new String[]{"image/jpeg", "image/png", "image/webp"}, 5);
-            imageUrl = storageService.uploadFile(image, "complaints");
+            String uploadedUrl = storageService.uploadFile(image, "complaints");
+            images.add(uploadedUrl);
         }
+
+        if (images.size() > 3 || images.stream().anyMatch(url -> url == null ||
+                !url.matches("/uploads/complaints/[a-zA-Z0-9._-]+"))) {
+            throw badRequest("Ảnh minh chứng không hợp lệ (tối đa 3 ảnh)");
+        }
+
+        String description = request.description() == null ? "" : request.description().trim();
+        if (description.contains(IMAGE_MARKER)) throw badRequest("Mô tả chứa ký tự không hợp lệ");
+        String storedDescription = description + images.stream().map(url -> IMAGE_MARKER + url)
+                .reduce("", String::concat);
+        String primaryImageUrl = images.isEmpty() ? null : images.get(0);
+
         Complaint complaint = complaints.save(Complaint.builder().customer(customer).order(order)
                 .provider(order.getProvider()).complaintType(request.type()).subject(request.subject().trim())
-                .description(request.description() == null ? null : request.description().trim())
-                .imageUrl(imageUrl).status(ComplaintStatus.OPEN).build());
+                .description(storedDescription.isBlank() ? null : storedDescription)
+                .imageUrl(primaryImageUrl)
+                .status(ComplaintStatus.OPEN).build());
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponseDTO.success(toResponse(complaint)));
     }
 
@@ -152,11 +192,18 @@ public class ComplaintController {
     }
 
     private ComplaintResponse toResponse(Complaint c) {
+        String stored = c.getDescription() == null ? "" : c.getDescription();
+        String[] parts = stored.split("\\n\\[COMPLAINT_IMAGE\\]");
+        List<String> images = new ArrayList<>(java.util.Arrays.stream(parts).skip(1).toList());
+        if (c.getImageUrl() != null && !c.getImageUrl().isBlank() && !images.contains(c.getImageUrl())) {
+            images.add(0, c.getImageUrl());
+        }
+        String primaryImageUrl = images.isEmpty() ? c.getImageUrl() : images.get(0);
+        String phone = c.getCustomer().getPhone() != null ? c.getCustomer().getPhone() : c.getOrder().getReceiverPhone();
         return new ComplaintResponse(c.getId(), c.getOrder().getId(), c.getOrder().getOrderCode(),
-                c.getProvider().getStoreName(), c.getCustomer().getFullName(),
-                c.getCustomer().getPhone() != null ? c.getCustomer().getPhone() : c.getOrder().getReceiverPhone(),
-                c.getComplaintType(), c.getSubject(), c.getDescription(), c.getStatus(), c.getResolution(),
-                c.getCreatedAt(), c.getResolvedAt(), c.getImageUrl());
+                c.getProvider().getStoreName(), c.getCustomer().getFullName(), phone,
+                c.getComplaintType(), c.getSubject(), parts[0].isBlank() ? null : parts[0], c.getStatus(), c.getResolution(),
+                c.getCreatedAt(), c.getResolvedAt(), primaryImageUrl, images);
     }
 
     private static ResponseStatusException badRequest(String message) {

@@ -116,10 +116,14 @@ public class OrderServiceImpl implements OrderService {
     private Order createProviderOrder(CreateOrdersCommand command, ProviderOrder group, User customer) {
         User provider = findUser(group.providerId(), UserRole.PROVIDER);
         Map<UUID, ProductVariant> variants = findGroupVariants(group);
-        BigDecimal subtotal = group.items().stream()
-                .map(item -> item.lineAmount()
+        BigDecimal itemSubtotal = group.items().stream()
+                .map(item -> (item.lineAmount() != null ? item.lineAmount() : item.unitPrice().multiply(BigDecimal.valueOf(item.quantity())))
                         .add(item.personalizationFee()))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal subtotal = group.listAmount() == null ? itemSubtotal
+                : group.listAmount().subtract(group.discountAmount() == null ? BigDecimal.ZERO : group.discountAmount())
+                        .add(group.items().stream().map(CreateOrdersCommand.ItemSnapshot::personalizationFee)
+                                .reduce(BigDecimal.ZERO, BigDecimal::add));
         BigDecimal total = subtotal.add(group.shippingFee());
         validatePayment(command, group, total);
         DailyCapacity capacity = findCapacity(group);

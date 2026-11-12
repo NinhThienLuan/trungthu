@@ -1,0 +1,1 @@
+{"nodes": [{"id": "$graphify-root$_be_src_main_resources_db_views_v_bake_lines_postgres_sql", "label": "v_bake_lines_postgres.sql", "file_type": "code", "source_file": "be/src/main/resources/db/views/v_bake_lines_postgres.sql", "source_location": null}], "edges": []}

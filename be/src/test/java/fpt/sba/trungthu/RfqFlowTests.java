@@ -467,6 +467,30 @@ class RfqFlowTests {
                 100, today.plusDays(7), today.plusDays(8), null)).status()).isEqualTo(QuoteStatus.SUBMITTED);
     }
 
+    @Test
+    void providerCanOfferFewerBoxesWhenQuoteExpiresAfterDelivery() {
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh"));
+        User buyer = createUser(UserRole.CUSTOMER, false);
+        User seller = createUser(UserRole.PROVIDER, true);
+        subscribe(seller, today);
+        capacity(seller, today.plusDays(6), 100);
+        as(buyer);
+        var request = rfq.create(new CreateRfqRequest("Công ty Mặt Trăng", "0123456789", "Lan",
+                "Thu mua", "0901234567", "lan@example.com", 100, today.plusDays(7),
+                null, null, null, seller.getId(), null));
+
+        as(seller);
+        assertThatThrownBy(() -> rfq.submitQuote(request.id(), new SubmitQuoteRequest(
+                new BigDecimal("420000"), 50, today.plusDays(7), today.plusDays(7), null)))
+                .isInstanceOf(ResponseStatusException.class);
+        var quote = rfq.submitQuote(request.id(), new SubmitQuoteRequest(
+                new BigDecimal("420000"), 50, today.plusDays(7), today.plusDays(8), null));
+        assertThat(quote.offeredQuantity()).isEqualTo(50);
+        as(buyer);
+        rfq.acceptQuote(request.id(), quote.id());
+        assertThat(bulkOrders.findByQuoteId(quote.id()).orElseThrow().getQuantity()).isEqualTo(50);
+    }
+
     private void subscribe(User provider, LocalDate today) {
         subscriptions.saveAndFlush(Subscription.builder().provider(provider).planName("Test")
                 .price(BigDecimal.ZERO).startDate(today.minusDays(1)).endDate(today.plusDays(30))

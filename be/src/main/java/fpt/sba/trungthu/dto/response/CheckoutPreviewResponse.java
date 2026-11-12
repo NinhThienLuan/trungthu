@@ -16,5 +16,5 @@ public record CheckoutPreviewResponse(List<ProviderPrice> groups, BigDecimal gra
 
     public record Line(UUID variantId, String productName, String variantName, int quantity,
             BigDecimal unitPrice, BigDecimal personalizationFee, BigDecimal subtotal,
-            BigDecimal listAmount, String promotion) {}
+            BigDecimal listAmount, String promotion, int freeQuantity) {}
 }

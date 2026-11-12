@@ -27,6 +27,7 @@ export interface CheckoutLine {
 /** Mỗi Provider một nhóm = một Order: một ngày nhận, một phương thức thanh toán */
 export interface CheckoutGroup {
   providerId: string
+  promotionSelection?: string
   deliveryDate: string // yyyy-MM-dd
   province?: string
   district?: string
@@ -83,6 +84,7 @@ export interface CheckoutPreviewLine {
   listAmount: number
   /** Nhãn khuyến mãi đã áp, vd "Mua 3 tặng 1" */
   promotion: string | null
+  freeQuantity: number
 }
 
 export interface CheckoutPreview {

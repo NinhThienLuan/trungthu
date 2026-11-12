@@ -100,7 +100,7 @@ export function PromotionsPage() {
         <fieldset className="md:col-span-2">
           <legend className="field-label">Kiểu khuyến mãi</legend>
           <div className="mt-1 flex flex-wrap gap-2">
-            {([['BUY_X_GET_Y', 'Mua X tặng Y'], ['PERCENT_OFF', 'Giảm % khi mua từ N cái']] as const).map(([value, label]) => (
+            {([['BUY_X_GET_Y', 'Mua X tặng Y'], ['BUY_X_PAY_Y', 'Lấy X trả tiền Y'], ['PERCENT_OFF', 'Giảm % khi mua từ N cái']] as const).map(([value, label]) => (
               <label key={value} className={`chip cursor-pointer ${type === value ? 'chip-active' : ''}`}>
                 <input type="radio" name="type" value={value} className="sr-only" checked={type === value} onChange={() => setType(value)} />
                 {label}
@@ -108,10 +108,11 @@ export function PromotionsPage() {
             ))}
           </div>
         </fieldset>
-        {type === 'BUY_X_GET_Y' ? (
+        {type !== 'PERCENT_OFF' ? (
           <>
             <TextInput key="buy" label="Mua (cái)" name="buyQuantity" type="number" min={1} defaultValue={3} required hint="Vd mua 3" />
-            <TextInput key="free" label="Tặng (cái)" name="freeQuantity" type="number" min={1} defaultValue={1} required hint="tặng 1 — lặp lại theo từng bộ 4 cái" />
+            <TextInput key="free" label={type === 'BUY_X_PAY_Y' ? 'Tính tiền (cái)' : 'Tặng (cái)'} name="freeQuantity" type="number" min={1} defaultValue={1} required
+              hint={type === 'BUY_X_PAY_Y' ? 'Ví dụ: lấy 3, tính tiền 1' : 'Tặng 1 — lặp lại theo từng bộ 4 cái'} />
           </>
         ) : (
           <>

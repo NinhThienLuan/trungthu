@@ -35,6 +35,7 @@ import { OrdersPage } from '../pages/seller/OrdersPage'
 import { SellerRfqPage } from '../pages/seller/SellerRfqPage'
 import { PromotionsPage } from '../pages/seller/PromotionsPage'
 import { ComplaintsPage } from '../pages/shared/ComplaintsPage'
+import { StorePage } from '../pages/user/StorePage'
 import { SubscriptionPage } from '../pages/seller/SubscriptionPage'
 import { SubscriptionsAdminPage } from '../pages/admin/SubscriptionsAdminPage'
 import { QualityReviewPage } from '../pages/admin/QualityReviewPage'
@@ -61,6 +62,7 @@ export const router = createBrowserRouter([
           // Đặt sỉ đi qua RFQ (báo giá -> chấp nhận); link cũ chuyển về đó
           { path: '/b2b/checkout', element: <Navigate to={ROUTES.rfq} replace /> },
           { path: '/policy', element: <PolicyPage /> },
+          { path: '/stores/:id', element: <StorePage /> },
 
           // Giỏ hàng: Khách vãng lai và Customer được xem; Cấm PROVIDER và PLATFORM_ADMIN
           {

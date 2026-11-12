@@ -198,7 +198,9 @@ export function BuyerRfqDashboard({ created }: { created?: RfqResponse | null })
                             )}
                           </div>
                           <p className="text-small text-muted mt-0.5">
-                            Cung ứng: <b>{quote.offeredQuantity} hộp</b> · Giao hàng: <b>{formatDate(quote.estimatedDeliveryDate)}</b>
+                            Cung ứng: <b>{quote.offeredQuantity} hộp</b>
+                            {currentRfq && quote.offeredQuantity < currentRfq.requestedQuantity && <span className="text-danger"> · Thiếu {currentRfq.requestedQuantity - quote.offeredQuantity} hộp so với yêu cầu</span>}
+                            {' · '}Giao hàng: <b>{formatDate(quote.estimatedDeliveryDate)}</b>
                           </p>
                         </div>
                         <div className="text-right">

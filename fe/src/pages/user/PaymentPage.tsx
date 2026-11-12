@@ -49,7 +49,7 @@ export function PaymentPage() {
                     className={cn('rounded-sm border p-4 text-left transition-colors',
                       selected?.id === order.id ? 'border-navy bg-champagne/40' : 'border-line hover:bg-ivory')}>
                     <span className="block font-semibold text-navy">{order.storeName} · {order.code}</span>
-                    <span className="block text-small text-muted">Giao cho {order.receiverName} · {formatDate(order.deliveryDate)}</span>
+                    <span className="block text-small text-muted">Giao cho {order.receiverName} · {formatDate(order.deliveryDate)} · {order.shippingAddress.match(/Khung giờ nhận dự kiến: ([^\n]+)/)?.[1] ?? 'trong ngày'}</span>
                     <span className="mt-2 block font-semibold text-gold-ink">
                       {order.paymentMethod === 'VIETQR' && order.status === 'PENDING_DEPOSIT'
                         ? `Cần chuyển ${formatVnd(order.depositAmount)}`
@@ -71,7 +71,7 @@ export function PaymentPage() {
                   <h2 className="mt-1 text-h3">{selected.storeName}</h2>
                 </div>
                 <p className="text-small text-muted">
-                  Nhận {formatDate(selected.deliveryDate)} · {PAYMENT_METHOD_LABEL[selected.paymentMethod]}
+                  Nhận {formatDate(selected.deliveryDate)} · {selected.shippingAddress.match(/Khung giờ nhận dự kiến: ([^\n]+)/)?.[1] ?? 'trong ngày'} · {PAYMENT_METHOD_LABEL[selected.paymentMethod]}
                 </p>
               </div>
               <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">

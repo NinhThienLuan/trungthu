@@ -30,6 +30,7 @@ export interface Complaint {
   type: ComplaintType
   subject: string
   description: string | null
+  imageUrls: string[]
   status: ComplaintStatus
   resolution: string | null
   createdAt: string
@@ -39,16 +40,26 @@ export interface Complaint {
 
 /** Khiếu nại / đổi trả: khách gửi cho đơn đang giao/đã hoàn tất; xưởng xử lý; admin sàn phân xử */
 export const complaintService = {
-  create: (body: { orderId: string; type: ComplaintType; subject: string; description?: string }, image?: File) => {
-    if (!image) return unwrap(http.post<ApiResponse<Complaint>>('/complaints', body))
+  create: async (body: { orderId: string; type: ComplaintType; subject: string; description?: string; imageUrls?: string[] }, image?: File) => {
+    let imageUrls = body.imageUrls ? [...body.imageUrls] : []
+    if (image) {
+      const url = await complaintService.uploadImage(image)
+      imageUrls.push(url)
+    }
+    return unwrap(http.post<ApiResponse<Complaint>>('/complaints', { ...body, imageUrls }))
+  },
+  uploadImage: (file: File) => {
     const form = new FormData()
-    form.append('request', new Blob([JSON.stringify(body)], { type: 'application/json' }))
-    form.append('image', image)
-    return unwrap(http.post<ApiResponse<Complaint>>('/complaints', form, { headers: { 'Content-Type': 'multipart/form-data' } }))
+    form.append('file', file)
+    return unwrap(http.post<ApiResponse<string>>('/complaints/images', form, { headers: { 'Content-Type': 'multipart/form-data' } }))
   },
   mine: () => unwrap(http.get<ApiResponse<Complaint[]>>('/complaints/me')),
   forProvider: () => unwrap(http.get<ApiResponse<Complaint[]>>('/provider/complaints')),
   all: () => unwrap(http.get<ApiResponse<Complaint[]>>('/admin/complaints')),
   update: (scope: 'provider' | 'admin', id: string, status: ComplaintStatus, resolution?: string) =>
     unwrap(http.put<ApiResponse<Complaint>>(`/${scope}/complaints/${id}`, { status, resolution })),
+  providerUpdate: (id: string, body: { status: ComplaintStatus; resolution?: string }) =>
+    unwrap(http.put<ApiResponse<Complaint>>(`/provider/complaints/${id}`, body)),
+  adminUpdate: (id: string, body: { status: ComplaintStatus; resolution?: string }) =>
+    unwrap(http.put<ApiResponse<Complaint>>(`/admin/complaints/${id}`, body)),
 }
