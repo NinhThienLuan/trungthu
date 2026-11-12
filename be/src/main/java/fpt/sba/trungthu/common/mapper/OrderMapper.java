@@ -53,6 +53,8 @@ public class OrderMapper {
                 .sourceSetName(item.getSourceSet() == null ? null : item.getSourceSet().getName())
                 .productName(item.getProductName()).variantName(item.getVariantName())
                 .quantity(item.getQuantity()).unitPrice(item.getUnitPrice())
+                .listUnitPrice(item.getListUnitPrice()).freeQuantity(item.getFreeQuantity())
+                .promotionLabel(item.getPromotionLabel())
                 .personalizationText(item.getPersonalizationText())
                 .personalizationFee(item.getPersonalizationFee() == null ? BigDecimal.ZERO : item.getPersonalizationFee())
                 .subtotal(item.getSubtotal())

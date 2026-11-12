@@ -26,13 +26,32 @@ import java.util.UUID;
 public class BulkOrderService {
     private static final ZoneId VIETNAM = ZoneId.of("Asia/Ho_Chi_Minh");
     private final BulkOrderRepository orders;
+    private final BulkOrderGroupRepository groups;
     private final BulkOrderDayRepository days;
     private final DailyCapacityRepository capacities;
     private final SecurityContextService security;
 
+    /** Tạo một đơn tổng cùng các đơn theo xưởng trong giao dịch chốt RFQ. */
+    @Transactional
+    public BulkOrderGroup createForAcceptedQuotes(BulkRequest request, List<ProviderQuotation> quotes) {
+        if (groups.findByRequestId(request.getId()).isPresent()) throw conflict("RFQ đã có đơn tổng");
+        BulkOrderGroup group = groups.saveAndFlush(BulkOrderGroup.builder().request(request)
+                .quantity(request.getRequestedQuantity()).grossAmount(BigDecimal.ZERO)
+                .discountAmount(BigDecimal.ZERO).totalAmount(BigDecimal.ZERO)
+                .depositAmount(BigDecimal.ZERO).build());
+        for (ProviderQuotation quote : quotes) {
+            BulkOrder child = createForAcceptedQuote(quote, group);
+            group.setGrossAmount(group.getGrossAmount().add(child.getGrossAmount()));
+            group.setDiscountAmount(group.getDiscountAmount().add(child.getDiscountAmount()));
+            group.setTotalAmount(group.getTotalAmount().add(child.getTotalAmount()));
+            group.setDepositAmount(group.getDepositAmount().add(child.getDepositAmount()));
+        }
+        return groups.save(group);
+    }
+
     // Called inside the RFQ row lock and its transaction. All days are locked in date order.
     @Transactional
-    public BulkOrder createForAcceptedQuote(ProviderQuotation quote) {
+    public BulkOrder createForAcceptedQuote(ProviderQuotation quote, BulkOrderGroup group) {
         if (orders.findByQuoteId(quote.getId()).isPresent()) throw conflict("Đơn sỉ đã được tạo");
         LocalDate today = LocalDate.now(VIETNAM);
         LocalDate delivery = quote.getEstimatedDeliveryDate();
@@ -67,7 +86,7 @@ public class BulkOrderService {
         BigDecimal gross = quote.getQuotedPrice().multiply(BigDecimal.valueOf(quote.getOfferedQuantity()));
         BigDecimal discount = gross.multiply(new BigDecimal("0.30")).setScale(2, RoundingMode.HALF_UP);
         BigDecimal total = gross.subtract(discount);
-        BulkOrder order = orders.saveAndFlush(BulkOrder.builder().quote(quote)
+        BulkOrder order = orders.saveAndFlush(BulkOrder.builder().quote(quote).group(group)
                 .quantity(quote.getOfferedQuantity()).cakesPerBox(quote.getCakesPerBox())
                 .unitPrice(quote.getQuotedPrice()).grossAmount(gross).discountAmount(discount)
                 .totalAmount(total).depositAmount(total.multiply(new BigDecimal("0.50")).setScale(2, RoundingMode.HALF_UP))
@@ -105,7 +124,8 @@ public class BulkOrderService {
     @Transactional
     public BulkOrderResponse setDelivery(UUID id, BulkDeliveryRequest input) {
         BulkOrder order = ownLocked(id, false);
-        if (order.getStatus() != BulkOrderStatus.WAITING_DEPOSIT && order.getStatus() != BulkOrderStatus.PRODUCTION)
+        if (order.getStatus() != BulkOrderStatus.WAITING_DEPOSIT && order.getStatus() != BulkOrderStatus.PRODUCTION
+                && order.getStatus() != BulkOrderStatus.READY_TO_SHIP)
             throw conflict("Không thể sửa địa chỉ giao ở trạng thái này");
         order.setRecipientName(input.recipientName().trim());
         order.setRecipientPhone(input.recipientPhone().trim());
@@ -213,6 +233,9 @@ public class BulkOrderService {
                 order.getRecipientName(), order.getRecipientPhone(), order.getDeliveryAddress(),
                 order.getStatus(), days.findByOrderIdOrderByProductionDateAsc(order.getId()).stream()
                         .map(day -> new BulkOrderResponse.Day(day.getId(), day.getProductionDate(),
-                                day.getPlannedCakes(), day.isCompleted())).toList());
+                                day.getPlannedCakes(), day.isCompleted())).toList(),
+                order.getGroup() == null ? null : order.getGroup().getId(),
+                order.getGroup() == null ? order.getQuantity() : order.getGroup().getQuantity(),
+                order.getGroup() == null ? order.getTotalAmount() : order.getGroup().getTotalAmount());
     }
 }

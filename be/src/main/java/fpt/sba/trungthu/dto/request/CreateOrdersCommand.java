@@ -52,7 +52,11 @@ public record CreateOrdersCommand(
             int directUnits,
             @Size(max = 50) String personalizationText,
             @NotNull @DecimalMin("0") BigDecimal personalizationFee,
-            Integer stockReservedQuantity) {
+            Integer stockReservedQuantity,
+            BigDecimal listUnitPrice,
+            Integer freeQuantity,
+            String promotionLabel,
+            BigDecimal lineAmount) {
 
         public ItemSnapshot {
             if (personalizationFee == null) {
@@ -62,6 +66,14 @@ public record CreateOrdersCommand(
             if (stockReservedQuantity < 0 || stockReservedQuantity > quantity) {
                 throw new IllegalArgumentException("Reserved stock quantity must be between 0 and ordered quantity");
             }
+            if (lineAmount == null) lineAmount = unitPrice.multiply(BigDecimal.valueOf(quantity));
+        }
+
+        public ItemSnapshot(UUID variantId, String productName, String variantName, int quantity, BigDecimal unitPrice,
+                int bakeQuantity, UUID sourceSetId, int directUnits, String personalizationText,
+                BigDecimal personalizationFee, Integer stockReservedQuantity) {
+            this(variantId, productName, variantName, quantity, unitPrice, bakeQuantity, sourceSetId, directUnits,
+                    personalizationText, personalizationFee, stockReservedQuantity, null, null, null, null);
         }
 
         public ItemSnapshot(UUID variantId, String productName, String variantName, int quantity, BigDecimal unitPrice,

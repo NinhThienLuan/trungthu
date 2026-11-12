@@ -51,6 +51,10 @@ public class StoreComplianceDoc extends BaseEntity {
     @Column(name = "rejection_reason", length = 500)
     private String rejectionReason;
 
+    @org.hibernate.annotations.Nationalized
+    @Column(name = "verification_note", length = 1000)
+    private String verificationNote;
+
     @PrePersist
     protected void setSubmittedAt() {
         if (submittedAt == null) {

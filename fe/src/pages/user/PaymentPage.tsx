@@ -62,6 +62,9 @@ export function PaymentPage() {
           )}
           {selected && (
             <section key={selected.id} className="card p-5 md:p-6">
+              <p className="mb-4 rounded-sm bg-champagne/40 p-3 text-small font-semibold text-navy">
+                Ngày nhận hàng dự kiến: {formatDate(selected.deliveryDate)}. Xem tiến độ giao hàng trong Đơn của tôi.
+              </p>
               <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
                 <div>
                   <p className="eyebrow">Đơn {selected.code}</p>
@@ -100,6 +103,11 @@ function OrderSummary({ order }: { order: OrderDetail }) {
           <li key={line.key} className="flex justify-between gap-3">
             <span>
               {line.name}{line.quantity && <span className="text-muted"> × {line.quantity}</span>}
+              {!line.components && line.quantity && line.unitPrice != null && <span className="mt-1 block text-muted">
+                {formatVnd(line.listUnitPrice ?? line.unitPrice)} / bánh × {line.quantity} bánh
+              </span>}
+              {!!line.freeQuantity && <span className="block text-success">Tặng {line.freeQuantity} bánh · tính tiền {line.quantity! - line.freeQuantity} bánh</span>}
+              {line.promotionLabel && <span className="block text-success">{line.promotionLabel}</span>}
               {line.components && <span className="mt-1 block text-muted">
                 Gồm: {line.components.map((item) => `${item.productName} · ${item.variantName} × ${item.quantity}`).join('; ')}
               </span>}

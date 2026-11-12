@@ -1,0 +1,3 @@
+ALTER TABLE order_item ADD COLUMN IF NOT EXISTS list_unit_price NUMERIC(18,2);
+ALTER TABLE order_item ADD COLUMN IF NOT EXISTS free_quantity INTEGER;
+ALTER TABLE order_item ADD COLUMN IF NOT EXISTS promotion_label VARCHAR(150);

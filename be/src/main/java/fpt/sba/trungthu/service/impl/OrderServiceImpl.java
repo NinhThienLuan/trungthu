@@ -117,7 +117,7 @@ public class OrderServiceImpl implements OrderService {
         User provider = findUser(group.providerId(), UserRole.PROVIDER);
         Map<UUID, ProductVariant> variants = findGroupVariants(group);
         BigDecimal subtotal = group.items().stream()
-                .map(item -> item.unitPrice().multiply(BigDecimal.valueOf(item.quantity()))
+                .map(item -> item.lineAmount()
                         .add(item.personalizationFee()))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal total = subtotal.add(group.shippingFee());
@@ -144,8 +144,10 @@ public class OrderServiceImpl implements OrderService {
                 .productName(item.productName()).variantName(item.variantName())
                 .quantity(item.quantity()).stockReservedQuantity(item.stockReservedQuantity())
                 .unitPrice(item.unitPrice()).bakeQuantity(item.bakeQuantity())
+                .listUnitPrice(item.listUnitPrice()).freeQuantity(item.freeQuantity())
+                .promotionLabel(item.promotionLabel())
                 .personalizationText(item.personalizationText()).personalizationFee(item.personalizationFee())
-                .subtotal(item.unitPrice().multiply(BigDecimal.valueOf(item.quantity()))
+                .subtotal(item.lineAmount()
                         .add(item.personalizationFee())).build()).toList());
         if (!cod) {
             paymentRepository.save(PaymentTransaction.builder().order(order)

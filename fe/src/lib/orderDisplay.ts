@@ -5,6 +5,9 @@ export interface DisplayOrderLine {
   name: string
   quantity?: number
   unitPrice?: number
+  listUnitPrice?: number | null
+  freeQuantity?: number | null
+  promotionLabel?: string | null
   boxContents?: string[]
   subtotal: number
   components?: OrderLine[]
@@ -18,7 +21,9 @@ export function displayOrderLines(lines: OrderLine[]): DisplayOrderLine[] {
   lines.forEach((line, index) => {
     if (!line.sourceSetId) {
       result.push({ key: `${line.variantId}-${index}`, name: `${line.productName} · ${line.variantName}`,
-        quantity: line.quantity, unitPrice: line.unitPrice, subtotal: line.subtotal, boxContents: line.boxContents })
+        quantity: line.quantity, unitPrice: line.unitPrice, listUnitPrice: line.listUnitPrice,
+        freeQuantity: line.freeQuantity, promotionLabel: line.promotionLabel,
+        subtotal: line.subtotal, boxContents: line.boxContents })
       return
     }
 

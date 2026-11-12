@@ -19,6 +19,8 @@ import java.time.ZoneId;
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
+import java.util.Map;
+import java.util.TreeMap;
 
 @Service
 @RequiredArgsConstructor
@@ -34,7 +36,7 @@ public class RfqDeliveryEstimator {
 
     @Transactional(readOnly = true)
     public Estimate estimate(int boxes, int cakesPerBox, UUID providerId) {
-        if (boxes < 20 || cakesPerBox < 1 || cakesPerBox > 100) {
+        if (boxes < 1 || cakesPerBox < 1 || cakesPerBox > 100) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Số hộp hoặc số bánh mỗi hộp không hợp lệ");
         }
         int cakes;
@@ -49,14 +51,43 @@ public class RfqDeliveryEstimator {
                         UserRole.PROVIDER, UserStatus.ACTIVE)
                 : users.findById(providerId).filter(user -> user.getRole() == UserRole.PROVIDER
                         && user.getStatus() == UserStatus.ACTIVE).stream().toList();
-        return candidates.stream().filter(provider -> subscriptions
+        List<User> eligible = candidates.stream().filter(provider -> subscriptions
                         .existsByProviderIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
-                                provider.getId(), SubscriptionStatus.ACTIVE, today, today))
+                                provider.getId(), SubscriptionStatus.ACTIVE, today, today)).toList();
+        Estimate single = eligible.stream()
                 .map(provider -> estimateForProvider(provider, cakes, today))
                 .filter(estimate -> estimate != null)
                 .min(Comparator.comparing(Estimate::earliestDeliveryDate))
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT,
-                        "Chưa có xưởng đủ suất nướng trong 120 ngày tới"));
+                .orElse(null);
+        if (providerId != null) return single != null ? single : unavailable();
+        Estimate combined = estimateCombined(eligible, cakes, today);
+        if (combined != null && (single == null || combined.earliestDeliveryDate().isBefore(single.earliestDeliveryDate()))) {
+            return combined;
+        }
+        return single != null ? single : unavailable();
+    }
+
+    private Estimate estimateCombined(List<User> providers, int cakes, LocalDate today) {
+        Map<LocalDate, Integer> freeByDate = new TreeMap<>();
+        for (User provider : providers) {
+            for (DailyCapacity day : capacities.findByProviderIdAndCapacityDateBetweenOrderByCapacityDateAsc(
+                    provider.getId(), today.plusDays(1), today.plusDays(HORIZON_DAYS - 1))) {
+                int free = Math.max(0, day.getMaxQuantity() - day.getReservedQuantity());
+                if (free > 0) freeByDate.merge(day.getCapacityDate(), free, Integer::sum);
+            }
+        }
+        int remaining = cakes;
+        int days = 0;
+        for (var day : freeByDate.entrySet()) {
+            remaining -= Math.min(remaining, day.getValue());
+            days++;
+            if (remaining == 0) return new Estimate(day.getKey().plusDays(1), null, cakes, days);
+        }
+        return null;
+    }
+
+    private Estimate unavailable() {
+        throw new ResponseStatusException(HttpStatus.CONFLICT, "Chưa có xưởng đủ suất nướng trong 120 ngày tới");
     }
 
     private Estimate estimateForProvider(User provider, int cakes, LocalDate today) {

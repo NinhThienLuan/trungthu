@@ -19,6 +19,7 @@ export interface CheckoutLine {
   variantId?: string
   setProductId?: string
   quantity: number
+  promotionId?: string
   /** Hộp tự phối: variant bánh lẻ cho từng ô, đủ đúng sức chứa hộp */
   boxContents?: string[]
 }
@@ -115,6 +116,9 @@ export interface OrderLine {
   variantName: string
   quantity: number
   unitPrice: number
+  listUnitPrice?: number | null
+  freeQuantity?: number | null
+  promotionLabel?: string | null
   subtotal: number
   /** [Phase 2 — FE] Tên bánh trong hộp tự phối */
   boxContents?: string[]
@@ -236,8 +240,20 @@ export interface QuoteResponse {
 export type BulkOrderStatus = 'WAITING_DEPOSIT' | 'PRODUCTION' | 'READY_TO_SHIP' | 'DELIVERING'
   | 'WAITING_BALANCE' | 'COMPLETED' | 'CANCELLED'
 
+export interface BulkVietQrInstruction {
+  imageUrl: string
+  bankCode: string
+  accountNumber: string
+  accountName: string
+  amount: number
+  transferContent: string
+}
+
 export interface BulkOrderResponse {
   id: string
+  groupId: string | null
+  groupQuantity: number
+  groupTotalAmount: number
   requestId: string
   quoteId: string
   requestCode: string

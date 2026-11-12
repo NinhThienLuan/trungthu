@@ -184,12 +184,17 @@ public class ComplianceServiceImpl implements ComplianceService {
                     throw new IllegalArgumentException("Rejection reason is required when rejecting document");
                 }
             }
+            if (request.getNewStatus() == ComplianceDocStatus.APPROVED
+                    && (request.getVerificationNote() == null || request.getVerificationNote().isBlank())) {
+                throw new IllegalArgumentException("Cần ghi nguồn và cách đối chiếu trước khi duyệt");
+            }
 
             // Update document
             doc.transitionVerificationStatus(request.getNewStatus());
             doc.setVerifiedAt(LocalDateTime.now());
             doc.setVerifiedBy(security.getCurrentUser());
             doc.setRejectionReason(request.getRejectionReason());
+            doc.setVerificationNote(request.getVerificationNote() == null ? null : request.getVerificationNote().trim());
 
             StoreComplianceDoc updatedDoc = complianceDocRepository.save(doc);
             
@@ -224,12 +229,15 @@ public class ComplianceServiceImpl implements ComplianceService {
     private ComplianceDocResponse mapToResponse(StoreComplianceDoc doc) {
         return ComplianceDocResponse.builder()
                 .id(doc.getId())
+                .providerRejectionCount(complianceDocRepository.countByProviderIdAndVerificationStatus(
+                        doc.getProvider().getId(), ComplianceDocStatus.REJECTED))
                 .providerEmail(doc.getProvider().getEmail())
                 .providerName(doc.getProvider().getFullName())
                 .documentType(doc.getDocumentType())
                 .documentUrl(doc.getDocumentUrl())
                 .verificationStatus(doc.getVerificationStatus())
                 .rejectionReason(doc.getRejectionReason())
+                .verificationNote(doc.getVerificationNote())
                 .verifiedByEmail(doc.getVerifiedBy() != null ? doc.getVerifiedBy().getEmail() : null)
                 .verifiedAt(doc.getVerifiedAt())
                 .submittedAt(doc.getSubmittedAt())

@@ -12,6 +12,7 @@ public record BulkOrderResponse(UUID id, UUID requestId, UUID quoteId, String re
         BigDecimal grossAmount, BigDecimal discountAmount, BigDecimal totalAmount,
         BigDecimal depositAmount, LocalDate deliveryDate, LocalDateTime depositDeadline,
         String recipientName, String recipientPhone, String deliveryAddress,
-        BulkOrderStatus status, List<Day> productionDays) {
+        BulkOrderStatus status, List<Day> productionDays,
+        UUID groupId, int groupQuantity, BigDecimal groupTotalAmount) {
     public record Day(UUID id, LocalDate date, int cakes, boolean completed) {}
 }

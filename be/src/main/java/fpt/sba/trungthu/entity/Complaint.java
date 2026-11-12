@@ -43,6 +43,9 @@ public class Complaint extends CreatedEntity {
     @Column(name = "description", length = 100000)
     private String description;
 
+    @Column(name = "image_url", length = 2000)
+    private String imageUrl;
+
     // Trạng thái khiếu nại: OPEN → IN_PROGRESS → RESOLVED / CLOSED / REJECTED
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 30)

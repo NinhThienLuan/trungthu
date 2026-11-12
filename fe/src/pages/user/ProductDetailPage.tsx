@@ -367,6 +367,7 @@ export function ProductDetailPage() {
             {tab === 'reviews' && (
               <div className="tab-panel py-space-lg" id="tab-reviews">
                 <ProductReviews />
+                <Link to={`/stores/${product.providerId}/reviews`} className="mt-3 inline-block text-small font-semibold text-secondary underline">Xem đánh giá gian hàng {product.storeName}</Link>
               </div>
             )}{' '}
           </div>{' '}

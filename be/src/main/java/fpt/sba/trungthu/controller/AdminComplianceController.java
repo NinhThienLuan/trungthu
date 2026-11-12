@@ -51,13 +51,14 @@ public class AdminComplianceController {
     @PutMapping("/{docId}/approve")
     @Operation(summary = "Approve compliance document")
     public ResponseEntity<ApiResponseDTO<ComplianceDocResponse>> approveDocument(
-            @PathVariable UUID docId) {
+            @PathVariable UUID docId, @RequestParam String verificationNote) {
 
         log.info("Admin approving compliance document: {}", docId);
 
         try {
             ReviewComplianceDocRequest request = ReviewComplianceDocRequest.builder()
                     .newStatus(ComplianceDocStatus.APPROVED)
+                    .verificationNote(verificationNote)
                     .build();
 
             ComplianceDocResponse response = complianceService.reviewDocument(docId, request);

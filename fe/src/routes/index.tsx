@@ -10,6 +10,8 @@ import { CartPage } from '../pages/user/CartPage'
 import { CheckoutPage } from '../pages/user/CheckoutPage'
 import { PaymentPage } from '../pages/user/PaymentPage'
 import { MyOrdersPage } from '../pages/user/MyOrdersPage'
+import { MyComplaintsPage } from '../pages/user/MyComplaintsPage'
+import { StoreReviewsPage } from '../pages/user/StoreReviewsPage'
 import { OrderDetailPage } from '../pages/user/OrderDetailPage'
 import { PolicyPage } from '../pages/user/PolicyPage'
 import { LoginPage } from '../pages/auth/LoginPage'
@@ -53,6 +55,7 @@ export const router = createBrowserRouter([
           { path: '/', element: stitch('', <RfqFormCatcher><HomePage /></RfqFormCatcher>) },
           { path: '/products', element: stitch('Bộ sưu tập', <CatalogPage />) },
           { path: '/products/:id', element: stitch(undefined, <ProductDetailPage />) },
+          { path: '/stores/:providerId/reviews', element: <StoreReviewsPage /> },
           { path: '/box-builder', element: <BoxBuilderPage /> },
           { path: '/rfq', element: stitch('Báo giá doanh nghiệp', <RfqPortalPage />) },
           // Đặt sỉ đi qua RFQ (báo giá -> chấp nhận); link cũ chuyển về đó
@@ -74,6 +77,7 @@ export const router = createBrowserRouter([
               { path: '/checkout', element: <CheckoutPage /> },
               { path: '/payment', element: <PaymentPage /> },
               { path: '/orders', element: <MyOrdersPage /> },
+              { path: '/complaints', element: <MyComplaintsPage /> },
               { path: '/orders/:id', element: <OrderDetailPage /> },
             ],
           },

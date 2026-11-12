@@ -237,6 +237,7 @@ class ComplianceFlowIntegrationTests {
     private ReviewComplianceDocRequest approveRequest() {
         return ReviewComplianceDocRequest.builder()
                 .newStatus(ComplianceDocStatus.APPROVED)
+                .verificationNote("Đối chiếu số giấy phép với cơ quan cấp")
                 .build();
     }
 

@@ -34,12 +34,18 @@ export interface Complaint {
   resolution: string | null
   createdAt: string
   resolvedAt: string | null
+  imageUrl: string | null
 }
 
 /** Khiếu nại / đổi trả: khách gửi cho đơn đang giao/đã hoàn tất; xưởng xử lý; admin sàn phân xử */
 export const complaintService = {
-  create: (body: { orderId: string; type: ComplaintType; subject: string; description?: string }) =>
-    unwrap(http.post<ApiResponse<Complaint>>('/complaints', body)),
+  create: (body: { orderId: string; type: ComplaintType; subject: string; description?: string }, image?: File) => {
+    if (!image) return unwrap(http.post<ApiResponse<Complaint>>('/complaints', body))
+    const form = new FormData()
+    form.append('request', new Blob([JSON.stringify(body)], { type: 'application/json' }))
+    form.append('image', image)
+    return unwrap(http.post<ApiResponse<Complaint>>('/complaints', form, { headers: { 'Content-Type': 'multipart/form-data' } }))
+  },
   mine: () => unwrap(http.get<ApiResponse<Complaint[]>>('/complaints/me')),
   forProvider: () => unwrap(http.get<ApiResponse<Complaint[]>>('/provider/complaints')),
   all: () => unwrap(http.get<ApiResponse<Complaint[]>>('/admin/complaints')),

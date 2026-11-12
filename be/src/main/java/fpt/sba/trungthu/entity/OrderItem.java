@@ -64,6 +64,15 @@ public class OrderItem extends CreatedEntity {
     @Column(name = "unit_price", nullable = false, precision = 18, scale = 2)
     private BigDecimal unitPrice;
 
+    @Column(name = "list_unit_price", precision = 18, scale = 2)
+    private BigDecimal listUnitPrice;
+
+    @Column(name = "free_quantity")
+    private Integer freeQuantity;
+
+    @Column(name = "promotion_label", length = 150)
+    private String promotionLabel;
+
     @org.hibernate.annotations.Nationalized
     @Column(name = "personalization_text", length = 50)
     private String personalizationText;

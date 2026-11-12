@@ -18,7 +18,7 @@ export const bakeUnitsOf = (items: CartItem[]) =>
     : item.canPreorder && !item.setProductId ? item.quantity : 0), 0)
 
 export const toCheckoutGroups = (cart: CartItem[], dates: Record<string, string>,
-  choices: Record<string, PayChoice>): CheckoutGroup[] =>
+  choices: Record<string, PayChoice>, promotions: Record<string, string> = {}): CheckoutGroup[] =>
   groupByProvider(cart).map((group) => {
     const choice = choices[group.providerId] ?? 'MIN_DEPOSIT'
     return {
@@ -31,6 +31,6 @@ export const toCheckoutGroups = (cart: CartItem[], dates: Record<string, string>
         item.setProductId ? { setProductId: item.setProductId, quantity: item.quantity }
           : item.kind === 'box'
             ? { variantId: item.variantId, quantity: item.quantity, boxContents: (item.slots ?? []).map((slot) => slot.variantId) }
-            : { variantId: item.variantId, quantity: item.quantity }),
+            : { variantId: item.variantId, quantity: item.quantity, promotionId: promotions[item.variantId] }),
     }
   })

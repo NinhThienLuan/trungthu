@@ -3,6 +3,7 @@ import { Navigate, useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import { Plus, Trash2 } from 'lucide-react'
 import { orderService } from '../../services/orderService'
+import { promotionService } from '../../services/sellerService'
 import { errorMessage } from '../../apis/http'
 import { groupByProvider, useCartStore, type CartItem } from '../../stores/cartStore'
 import { useAuthStore } from '../../stores/authStore'
@@ -75,6 +76,8 @@ export function CheckoutPage() {
   const navigate = useNavigate()
   const [wantVat, setWantVat] = useState(false)
   const [choices, setChoices] = useState<Record<string, PayChoice>>({})
+  const [selectedPromotions, setSelectedPromotions] = useState<Record<string, string>>({})
+  const { data: runningPromotions, loading: promotionsLoading, error: promotionsError } = useApi(() => promotionService.running(), [])
   const [recipients, setRecipients] = useState<Recipient[]>(() => [newRecipient(user?.fullName ?? '', user?.phone ?? '')])
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitError, setSubmitError] = useState<string>()
@@ -97,9 +100,9 @@ export function CheckoutPage() {
   const { data: previews, loading: previewLoading, error: previewError } = useApi(
     (): Promise<CheckoutPreview[] | null> => ready && overAllocated.length === 0
       ? Promise.all(active.map(({ cart }) => orderService.preview(
-          { receiverName: '', receiverPhone: '', shippingAddress: '', groups: toCheckoutGroups(cart, deliveryDates, {}) })))
+          { receiverName: '', receiverPhone: '', shippingAddress: '', groups: toCheckoutGroups(cart, deliveryDates, {}, selectedPromotions) })))
       : Promise.resolve(null),
-    [items, deliveryDates, allocationKey],
+    [items, deliveryDates, allocationKey, selectedPromotions],
   )
 
   // Đã đặt xong thì giỏ trống là bình thường: đừng chuyển về /cart, chờ sang trang QR
@@ -156,7 +159,7 @@ export function CheckoutPage() {
         receiverPhone: '',
         shippingAddress: '',
         vat: vatCheck.success ? vatCheck.data.vat : undefined,
-        groups: active.flatMap(({ r, cart }) => toCheckoutGroups(cart, deliveryDates, effectiveChoices).map((g) => ({
+        groups: active.flatMap(({ r, cart }) => toCheckoutGroups(cart, deliveryDates, effectiveChoices, selectedPromotions).map((g) => ({
           ...g, receiverName: r.name.trim(), receiverPhone: r.phone.trim(), shippingAddress: fullAddress(r),
         }))),
       })
@@ -242,6 +245,31 @@ export function CheckoutPage() {
               Số lượng chia cho người nhận vượt quá số trong giỏ: {overAllocated.map((i) => i.productName).join(', ')}.
             </Notice>
           )}
+
+          {items.some((item) => item.kind === 'single' && !item.setProductId && runningPromotions?.some((promotion) =>
+            promotion.providerId === item.providerId && (!promotion.productId || promotion.productId === item.productId))) &&
+            <section className="card p-5 md:p-6">
+              <h2 className="text-h3">Chọn ưu đãi khuyến mãi</h2>
+              <p className="mt-1 text-small text-muted">Ưu đãi được tính riêng cho mỗi người nhận. Nếu để tự động, hệ thống chọn mức giảm cao nhất.</p>
+              <div className="mt-4 flex flex-col gap-4">{items.filter((item) => item.kind === 'single' && !item.setProductId).map((item) => {
+                const options = (runningPromotions ?? []).filter((promotion) => promotion.providerId === item.providerId
+                  && (!promotion.productId || promotion.productId === item.productId)
+                  && active.every(({ cart }) => {
+                    const quantity = cart.find((line) => line.variantId === item.variantId)?.quantity ?? 0
+                    return quantity === 0 || (promotion.type === 'PERCENT_OFF'
+                      ? quantity >= (promotion.minQuantity ?? Infinity)
+                      : quantity >= (promotion.buyQuantity ?? Infinity) + (promotion.freeQuantity ?? Infinity))
+                  }))
+                if (!options.length) return null
+                return <label key={item.lineId} className="text-small font-semibold text-navy">{item.productName} · {item.variantName}
+                  <select className="input mt-1" value={selectedPromotions[item.variantId] ?? ''}
+                    onChange={(event) => setSelectedPromotions((current) => ({ ...current, [item.variantId]: event.target.value }))}>
+                    <option value="">Tự động chọn ưu đãi tốt nhất</option>
+                    {options.map((promotion) => <option key={promotion.id} value={promotion.id}>{promotion.label}</option>)}
+                  </select>
+                </label>
+              })}</div>
+            </section>}
 
           <section className="card p-5 md:p-6" aria-labelledby="pay-title">
             <h2 id="pay-title" className="text-h3">Thanh toán</h2>
@@ -348,9 +376,10 @@ export function CheckoutPage() {
               <dd>{formatVnd(grandTotal - payNow)}</dd>
             </div>
           </dl>
+          {promotionsError && <div className="mt-4"><Notice tone="danger">Không tải được ưu đãi: {promotionsError}</Notice></div>}
           {submitError && <div className="mt-4"><Notice tone="danger">{submitError}</Notice></div>}
           <button type="submit" className="btn btn-primary mt-5 w-full"
-            disabled={submitting || previewLoading || !!previewError || overAllocated.length > 0 || active.length === 0}>
+            disabled={submitting || previewLoading || promotionsLoading || !!promotionsError || !!previewError || overAllocated.length > 0 || active.length === 0}>
             {submitting ? 'Đang giữ chỗ...' : active.length > 1 ? `Xác nhận đặt ${active.length} đơn giao` : 'Xác nhận đặt hàng'}
           </button>
         </aside>

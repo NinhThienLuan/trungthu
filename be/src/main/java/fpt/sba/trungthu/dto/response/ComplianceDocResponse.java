@@ -16,12 +16,14 @@ import java.util.UUID;
 @AllArgsConstructor
 public class ComplianceDocResponse {
     private UUID id;
+    private long providerRejectionCount;
     private String providerEmail;
     private String providerName;
     private ComplianceDocType documentType;
     private String documentUrl;
     private ComplianceDocStatus verificationStatus;
     private String rejectionReason;
+    private String verificationNote;
     private String verifiedByEmail;
     private LocalDateTime verifiedAt;
     private LocalDateTime submittedAt;

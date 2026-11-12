@@ -87,4 +87,13 @@ public class RfqController {
             @PathVariable UUID quoteId) {
         return ResponseEntity.ok(ApiResponseDTO.success(rfqService.acceptQuote(requestId, quoteId)));
     }
+
+    public record AcceptQuotesRequest(@jakarta.validation.constraints.NotEmpty List<@jakarta.validation.constraints.NotNull UUID> quoteIds) {}
+
+    @PostMapping("/api/rfqs/{requestId}/accept-quotes")
+    @PreAuthorize("hasRole('CUSTOMER')")
+    public ResponseEntity<ApiResponseDTO<List<QuoteResponse>>> acceptQuotes(@PathVariable UUID requestId,
+            @Valid @RequestBody AcceptQuotesRequest input) {
+        return ResponseEntity.ok(ApiResponseDTO.success(rfqService.acceptQuotes(requestId, input.quoteIds())));
+    }
 }

@@ -18,6 +18,10 @@ public class BulkOrder extends BaseEntity {
     @JoinColumn(name = "quote_id", nullable = false)
     private ProviderQuotation quote;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "group_id")
+    private BulkOrderGroup group;
+
     @Column(name = "quantity", nullable = false)
     private int quantity;
     @Column(name = "cakes_per_box", nullable = false)

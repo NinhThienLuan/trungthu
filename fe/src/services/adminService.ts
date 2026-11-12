@@ -5,6 +5,7 @@ import type { ComplianceDoc } from './sellerService'
 export type ComplianceStatus = ComplianceDoc['verificationStatus']
 
 export interface AdminComplianceDoc extends ComplianceDoc {
+  providerRejectionCount: number
   providerEmail: string
   providerName: string | null
   verifiedByEmail: string | null
@@ -61,7 +62,8 @@ export const adminService = {
   dashboard: () => unwrap(http.get<ApiResponse<AdminDashboardData>>('/admin/dashboard')),
   documents: (status: ComplianceStatus) =>
     unwrap(http.get<ApiResponse<AdminComplianceDoc[]>>(`/admin/compliance/status/${status}`)),
-  approve: (id: string) => unwrap(http.put<ApiResponse<AdminComplianceDoc>>(`/admin/compliance/${id}/approve`)),
+  approve: (id: string, verificationNote: string) =>
+    unwrap(http.put<ApiResponse<AdminComplianceDoc>>(`/admin/compliance/${id}/approve`, null, { params: { verificationNote } })),
   reject: (id: string, reason: string) =>
     unwrap(http.put<ApiResponse<AdminComplianceDoc>>(`/admin/compliance/${id}/reject`, null, { params: { reason } })),
 }

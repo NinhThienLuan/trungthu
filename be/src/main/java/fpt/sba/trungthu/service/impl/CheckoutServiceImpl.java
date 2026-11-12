@@ -92,7 +92,13 @@ public class CheckoutServiceImpl implements CheckoutService {
                         plan.deliveryDate(), null, futureBake));
                 snaps.add(new Snap(plan.provider().getId(), line.variant().getId(),
                         line.variant().getProduct().getName(), line.variantName(), line.quantity(),
-                        line.unitPrice(), line.personalizationText(), line.personalizationFee()));
+                        line.unitPrice(), line.personalizationText(), line.personalizationFee(),
+                        line.amount(),
+                        line.variant().getPrice(), line.promotion() == null ? 0
+                                : line.promotion().getType() == PromotionType.BUY_X_GET_Y
+                                    ? line.quantity() / (line.promotion().getBuyQuantity() + line.promotion().getFreeQuantity())
+                                            * line.promotion().getFreeQuantity() : 0,
+                        line.promotion() == null ? null : line.promotion().label()));
             }
             List<ReservedLineResponse> reserved = inventory.reserve(new ReserveStockCommand(reserveLines));
             UUID capacityId = reserved.stream().map(ReservedLineResponse::capacityId).filter(Objects::nonNull)
@@ -108,7 +114,8 @@ public class CheckoutServiceImpl implements CheckoutService {
                 return new CreateOrdersCommand.ItemSnapshot(snap.variantId(), snap.productName(),
                         snap.variantName(), snap.quantity(), snap.unitPrice(), held.bakeQuantity(),
                         null, 0, snap.personalizationText(), snap.personalizationFee(),
-                        held.stockReservedQuantity());
+                        held.stockReservedQuantity(), snap.listUnitPrice(), snap.freeQuantity(), snap.promotionLabel(),
+                        snap.lineAmount());
             }).toList());
             reserved.stream()
                     .filter(line -> line.sourceSetId() != null)
@@ -185,6 +192,12 @@ public class CheckoutServiceImpl implements CheckoutService {
                 throw badRequest("Custom box combinations are not supported in MVP");
             }
             if (group.deliveryDate() == null) throw badRequest("Vui lòng chọn ngày nhận hàng");
+            Map<UUID, UUID> chosenPromotions = new HashMap<>();
+            for (CheckoutRequest.Item item : group.items()) {
+                if (item != null && item.variantId() != null && item.promotionId() != null) {
+                    chosenPromotions.put(item.variantId(), item.promotionId());
+                }
+            }
             List<CheckoutRequest.Item> sortedItems = new ArrayList<>(group.items());
             if (sortedItems.stream().anyMatch(item -> item == null
                     || (item.variantId() == null) == (item.setProductId() == null)
@@ -298,7 +311,7 @@ public class CheckoutServiceImpl implements CheckoutService {
             for (Line line : lines) {
                 BigDecimal fee = line.personalizationText() != null && personalizedBoxes < 5
                         ? PRINT_FEE.multiply(BigDecimal.valueOf(line.quantity())) : BigDecimal.ZERO;
-                Line priced = line.set() != null ? line : promote(line, running);
+                Line priced = line.set() != null ? line : promote(line, running, chosenPromotions.get(line.id()));
                 merchandise = merchandise.add(priced.amount());
                 personalization = personalization.add(fee);
                 pricedLines.add(new Line(priced.variant(), priced.set(), priced.quantity(), priced.bakeQuantity(),
@@ -446,15 +459,13 @@ public class CheckoutServiceImpl implements CheckoutService {
         return value;
     }
 
-    /**
-     * Khuyến mãi giảm nhiều nhất cho dòng lẻ. Đơn giá sau giảm làm tròn xuống đồng chẵn (có lợi cho khách)
-     * để tổng đơn = đơn giá × số lượng, không ra số lẻ.
-     */
-    private static Line promote(Line line, List<Promotion> running) {
+    /** Khuyến mãi giảm nhiều nhất cho dòng lẻ; tổng dòng giữ đúng số tiền được giảm. */
+    private static Line promote(Line line, List<Promotion> running, UUID chosenId) {
         BigDecimal list = line.variant().getPrice().multiply(BigDecimal.valueOf(line.quantity()));
         Promotion best = null;
         BigDecimal bestDiscount = BigDecimal.ZERO;
         for (Promotion promotion : running) {
+            if (chosenId != null && !chosenId.equals(promotion.getId())) continue;
             if (!promotion.covers(line.variant().getProduct())) continue;
             BigDecimal discount = promotion.discountFor(line.variant().getPrice(), line.quantity());
             if (discount.compareTo(bestDiscount) > 0) {
@@ -462,10 +473,10 @@ public class CheckoutServiceImpl implements CheckoutService {
                 bestDiscount = discount;
             }
         }
+        if (chosenId != null && best == null) throw badRequest("Ưu đãi đã chọn không còn áp dụng cho sản phẩm này");
         if (best == null) return line;
-        BigDecimal unit = list.subtract(bestDiscount).divide(BigDecimal.valueOf(line.quantity()), 0, RoundingMode.FLOOR);
         return new Line(line.variant(), null, line.quantity(), line.bakeQuantity(), line.personalizationText(),
-                line.personalizationFee(), unit.multiply(BigDecimal.valueOf(line.quantity())), list, best, line.contents());
+                line.personalizationFee(), list.subtract(bestDiscount), list, best, line.contents());
     }
 
     /**
@@ -489,9 +500,9 @@ public class CheckoutServiceImpl implements CheckoutService {
         for (CheckoutRequest.Item item : items) {
             Integer extra = item.variantId() == null ? null : cakes.remove(item.variantId());
             result.add(extra == null ? item : new CheckoutRequest.Item(item.variantId(), item.setProductId(),
-                    Math.addExact(item.quantity(), extra), item.personalizationText(), item.boxContents()));
+                    Math.addExact(item.quantity(), extra), item.personalizationText(), item.boxContents(), item.promotionId()));
         }
-        cakes.forEach((cake, quantity) -> result.add(new CheckoutRequest.Item(cake, null, quantity, null, null)));
+        cakes.forEach((cake, quantity) -> result.add(new CheckoutRequest.Item(cake, null, quantity, null, null, null)));
         return result;
     }
 
@@ -527,7 +538,7 @@ public class CheckoutServiceImpl implements CheckoutService {
         return half.divide(THOUSAND, 0, RoundingMode.CEILING).multiply(THOUSAND).min(total);
     }
 
-    private ResponseStatusException badRequest(String message) {
+    private static ResponseStatusException badRequest(String message) {
         return new ResponseStatusException(HttpStatus.BAD_REQUEST, message);
     }
 
@@ -536,7 +547,8 @@ public class CheckoutServiceImpl implements CheckoutService {
     }
 
     private record Snap(UUID providerId, UUID variantId, String productName, String variantName, int quantity,
-            BigDecimal unitPrice, String personalizationText, BigDecimal personalizationFee) {}
+            BigDecimal unitPrice, String personalizationText, BigDecimal personalizationFee,
+            BigDecimal lineAmount, BigDecimal listUnitPrice, int freeQuantity, String promotionLabel) {}
 
     /** variant = dòng lẻ; set = dòng set quà (variant null). amount = tiền hàng, listAmount = theo giá gốc */
     private record Line(ProductVariant variant, Product set, int quantity, int bakeQuantity,

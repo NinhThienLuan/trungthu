@@ -19,4 +19,7 @@ public class ReviewComplianceDocRequest {
     
     @Size(max = 500, message = "Rejection reason must not exceed 500 characters")
     private String rejectionReason; // required if newStatus = REJECTED
+
+    @Size(max = 1000)
+    private String verificationNote;
 }

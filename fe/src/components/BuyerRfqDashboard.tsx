@@ -27,20 +27,26 @@ export function BuyerRfqDashboard({ created }: { created?: RfqResponse | null })
   const [version, setVersion] = useState(0)
   const [message, setMessage] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [selectedQuoteIds, setSelectedQuoteIds] = useState<Record<string, string[]>>({})
   const list = useApi(() => (isBuyer ? rfqService.mine() : Promise.resolve([])), [isBuyer, created?.id, version])
   const requestId = selected ?? created?.id ?? list.data?.[0]?.id
   const quotes = useApi(
     () => (requestId && isBuyer ? rfqService.quotes(requestId) : Promise.resolve([])),
     [requestId, isBuyer, version],
   )
+  const currentRfq = list.data?.find((item) => item.id === requestId)
+  const chosenIds = selectedQuoteIds[requestId ?? ''] ?? []
+  const chosenQuantity = (quotes.data ?? []).filter((quote) => chosenIds.includes(quote.id))
+    .reduce((total, quote) => total + quote.offeredQuantity, 0)
 
-  const accept = async (quoteId: string) => {
+  const accept = async (quoteIds: string[]) => {
     if (!requestId || busy) return
     setBusy(true)
     setMessage(null)
     try {
-      await rfqService.acceptQuote(requestId, quoteId)
+      await rfqService.acceptQuotes(requestId, quoteIds)
       setMessage('Đã tạo đơn sỉ và giữ lịch nướng. Vui lòng bổ sung địa chỉ giao và chuyển cọc theo hướng dẫn của xưởng.')
+      setSelectedQuoteIds((current) => ({ ...current, [requestId]: [] }))
       setVersion((value) => value + 1)
     } catch (error) {
       setMessage(errorMessage(error))
@@ -168,7 +174,6 @@ export function BuyerRfqDashboard({ created }: { created?: RfqResponse | null })
             ) : (
               <div className="space-y-3.5">
                 {quotes.data.map((quote) => {
-                  const currentRfq = list.data?.find((item) => item.id === requestId)
                   const isAccepted = quote.status === 'ACCEPTED'
                   const canAccept =
                     quote.status === 'SUBMITTED' &&
@@ -205,6 +210,15 @@ export function BuyerRfqDashboard({ created }: { created?: RfqResponse | null })
                         </div>
                       </div>
                       <p className="mt-1 text-xs text-muted">{quote.offeredQuantity * quote.cakesPerBox} bánh · Thành tiền {formatVnd(quote.grossAmount)} · Chiết khấu {formatVnd(quote.discountAmount)} · Cọc 50% {formatVnd(quote.depositAmount)}</p>
+                      {canAccept && <label className="mt-2 flex items-center gap-2 text-small font-semibold text-navy">
+                        <input type="checkbox" className="size-4 accent-navy" checked={chosenIds.includes(quote.id)}
+                          onChange={(event) => setSelectedQuoteIds((current) => {
+                            const previous = current[requestId ?? ''] ?? []
+                            return { ...current, [requestId ?? '']: event.target.checked
+                              ? [...previous, quote.id] : previous.filter((id) => id !== quote.id) }
+                          })} />
+                        Chọn báo giá này ({quote.offeredQuantity} hộp)
+                      </label>}
                       {canAccept && <p className="mt-1 text-xs text-muted">Suất nướng được giữ khi chấp nhận; cọc cần được xác nhận trong 48 giờ hoặc trước khi bắt đầu nướng.</p>}
 
                       {quote.note && (
@@ -240,20 +254,16 @@ export function BuyerRfqDashboard({ created }: { created?: RfqResponse | null })
                         <span>
                           {quote.validUntil ? `Hiệu lực báo giá đến ${formatDate(quote.validUntil)}` : 'Chưa có hạn'}
                         </span>
-                        {canAccept && (
-                          <button
-                            type="button"
-                            disabled={busy}
-                            className="btn btn-primary btn-sm cursor-pointer"
-                            onClick={() => accept(quote.id)}
-                          >
-                            Chấp nhận báo giá xưởng này
-                          </button>
-                        )}
                       </div>
                     </div>
                   )
                 })}
+                {currentRfq?.status === 'QUOTES_RECEIVED' && <div className="rounded-md border border-secondary/40 bg-champagne/30 p-4 text-small">
+                  <p>Đã chọn {chosenQuantity}/{currentRfq.requestedQuantity} hộp từ {chosenIds.length} xưởng.</p>
+                  <p className="text-muted">Tổng số hộp phải đúng yêu cầu để tạo một đơn tổng và các đơn theo xưởng.</p>
+                  <button type="button" className="btn btn-primary btn-sm mt-2" disabled={busy || chosenIds.length === 0 || chosenQuantity !== currentRfq.requestedQuantity}
+                    onClick={() => accept(chosenIds)}>Chốt {chosenIds.length} báo giá</button>
+                </div>}
               </div>
             )}
           </div>

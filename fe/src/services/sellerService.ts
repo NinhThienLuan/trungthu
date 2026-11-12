@@ -74,6 +74,7 @@ export interface ComplianceDoc {
   documentUrl: string
   verificationStatus: 'PENDING' | 'APPROVED' | 'REJECTED' | 'EXPIRED'
   rejectionReason: string | null
+  verificationNote?: string | null
   verifiedAt: string | null
   submittedAt: string
 }

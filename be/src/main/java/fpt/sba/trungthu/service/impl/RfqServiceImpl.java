@@ -188,8 +188,8 @@ public class RfqServiceImpl implements RfqService {
         if (input.validUntil().isBefore(today) || input.estimatedDeliveryDate().isBefore(today)) {
             throw badRequest("Ngày hiệu lực và ngày giao dự kiến không được ở quá khứ");
         }
-        if (input.offeredQuantity() < request.getRequestedQuantity()) {
-            throw badRequest("Số lượng chào giá phải đáp ứng yêu cầu của khách");
+        if (!input.validUntil().isAfter(input.estimatedDeliveryDate())) {
+            throw badRequest("Báo giá phải có hiệu lực sau ngày giao dự kiến");
         }
         BigDecimal gross = input.unitPrice().multiply(BigDecimal.valueOf(input.offeredQuantity()));
         if (gross.precision() - gross.scale() > 16) {
@@ -218,28 +218,49 @@ public class RfqServiceImpl implements RfqService {
     @Override
     @Transactional
     public QuoteResponse acceptQuote(UUID requestId, UUID quoteId) {
+        return acceptQuotes(requestId, List.of(quoteId)).getFirst();
+    }
+
+    @Override
+    @Transactional
+    public List<QuoteResponse> acceptQuotes(UUID requestId, List<UUID> quoteIds) {
         BulkRequest request = requests.findForUpdateById(requestId)
                 .filter(item -> item.getCustomer().getId().equals(security.getCurrentUserId()))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy RFQ"));
         if (request.getStatus() != BulkRequestStatus.QUOTES_RECEIVED) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "RFQ chưa thể chốt báo giá");
         }
-        ProviderQuotation selected = quotations.findById(quoteId)
-                .filter(quote -> quote.getRequest().getId().equals(requestId))
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy báo giá"));
-        if (selected.getStatus() != QuoteStatus.SUBMITTED
-                || selected.getValidUntil() != null && selected.getValidUntil().isBefore(LocalDate.now(VIETNAM))) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Báo giá đã hết hiệu lực");
+        if (quoteIds == null || quoteIds.isEmpty() || quoteIds.size() > 100
+                || quoteIds.stream().anyMatch(java.util.Objects::isNull)
+                || new java.util.HashSet<>(quoteIds).size() != quoteIds.size()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Danh sách báo giá không hợp lệ");
         }
-        bulkOrders.createForAcceptedQuote(selected);
-        selected.transitionStatus(QuoteStatus.ACCEPTED);
+        List<ProviderQuotation> selected = new java.util.ArrayList<>();
+        int totalQuantity = 0;
+        for (UUID quoteId : quoteIds) {
+            ProviderQuotation quote = quotations.findById(quoteId)
+                    .filter(item -> item.getRequest().getId().equals(requestId))
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy báo giá"));
+            if (quote.getStatus() != QuoteStatus.SUBMITTED
+                    || quote.getValidUntil() != null && quote.getValidUntil().isBefore(LocalDate.now(VIETNAM))) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Báo giá đã hết hiệu lực");
+            }
+            totalQuantity = Math.addExact(totalQuantity, quote.getOfferedQuantity());
+            selected.add(quote);
+        }
+        if (totalQuantity != request.getRequestedQuantity()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Tổng số lượng đã chọn phải đúng " + request.getRequestedQuantity() + " hộp");
+        }
+        bulkOrders.createForAcceptedQuotes(request, selected);
+        selected.forEach(quote -> quote.transitionStatus(QuoteStatus.ACCEPTED));
         for (ProviderQuotation quote : quotations.findByRequestIdOrderByQuotedPriceAsc(requestId)) {
-            if (!quote.getId().equals(quoteId) && quote.getStatus() == QuoteStatus.SUBMITTED) {
+            if (!quoteIds.contains(quote.getId()) && quote.getStatus() == QuoteStatus.SUBMITTED) {
                 quote.transitionStatus(QuoteStatus.REJECTED);
             }
         }
         request.transitionStatus(BulkRequestStatus.WON);
-        return toQuoteResponse(selected);
+        return selected.stream().map(this::toQuoteResponse).toList();
     }
 
     private BulkRequest requireOwnedRequest(UUID requestId) {

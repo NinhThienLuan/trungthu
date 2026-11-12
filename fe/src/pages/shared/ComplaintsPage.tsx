@@ -78,6 +78,7 @@ function ComplaintCard({ complaint: c, scope, run }: {
         <span className={cn('font-semibold', COMPLAINT_STATUS[c.status].tone)}>{COMPLAINT_STATUS[c.status].text}</span>
       </div>
       {c.description && <p className="whitespace-pre-line">{c.description}</p>}
+      {c.imageUrl && <a href={c.imageUrl} target="_blank" rel="noopener noreferrer"><img src={c.imageUrl} alt={`Ảnh minh chứng: ${c.subject}`} className="max-h-56 rounded-sm object-contain" /></a>}
       <p className="text-muted">Khách: {c.customerName}{c.customerPhone && ` · ${c.customerPhone}`}</p>
       {c.resolution && <Notice tone={c.status === 'REJECTED' ? 'danger' : 'success'}>{c.status === 'REJECTED' ? 'Lý do từ chối' : 'Cách xử lý'}: {c.resolution}</Notice>}
       {!done && (closing ? (

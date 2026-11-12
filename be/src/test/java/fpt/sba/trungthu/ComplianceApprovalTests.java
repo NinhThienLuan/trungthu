@@ -52,7 +52,8 @@ class ComplianceApprovalTests {
     }
 
     private static ReviewComplianceDocRequest review(ComplianceDocStatus status, String reason) {
-        return ReviewComplianceDocRequest.builder().newStatus(status).rejectionReason(reason).build();
+        return ReviewComplianceDocRequest.builder().newStatus(status).rejectionReason(reason)
+                .verificationNote(status == ComplianceDocStatus.APPROVED ? "Đối chiếu cơ quan cấp" : null).build();
     }
 
     private StoreComplianceDoc doc(User seller, ComplianceDocType type) {

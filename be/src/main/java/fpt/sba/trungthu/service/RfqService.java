@@ -17,4 +17,5 @@ public interface RfqService {
     QuoteResponse reviseQuote(UUID requestId, UUID quoteId, SubmitQuoteRequest input);
     List<QuoteResponse> quotes(UUID requestId);
     QuoteResponse acceptQuote(UUID requestId, UUID quoteId);
+    List<QuoteResponse> acceptQuotes(UUID requestId, List<UUID> quoteIds);
 }

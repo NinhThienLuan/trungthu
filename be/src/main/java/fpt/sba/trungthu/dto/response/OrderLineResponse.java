@@ -16,6 +16,9 @@ public class OrderLineResponse {
     private String variantName;
     private int quantity;
     private BigDecimal unitPrice;
+    private BigDecimal listUnitPrice;
+    private Integer freeQuantity;
+    private String promotionLabel;
     private String personalizationText;
     private BigDecimal personalizationFee;
     private BigDecimal subtotal;

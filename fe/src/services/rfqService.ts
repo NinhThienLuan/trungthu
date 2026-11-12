@@ -1,6 +1,6 @@
 import { http, unwrap } from '../apis/http'
 import type { ApiResponse } from '../types/api'
-import type { BulkOrderResponse, QuoteResponse, RfqRequest, RfqResponse, SubmitQuoteRequest } from '../types/order'
+import type { BulkOrderResponse, BulkVietQrInstruction, QuoteResponse, RfqRequest, RfqResponse, SubmitQuoteRequest } from '../types/order'
 
 export const rfqService = {
   earliestDelivery: (boxes: number, cakesPerBox: number, providerId?: string) =>
@@ -18,8 +18,11 @@ export const rfqService = {
   quotes: (requestId: string) => unwrap(http.get<ApiResponse<QuoteResponse[]>>(`/rfqs/${requestId}/quotes`)),
   acceptQuote: (requestId: string, quoteId: string) =>
     unwrap(http.post<ApiResponse<QuoteResponse>>(`/rfqs/${requestId}/quotes/${quoteId}/accept`)),
+  acceptQuotes: (requestId: string, quoteIds: string[]) =>
+    unwrap(http.post<ApiResponse<QuoteResponse[]>>(`/rfqs/${requestId}/accept-quotes`, { quoteIds })),
   buyerOrders: () => unwrap(http.get<ApiResponse<BulkOrderResponse[]>>('/bulk-orders/me')),
   providerOrders: () => unwrap(http.get<ApiResponse<BulkOrderResponse[]>>('/provider/bulk-orders')),
+  vietQr: (id: string) => unwrap(http.get<ApiResponse<BulkVietQrInstruction>>(`/bulk-orders/${id}/vietqr`)),
   delivery: (id: string, body: { recipientName: string; recipientPhone: string; deliveryAddress: string }) =>
     unwrap(http.put<ApiResponse<BulkOrderResponse>>(`/bulk-orders/${id}/delivery`, body)),
   cancelOrder: (id: string) => unwrap(http.post<ApiResponse<BulkOrderResponse>>(`/bulk-orders/${id}/cancel`)),

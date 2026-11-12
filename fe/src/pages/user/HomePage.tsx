@@ -6,6 +6,7 @@ import { HeroMotion } from '../../components/HeroMotion'
 import { useApi } from '../../hooks/useApi'
 import { productService } from '../../services/productService'
 import { promotionService } from '../../services/sellerService'
+import { storeReviewService } from '../../services/storeReviewService'
 import { ROUTES } from '../../constants'
 import { formatVnd } from '../../lib/format'
 import type { Product } from '../../types/product'
@@ -510,10 +511,12 @@ function FeaturedProducts({
 }
 
 function FeaturedShops({ shops, loading }: { shops: Shop[]; loading: boolean }) {
+  const reviewKey = shops.map((shop) => shop.providerId).join(',')
+  const { data: reviewGroups } = useApi(() => Promise.all(shops.map((shop) => storeReviewService.byStore(shop.providerId))), [reviewKey])
   if (!loading && shops.length === 0) return null
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-gutter" aria-busy={loading}>
-      {shops.map((shop) => (
+      {shops.map((shop, index) => (
         <div key={shop.providerId} className="rounded-[0.125rem] bg-surface-container-lowest border border-border-gold-subtle p-space-md shadow-sm hover:shadow-xl transition-all flex flex-col justify-between">
           <div className="flex flex-col gap-space-sm">
             <div className="relative h-48 w-full rounded-[0.125rem] overflow-hidden bg-surface-container border border-border-gold-subtle/50">
@@ -523,6 +526,10 @@ function FeaturedShops({ shops, loading }: { shops: Shop[]; loading: boolean }) 
               {shop.productCount} sản phẩm đang bán
             </span>
             <h3 className="font-headline-sm text-headline-sm text-primary">{shop.storeName}</h3>
+            {!!reviewGroups?.[index]?.length && <p className="text-small font-semibold text-gold-ink">
+              ★ {(reviewGroups[index].reduce((total, review) => total + review.rating, 0) / reviewGroups[index].length).toFixed(1)} · {reviewGroups[index].length} đánh giá
+            </p>}
+            <Link to={`/stores/${shop.providerId}/reviews`} className="text-small font-semibold text-secondary underline">Xem đánh giá của khách hàng</Link>
           </div>
           <div className="pt-space-md flex flex-col gap-2 mt-2">
             <div className="flex items-baseline justify-between">
