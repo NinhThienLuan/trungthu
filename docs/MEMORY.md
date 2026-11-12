@@ -4,7 +4,7 @@
 
 > Lưu ý BE4 2026-11-03: Đã hoàn thành API Phiếu ra lò `GET /api/provider/bake-sheet?date=YYYY-MM-DD` gom dữ liệu từ view `v_bake_lines`. `OrderApiTests` đạt **30/30 PASS [OK]**. Production PostgreSQL sử dụng Flyway migration (V1__initial_schema.sql), H2 in-memory dùng cho test tự động.
 
-> Last updated: 2026-10-14 | Tests: **24/24 PASS** [OK] | Note: Đã xóa hoàn toàn Hạn Sử Dụng (`shelfLifeDays`) khỏi Product module theo quyết định tinh gọn scope.
+> Last updated: 2026-11-12 | Tests: **170/170 PASS** [OK] | Merged branch `luna_rfq` with `origin` (BE3 Phat). All conflicts resolved cleanly.
 
 ---
 
