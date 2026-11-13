@@ -2,19 +2,23 @@ package fpt.sba.trungthu.service.impl;
 
 import fpt.sba.trungthu.dto.request.VnFormats;
 import fpt.sba.trungthu.common.security.SecurityContextService;
+import fpt.sba.trungthu.dto.request.AcceptQuotesRequest;
 import fpt.sba.trungthu.dto.request.CreateRfqRequest;
 import fpt.sba.trungthu.dto.request.SubmitQuoteRequest;
 import fpt.sba.trungthu.dto.response.QuoteResponse;
 import fpt.sba.trungthu.dto.response.RfqResponse;
+import fpt.sba.trungthu.entity.BulkOrder;
 import fpt.sba.trungthu.entity.BulkRequest;
 import fpt.sba.trungthu.entity.Product;
 import fpt.sba.trungthu.entity.ProviderQuotation;
 import fpt.sba.trungthu.entity.User;
+import fpt.sba.trungthu.entity.enumeration.BulkOrderStatus;
 import fpt.sba.trungthu.entity.enumeration.BulkRequestStatus;
 import fpt.sba.trungthu.entity.enumeration.QuoteStatus;
 import fpt.sba.trungthu.entity.enumeration.SubscriptionStatus;
 import fpt.sba.trungthu.entity.enumeration.UserRole;
 import fpt.sba.trungthu.entity.enumeration.UserStatus;
+import fpt.sba.trungthu.repository.BulkOrderRepository;
 import fpt.sba.trungthu.repository.BulkRequestRepository;
 import fpt.sba.trungthu.repository.ProductRepository;
 import fpt.sba.trungthu.repository.ProviderQuotationRepository;
@@ -31,6 +35,8 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -51,6 +57,7 @@ public class RfqServiceImpl implements RfqService {
     private final UserRepository users;
     private final ProductRepository products;
     private final BulkOrderService bulkOrders;
+    private final BulkOrderRepository bulkOrderRepository;
     private final RfqDeliveryEstimator deliveryEstimator;
 
     @Override
@@ -237,31 +244,92 @@ public class RfqServiceImpl implements RfqService {
                 .stream().map(this::toQuoteResponse).toList();
     }
 
+    /** Chốt trọn một xưởng với toàn bộ số hộp xưởng đó báo (luồng cũ, giữ cho tương thích) */
     @Override
     @Transactional
     public QuoteResponse acceptQuote(UUID requestId, UUID quoteId) {
+        return acceptQuotes(requestId, List.of(new AcceptQuotesRequest.Item(quoteId, null))).get(0);
+    }
+
+    /**
+     * Chia một RFQ (đơn tổng) cho nhiều xưởng: mỗi báo giá được chọn thành một đơn sỉ con với số hộp khách chọn.
+     * Tất cả hoặc không: một xưởng thiếu suất nướng thì cả lần chốt bị huỷ, không để lại đơn lẻ.
+     * {@code quantity} null = lấy hết số hộp xưởng báo.
+     */
+    @Override
+    @Transactional
+    public List<QuoteResponse> acceptQuotes(UUID requestId, List<AcceptQuotesRequest.Item> items) {
         BulkRequest request = requests.findForUpdateById(requestId)
                 .filter(item -> item.getCustomer().getId().equals(security.getCurrentUserId()))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy RFQ"));
         if (request.getStatus() != BulkRequestStatus.QUOTES_RECEIVED) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "RFQ chưa thể chốt báo giá");
         }
-        ProviderQuotation selected = quotations.findById(quoteId)
-                .filter(quote -> quote.getRequest().getId().equals(requestId))
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy báo giá"));
-        if (selected.getStatus() != QuoteStatus.SUBMITTED
-                || selected.getValidUntil() != null && selected.getValidUntil().isBefore(LocalDate.now(VIETNAM))) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Báo giá đã hết hiệu lực");
+        if (items == null || items.isEmpty()) throw badRequest("Chọn ít nhất một xưởng");
+        LocalDate today = LocalDate.now(VIETNAM);
+        Map<UUID, Integer> boxes = new LinkedHashMap<>();
+        List<ProviderQuotation> selected = new ArrayList<>();
+        for (AcceptQuotesRequest.Item item : items) {
+            if (boxes.containsKey(item.quoteId())) throw badRequest("Mỗi xưởng chỉ được chọn một lần");
+            ProviderQuotation quote = quotations.findById(item.quoteId())
+                    .filter(q -> q.getRequest().getId().equals(requestId))
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy báo giá"));
+            if (quote.getStatus() != QuoteStatus.SUBMITTED
+                    || quote.getValidUntil() != null && quote.getValidUntil().isBefore(today)) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "Báo giá của " + quote.getProvider().getStoreName() + " đã hết hiệu lực");
+            }
+            int qty = item.quantity() == null ? quote.getOfferedQuantity() : item.quantity();
+            if (qty < 1 || qty > quote.getOfferedQuantity()) {
+                throw badRequest("Số hộp chọn của " + quote.getProvider().getStoreName()
+                        + " phải từ 1 đến " + quote.getOfferedQuantity());
+            }
+            boxes.put(quote.getId(), qty);
+            selected.add(quote);
         }
-        bulkOrders.createForAcceptedQuote(selected);
-        selected.transitionStatus(QuoteStatus.ACCEPTED);
+        // Giữ suất nướng theo thứ tự xưởng cố định: hai RFQ chốt cùng lúc không khoá chéo lịch của nhau
+        selected.sort(Comparator.comparing(q -> q.getProvider().getId()));
+        for (ProviderQuotation quote : selected) {
+            bulkOrders.createForAcceptedQuote(quote, boxes.get(quote.getId()));
+            quote.transitionStatus(QuoteStatus.ACCEPTED);
+        }
         for (ProviderQuotation quote : quotations.findByRequestIdOrderByQuotedPriceAsc(requestId)) {
-            if (!quote.getId().equals(quoteId) && quote.getStatus() == QuoteStatus.SUBMITTED) {
+            if (!boxes.containsKey(quote.getId()) && quote.getStatus() == QuoteStatus.SUBMITTED) {
                 quote.transitionStatus(QuoteStatus.REJECTED);
             }
         }
         request.transitionStatus(BulkRequestStatus.WON);
-        return toQuoteResponse(selected);
+        return selected.stream().map(this::toQuoteResponse).toList();
+    }
+
+    /**
+     * Đơn tổng còn thiếu hộp (chốt chưa đủ hoặc một đơn con bị huỷ): mở RFQ mới cho đúng phần thiếu,
+     * gửi mọi xưởng, giữ thông tin liên hệ, logo và ngày nhận của RFQ gốc.
+     */
+    @Override
+    @Transactional
+    public RfqResponse reorderShortfall(UUID requestId) {
+        BulkRequest original = requests.findForUpdateById(requestId)
+                .filter(item -> item.getCustomer().getId().equals(security.getCurrentUserId()))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy RFQ"));
+        if (original.getStatus() != BulkRequestStatus.WON) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "RFQ chưa chốt xưởng nào");
+        }
+        int shortfall = original.getRequestedQuantity() - allocatedBoxes(requestId);
+        if (shortfall <= 0) throw new ResponseStatusException(HttpStatus.CONFLICT, "Đơn tổng đã đủ số hộp");
+        String note = "Bổ sung " + shortfall + " hộp còn thiếu của " + original.getRequestCode() + ".";
+        return create(new CreateRfqRequest(original.getCompanyName(), original.getTaxCode(), original.getContactName(),
+                original.getContactPosition(), original.getContactPhone(), original.getContactEmail(), shortfall,
+                original.getCakesPerBox(), original.getExpectedDate(), null,
+                original.getDescription() == null ? note : note + "\n" + original.getDescription(),
+                original.getLogoUrl(), null, null, original.getTaxCode() == null ? "INDIVIDUAL" : "BUSINESS"));
+    }
+
+    /** Số hộp đã giao cho các đơn sỉ con còn hiệu lực (bỏ đơn đã huỷ) */
+    private int allocatedBoxes(UUID requestId) {
+        return bulkOrderRepository.findByQuoteRequestId(requestId).stream()
+                .filter(order -> order.getStatus() != BulkOrderStatus.CANCELLED)
+                .mapToInt(BulkOrder::getQuantity).sum();
     }
 
     private BulkRequest requireOwnedRequest(UUID requestId) {
@@ -313,7 +381,11 @@ public class RfqServiceImpl implements RfqService {
 
     private QuoteResponse toQuoteResponse(ProviderQuotation quote) {
         boolean accepted = quote.getStatus() == QuoteStatus.ACCEPTED;
-        BigDecimal gross = quote.getQuotedPrice().multiply(BigDecimal.valueOf(quote.getOfferedQuantity()));
+        // Đã chốt: tiền tính theo số hộp thực chốt với xưởng (có thể ít hơn số xưởng báo khi chia nhiều xưởng)
+        Integer acceptedBoxes = accepted ? bulkOrderRepository.findByQuoteId(quote.getId())
+                .map(BulkOrder::getQuantity).orElse(null) : null;
+        int boxes = acceptedBoxes != null ? acceptedBoxes : quote.getOfferedQuantity();
+        BigDecimal gross = quote.getQuotedPrice().multiply(BigDecimal.valueOf(boxes));
         BigDecimal discount = gross.multiply(new BigDecimal("0.30")).setScale(2, RoundingMode.HALF_UP);
         return new QuoteResponse(quote.getId(), quote.getRequest().getId(), quote.getProvider().getId(),
                 quote.getProvider().getStoreName(), quote.getQuotedPrice(), quote.getOfferedQuantity(),
@@ -323,7 +395,7 @@ public class RfqServiceImpl implements RfqService {
                 accepted ? quote.getProvider().getEmail() : null,
                 accepted ? quote.getProvider().getAddress() : null,
                 quote.getCakesPerBox(), gross, discount, gross.subtract(discount),
-                gross.subtract(discount).multiply(new BigDecimal("0.50")).setScale(2, RoundingMode.HALF_UP));
+                CheckoutServiceImpl.minDeposit(gross.subtract(discount)), acceptedBoxes);
     }
 
     private ResponseStatusException badRequest(String reason) {

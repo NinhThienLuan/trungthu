@@ -1,5 +1,6 @@
 package fpt.sba.trungthu.controller;
 
+import fpt.sba.trungthu.dto.request.AcceptQuotesRequest;
 import fpt.sba.trungthu.dto.request.CreateRfqRequest;
 import fpt.sba.trungthu.dto.request.SubmitQuoteRequest;
 import fpt.sba.trungthu.dto.response.ApiResponseDTO;
@@ -86,5 +87,20 @@ public class RfqController {
     public ResponseEntity<ApiResponseDTO<QuoteResponse>> acceptQuote(@PathVariable UUID requestId,
             @PathVariable UUID quoteId) {
         return ResponseEntity.ok(ApiResponseDTO.success(rfqService.acceptQuote(requestId, quoteId)));
+    }
+
+    /** Chia RFQ cho nhiều xưởng: mỗi xưởng một đơn sỉ con với số hộp khách chọn */
+    @PostMapping("/api/rfqs/{requestId}/accept")
+    @PreAuthorize("hasRole('CUSTOMER')")
+    public ResponseEntity<ApiResponseDTO<List<QuoteResponse>>> acceptQuotes(@PathVariable UUID requestId,
+            @Valid @RequestBody AcceptQuotesRequest input) {
+        return ResponseEntity.ok(ApiResponseDTO.success(rfqService.acceptQuotes(requestId, input.items())));
+    }
+
+    /** Mở RFQ mới cho phần hộp đơn tổng còn thiếu */
+    @PostMapping("/api/rfqs/{requestId}/shortfall")
+    @PreAuthorize("hasRole('CUSTOMER')")
+    public ResponseEntity<ApiResponseDTO<RfqResponse>> reorderShortfall(@PathVariable UUID requestId) {
+        return ResponseEntity.ok(ApiResponseDTO.success(rfqService.reorderShortfall(requestId)));
     }
 }

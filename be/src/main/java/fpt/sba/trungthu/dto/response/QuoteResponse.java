@@ -13,4 +13,6 @@ public record QuoteResponse(UUID id, UUID requestId, UUID providerId, String pro
         /** Liên hệ xưởng: chỉ có khi báo giá đã được khách chấp nhận (để hai bên chốt hợp đồng) */
         String providerPhone, String providerEmail, String providerAddress,
         int cakesPerBox, BigDecimal grossAmount, BigDecimal discountAmount, BigDecimal totalAmount,
-        BigDecimal depositAmount) {}
+        BigDecimal depositAmount,
+        /** Số hộp khách chốt với xưởng này (có thể ít hơn offeredQuantity khi chia cho nhiều xưởng); null khi chưa chốt */
+        Integer acceptedQuantity) {}

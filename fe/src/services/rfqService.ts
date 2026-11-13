@@ -18,6 +18,11 @@ export const rfqService = {
   quotes: (requestId: string) => unwrap(http.get<ApiResponse<QuoteResponse[]>>(`/rfqs/${requestId}/quotes`)),
   acceptQuote: (requestId: string, quoteId: string) =>
     unwrap(http.post<ApiResponse<QuoteResponse>>(`/rfqs/${requestId}/quotes/${quoteId}/accept`)),
+  /** Chia RFQ cho nhiều xưởng: mỗi xưởng một đơn sỉ con với số hộp khách chọn */
+  acceptQuotes: (requestId: string, items: { quoteId: string; quantity: number }[]) =>
+    unwrap(http.post<ApiResponse<QuoteResponse[]>>(`/rfqs/${requestId}/accept`, { items })),
+  /** Mở RFQ mới cho phần hộp đơn tổng còn thiếu (chốt chưa đủ hoặc một xưởng bị huỷ) */
+  reorderShortfall: (requestId: string) => unwrap(http.post<ApiResponse<RfqResponse>>(`/rfqs/${requestId}/shortfall`)),
   buyerOrders: () => unwrap(http.get<ApiResponse<BulkOrderResponse[]>>('/bulk-orders/me')),
   providerOrders: () => unwrap(http.get<ApiResponse<BulkOrderResponse[]>>('/provider/bulk-orders')),
   delivery: (id: string, body: { recipientName: string; recipientPhone: string; deliveryAddress: string }) =>

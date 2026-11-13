@@ -1,5 +1,6 @@
 package fpt.sba.trungthu.service;
 
+import fpt.sba.trungthu.dto.request.AcceptQuotesRequest;
 import fpt.sba.trungthu.dto.request.CreateRfqRequest;
 import fpt.sba.trungthu.dto.request.SubmitQuoteRequest;
 import fpt.sba.trungthu.dto.response.QuoteResponse;
@@ -17,4 +18,6 @@ public interface RfqService {
     QuoteResponse reviseQuote(UUID requestId, UUID quoteId, SubmitQuoteRequest input);
     List<QuoteResponse> quotes(UUID requestId);
     QuoteResponse acceptQuote(UUID requestId, UUID quoteId);
+    List<QuoteResponse> acceptQuotes(UUID requestId, List<AcceptQuotesRequest.Item> items);
+    RfqResponse reorderShortfall(UUID requestId);
 }
