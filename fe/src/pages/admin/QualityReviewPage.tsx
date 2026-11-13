@@ -17,6 +17,34 @@ const TABS: Array<{ status: ComplianceStatus; label: string }> = [
   { status: 'EXPIRED', label: 'Hết hạn' },
 ]
 
+/**
+ * Cách admin tự xác minh giấy tờ thật/giả: hệ thống không tự kết luận (không có API cơ quan cấp),
+ * nên đưa link cổng tra cứu chính thức và các điểm cần đối chiếu cho từng loại giấy.
+ */
+const VERIFY_GUIDE: Record<ComplianceDocType, { checks: string[]; links: Array<{ label: string; href: string }> }> = {
+  BUSINESS_LICENSE: {
+    checks: ['Tên doanh nghiệp/hộ kinh doanh và mã số trên giấy khớp với thông tin gian hàng',
+      'Tra mã số doanh nghiệp hoặc mã số thuế: đúng tên, trạng thái "đang hoạt động"',
+      'Có dấu đỏ và chữ ký của cơ quan đăng ký kinh doanh'],
+    links: [
+      { label: 'Cổng đăng ký doanh nghiệp quốc gia', href: 'https://dangkykinhdoanh.gov.vn' },
+      { label: 'Tra cứu mã số thuế (Tổng cục Thuế)', href: 'https://tracuunnt.gdt.gov.vn/tcnnt/mstdn.jsp' },
+    ],
+  },
+  FOOD_SAFETY_CERT: {
+    checks: ['Tên cơ sở và địa chỉ sản xuất khớp với gian hàng',
+      'Còn hạn (giấy ATTP có hiệu lực 3 năm kể từ ngày cấp)',
+      'Số giấy chứng nhận và cơ quan cấp (Sở Y tế / Ban quản lý ATTP) rõ ràng, có dấu đỏ'],
+    links: [{ label: 'Cục An toàn thực phẩm', href: 'https://vfa.gov.vn' }],
+  },
+  IDENTITY_KYC: {
+    checks: ['Họ tên trùng với chủ gian hàng/người đại diện trên giấy phép kinh doanh',
+      'Ảnh chụp thật: không lệch phông chữ ở số CCCD, không viền cắt ghép, có ảnh chân dung rõ',
+      'Có thể yêu cầu seller chụp kèm CCCD cầm trên tay nếu nghi ngờ'],
+    links: [],
+  },
+}
+
 const DOC_LABEL: Record<ComplianceDocType, string> = {
   FOOD_SAFETY_CERT: 'Giấy chứng nhận ATTP',
   BUSINESS_LICENSE: 'Giấy phép kinh doanh',
@@ -43,7 +71,7 @@ export function QualityReviewPage() {
 
   return (
     <div className="page section flex flex-col gap-6">
-      <PageHeader eyebrow="Quản trị sàn" title="Thẩm định hồ sơ seller" description="Xem tệp seller nộp rồi duyệt hoặc từ chối kèm lý do. Seller thấy kết quả ở trang Hồ sơ & thẩm định." />
+      <PageHeader eyebrow="Quản trị sàn" title="Thẩm định hồ sơ seller" description="Xem tệp seller nộp, đối chiếu với cổng tra cứu chính thức rồi duyệt hoặc từ chối kèm lý do. Hệ thống tự cảnh báo file trùng với xưởng khác hoặc nộp lại bản đã bị từ chối." />
 
       <div className="flex flex-wrap gap-2">
         {TABS.map((t) => (
@@ -99,7 +127,23 @@ function DocRow({ doc, run }: { doc: AdminComplianceDoc; run: (action: () => Pro
         </div>
         <button type="button" onClick={() => setPreviewing(true)} className="btn btn-outline btn-sm">Xem tài liệu</button>
       </div>
+      {doc.warnings?.map((warning) => <Notice key={warning} tone="danger">Nghi vấn: {warning}</Notice>)}
       {doc.rejectionReason && <Notice tone="danger">Lý do từ chối: {doc.rejectionReason}</Notice>}
+      {doc.verificationStatus === 'PENDING' && (
+        <details className="rounded border border-line bg-surface/40 p-3 text-small">
+          <summary className="cursor-pointer font-semibold text-navy">Cách kiểm tra {DOC_LABEL[doc.documentType]} thật hay giả</summary>
+          <ul className="mt-2 list-disc space-y-1 pl-5">
+            {VERIFY_GUIDE[doc.documentType].checks.map((check) => <li key={check}>{check}</li>)}
+          </ul>
+          {VERIFY_GUIDE[doc.documentType].links.length > 0 && (
+            <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+              {VERIFY_GUIDE[doc.documentType].links.map((link) => (
+                <a key={link.href} href={link.href} target="_blank" rel="noreferrer" className="text-primary underline">{link.label} ↗</a>
+              ))}
+            </p>
+          )}
+        </details>
+      )}
       {doc.verificationStatus === 'PENDING' && (
         rejecting ? (
           <form noValidate onSubmit={reject} className="flex flex-wrap items-end gap-3 border-t border-line pt-3">

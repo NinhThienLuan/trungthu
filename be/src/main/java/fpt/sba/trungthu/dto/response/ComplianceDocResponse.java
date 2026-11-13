@@ -8,6 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -27,4 +28,6 @@ public class ComplianceDocResponse {
     private LocalDateTime submittedAt;
     /** Chỉ cho admin: số lần tài khoản này đã bị từ chối giấy tờ (mọi loại) */
     private Integer rejectedCount;
+    /** Chỉ cho admin: dấu hiệu giấy tờ có thể giả/mượn (file trùng xưởng khác, nộp lại bản đã bị từ chối) */
+    private List<String> warnings;
 }

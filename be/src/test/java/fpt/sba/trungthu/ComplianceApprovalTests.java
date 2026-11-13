@@ -48,25 +48,35 @@ class ComplianceApprovalTests {
     }
 
     @Test
-    void adminSeesHowManyTimesTheAccountWasRejected() {
+    void adminSeesRejectionCountAndDuplicateFileWarnings() {
         User admin = user(UserRole.PLATFORM_ADMIN);
         User seller = user(UserRole.PROVIDER);
         User other = user(UserRole.PROVIDER);
         when(security.getCurrentUser()).thenReturn(admin);
 
-        StoreComplianceDoc first = doc(seller, ComplianceDocType.FOOD_SAFETY_CERT);
+        StoreComplianceDoc first = hashed(seller, ComplianceDocType.FOOD_SAFETY_CERT, "aaa");
         compliance.reviewDocument(first.getId(), review(ComplianceDocStatus.REJECTED, "Giấy mờ"));
-        StoreComplianceDoc second = doc(seller, ComplianceDocType.BUSINESS_LICENSE);
+        StoreComplianceDoc second = hashed(seller, ComplianceDocType.BUSINESS_LICENSE, "bbb");
         compliance.reviewDocument(second.getId(), review(ComplianceDocStatus.REJECTED, "Sai tên"));
-        doc(other, ComplianceDocType.BUSINESS_LICENSE);
+        hashed(other, ComplianceDocType.BUSINESS_LICENSE, "ccc");
 
-        StoreComplianceDoc resent = doc(seller, ComplianceDocType.FOOD_SAFETY_CERT);
+        StoreComplianceDoc resent = hashed(seller, ComplianceDocType.FOOD_SAFETY_CERT, "aaa");
+        StoreComplianceDoc borrowed = hashed(seller, ComplianceDocType.BUSINESS_LICENSE, "ccc");
         var pending = compliance.getDocumentsByStatus(ComplianceDocStatus.PENDING);
 
         var resentView = pending.stream().filter(d -> d.getId().equals(resent.getId())).findFirst().orElseThrow();
         assertThat(resentView.getRejectedCount()).isEqualTo(2);
+        assertThat(resentView.getWarnings()).singleElement().asString().contains("đã bị từ chối", "Giấy mờ");
+        var borrowedView = pending.stream().filter(d -> d.getId().equals(borrowed.getId())).findFirst().orElseThrow();
+        assertThat(borrowedView.getWarnings()).singleElement().asString().contains("xưởng khác");
         var otherView = pending.stream().filter(d -> d.getProviderEmail().equals(other.getEmail())).findFirst().orElseThrow();
         assertThat(otherView.getRejectedCount()).isZero();
+    }
+
+    private StoreComplianceDoc hashed(User seller, ComplianceDocType type, String hash) {
+        StoreComplianceDoc doc = doc(seller, type);
+        doc.setFileHash(hash);
+        return docs.save(doc);
     }
 
     private fpt.sba.trungthu.dto.response.ComplianceDocResponse approve(StoreComplianceDoc doc) {

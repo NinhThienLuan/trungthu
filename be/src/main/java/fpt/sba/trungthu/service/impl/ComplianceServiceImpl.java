@@ -19,7 +19,16 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
+import java.util.HexFormat;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
@@ -62,12 +71,14 @@ public class ComplianceServiceImpl implements ComplianceService {
 
             // Store file
             String documentUrl = storageService.uploadFile(request.getFile(), "compliance");
+            String fileHash = sha256(request.getFile());
 
             // Create document
             StoreComplianceDoc doc = StoreComplianceDoc.builder()
                     .provider(provider)
                     .documentType(docType)
                     .documentUrl(documentUrl)
+                    .fileHash(fileHash)
                     .verificationStatus(ComplianceDocStatus.PENDING)
                     .submittedAt(LocalDateTime.now())
                     .build();
@@ -221,12 +232,42 @@ public class ComplianceServiceImpl implements ComplianceService {
         }
     }
 
-    /** Admin thấy thêm số lần tài khoản này đã bị từ chối giấy tờ (mỗi lần nộp lại là một dòng mới) */
+    /**
+     * Admin thấy thêm: số lần tài khoản bị từ chối và các dấu hiệu nghi giả. Hệ thống không tự kết luận thật/giả
+     * (không có API tra cứu cơ quan cấp); nó chỉ gắn cờ để admin đối chiếu kỹ trước khi duyệt.
+     */
     private ComplianceDocResponse mapForAdmin(StoreComplianceDoc doc) {
         ComplianceDocResponse response = mapToResponse(doc);
-        response.setRejectedCount((int) complianceDocRepository.countByProviderIdAndVerificationStatus(
-                doc.getProvider().getId(), ComplianceDocStatus.REJECTED));
+        UUID providerId = doc.getProvider().getId();
+        response.setRejectedCount((int) complianceDocRepository
+                .countByProviderIdAndVerificationStatus(providerId, ComplianceDocStatus.REJECTED));
+        Set<String> warnings = new LinkedHashSet<>();
+        if (doc.getFileHash() != null) {
+            for (StoreComplianceDoc same : complianceDocRepository.findByFileHash(doc.getFileHash())) {
+                if (same.getId().equals(doc.getId())) continue;
+                if (!same.getProvider().getId().equals(providerId)) {
+                    User other = same.getProvider();
+                    warnings.add("File giống hệt giấy tờ của xưởng khác ("
+                            + (other.getStoreName() != null ? other.getStoreName() : other.getEmail())
+                            + "): có thể mượn hoặc sao chép giấy tờ");
+                } else if (same.getVerificationStatus() == ComplianceDocStatus.REJECTED) {
+                    warnings.add("Nộp lại đúng file đã bị từ chối trước đó"
+                            + (same.getRejectionReason() != null ? " (lý do cũ: " + same.getRejectionReason() + ")" : ""));
+                }
+            }
+        }
+        response.setWarnings(List.copyOf(warnings));
         return response;
+    }
+
+    private static String sha256(MultipartFile file) {
+        try {
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(file.getBytes()));
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     private ComplianceDocResponse mapToResponse(StoreComplianceDoc doc) {

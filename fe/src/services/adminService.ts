@@ -10,6 +10,8 @@ export interface AdminComplianceDoc extends ComplianceDoc {
   verifiedByEmail: string | null
   /** Số lần tài khoản này đã bị từ chối giấy tờ (mọi loại) */
   rejectedCount: number | null
+  /** Dấu hiệu nghi giả/mượn giấy tờ do BE phát hiện (file trùng xưởng khác, nộp lại bản đã bị từ chối) */
+  warnings: string[] | null
 }
 
 export interface RecentSubscriptionItem {

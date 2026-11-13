@@ -36,6 +36,10 @@ public class StoreComplianceDoc extends BaseEntity {
     @Column(name = "document_url", nullable = false, length = 2048)
     private String documentUrl;
 
+    // SHA-256 của file đã nộp: phát hiện cùng một file bị nhiều xưởng dùng hoặc nộp lại bản đã bị từ chối
+    @Column(name = "file_hash", length = 64)
+    private String fileHash;
+
     // Trạng thái xác minh: PENDING → APPROVED / REJECTED
     @Enumerated(EnumType.STRING)
     @Column(name = "verification_status", nullable = false, length = 30)

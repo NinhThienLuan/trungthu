@@ -20,6 +20,9 @@ public interface StoreComplianceDocRepository extends JpaRepository<StoreComplia
      */
     List<StoreComplianceDoc> findByProviderIdOrderBySubmittedAtDesc(UUID providerId);
 
+    /** Các tài liệu có cùng file (cùng SHA-256) */
+    List<StoreComplianceDoc> findByFileHash(String fileHash);
+
     /**
      * Tìm tài liệu theo Provider và loại tài liệu
      */
