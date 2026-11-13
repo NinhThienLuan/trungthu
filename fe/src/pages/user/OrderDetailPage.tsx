@@ -1,13 +1,14 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ChevronLeft } from 'lucide-react'
+import { Icon } from '../../components/Icon'
 import { orderService } from '../../services/orderService'
 import { errorMessage } from '../../apis/http'
 import { useApi } from '../../hooks/useApi'
 import { useDocumentTitle } from '../../hooks/useDocumentTitle'
 import { CANCELLABLE_STATUSES, PAYMENT_METHOD_LABEL, PAYMENT_STATUS_LABEL, ROUTES } from '../../constants'
 import { formatDate, formatDateTime, formatVnd } from '../../lib/format'
-import { displayOrderLines } from '../../lib/orderDisplay'
+import { displayOrderLines, parseVariantName } from '../../lib/orderDisplay'
 import { OrderPaymentPanel } from '../../components/OrderPaymentPanel'
 import { OrderStatusChip } from '../../components/OrderStatusChip'
 import { ErrorState, Notice, Spinner } from '../../components/ui/States'
@@ -82,20 +83,65 @@ export function OrderDetailPage() {
           <section className="card p-5 md:p-6">
             <h2 className="text-h3">Sản phẩm</h2>
             <ul className="mt-4 flex flex-col gap-3">
-              {displayLines.map((line) => (
-                <li key={line.key} className="flex justify-between gap-4 text-small">
-                  <span>
-                    <span className="font-semibold text-navy">{line.name}{line.components && ` × ${line.quantity}`}</span>
-                    {line.components ? <span className="block text-muted">
-                      Gồm: {line.components.map((item) => `${item.productName} · ${item.variantName} × ${item.quantity}`).join('; ')}
-                    </span> : <span className="block text-muted">
-                      {line.quantity} × {formatVnd(line.unitPrice ?? line.subtotal / (line.quantity ?? 1))}
-                    </span>}
-                    {line.boxContents && <span className="block text-muted">Gồm: {line.boxContents.join(', ')}</span>}
-                  </span>
-                  <span className="shrink-0 font-semibold text-navy">{formatVnd(line.subtotal)}</span>
-                </li>
-              ))}
+              {displayLines.map((line) => {
+                // Set quà: hiển thị như cũ
+                if (line.components) {
+                  return (
+                    <li key={line.key} className="flex justify-between gap-4 text-small">
+                      <span>
+                        <span className="font-semibold text-navy">{line.name} × {line.quantity}</span>
+                        <span className="block text-muted">
+                          Gồm: {line.components.map((item) => `${item.productName} · ${item.variantName} × ${item.quantity}`).join('; ')}
+                        </span>
+                      </span>
+                      <span className="shrink-0 font-semibold text-navy">{formatVnd(line.subtotal)}</span>
+                    </li>
+                  )
+                }
+                
+                // Tách line.name = "ProductName · VariantName · [Promotion Label]"
+                const nameParts = line.name.split(' · ')
+                const productName = nameParts[0]
+                
+                // Tìm promotion label: pattern = "Mua X tặng Y" | "Giảm X%" | "Lấy X trả tiền Y"
+                const promotionPattern = /^(Mua \d+ tặng \d+|Giảm \d+% từ \d+ cái|Lấy \d+ trả tiền \d+)/
+                const promotionIndex = nameParts.findIndex((part, idx) => idx > 1 && promotionPattern.test(part))
+                
+                // Phần giữa productName và promotion = variantName (có thể nhiều parts nếu có |)
+                const variantParts = nameParts.slice(1, promotionIndex > 0 ? promotionIndex : nameParts.length)
+                const variantName = variantParts.join(' · ')
+                
+                // Promotion = từ promotionIndex đến cuối
+                const promotion = promotionIndex > 0 ? nameParts.slice(promotionIndex).join(' · ') : null
+                
+                // Parse variantName (đã clean) để tách size/spec/personalization
+                const parsed = parseVariantName(variantName)
+                
+                // Detect loại bánh để chọn label phù hợp: "Khối lượng" (150g) vs "Quy cách" (4 bánh)
+                const isWeightBased = /\d+\s*g/i.test(parsed.size)
+                const sizeLabel = isWeightBased ? 'Khối lượng' : 'Quy cách'
+                
+                return (
+                  <li key={line.key} className="flex justify-between gap-4 text-small">
+                    <span>
+                      <span className="font-semibold text-navy">{productName}</span>
+                      <span className="block text-muted">
+                        {sizeLabel}: {parsed.size} · {line.quantity} cái × {formatVnd(line.unitPrice ?? line.subtotal / (line.quantity ?? 1))}
+                      </span>
+                      {parsed.spec && <span className="block text-muted">Phối: {parsed.spec}</span>}
+                      {parsed.personalization && <span className="block text-primary font-medium">Cá nhân hóa: {parsed.personalization}</span>}
+                      {promotion && (
+                        <span className="block text-success text-xs mt-1 flex items-center gap-1">
+                          <Icon name="sell" className="text-[14px]" aria-hidden />
+                          Ưu đãi: {promotion}
+                        </span>
+                      )}
+                      {line.boxContents && <span className="block text-muted">Gồm: {line.boxContents.join(', ')}</span>}
+                    </span>
+                    <span className="shrink-0 font-semibold text-navy">{formatVnd(line.subtotal)}</span>
+                  </li>
+                )
+              })}
             </ul>
           </section>
         </div>
@@ -121,6 +167,24 @@ export function OrderDetailPage() {
             </dl>
           </section>
 
+          {order.remainingAmount > 0 && (
+            <section className="card p-5 bg-warning-soft border border-warning/30">
+              <h3 className="text-h4 text-warning-dark">Tiền nợ khi nhận hàng</h3>
+              <p className="mt-2 text-small text-muted leading-relaxed">
+                Số tiền còn lại <span className="font-bold text-navy">{formatVnd(order.remainingAmount)}</span> sẽ thu khi giao hàng. 
+                Vui lòng chuẩn bị đủ tiền mặt hoặc thanh toán chuyển khoản cho shipper.
+              </p>
+              <dl className="mt-3 grid grid-cols-[1fr_auto] gap-y-1 text-xs text-muted border-t border-warning/20 pt-2">
+                <dt>Tổng đơn hàng:</dt>
+                <dd>{formatVnd(order.totalAmount)}</dd>
+                <dt>Đã cọc/thanh toán:</dt>
+                <dd className="text-success">−{formatVnd(order.paidAmount)}</dd>
+                <dt className="font-semibold text-warning-dark">Trả khi nhận:</dt>
+                <dd className="font-semibold text-warning-dark">{formatVnd(order.remainingAmount)}</dd>
+              </dl>
+            </section>
+          )}
+
           <section className="card p-5">
             <h2 className="text-h3">Người nhận</h2>
             <p className="mt-3 text-small text-ink">{order.receiverName}</p>
@@ -140,12 +204,20 @@ export function OrderDetailPage() {
               </button>
             </div>
           )}
-          {(order.status === 'DELIVERING' || order.status === 'COMPLETED') && <OrderComplaint orderId={order.id} />}
         </aside>
       </div>
-      {order.status === 'COMPLETED' && <div className="mt-6 card p-5">
-        <ProductReviews providerId={order.providerId} storeName={order.storeName} completedOrder={order} />
-      </div>}
+
+      {/* Khiếu nại/đổi trả và đánh giá: di chuyển ra main content (không nằm trong sidebar nữa) */}
+      {(order.status === 'DELIVERING' || order.status === 'COMPLETED') && (
+        <div className="mt-6">
+          <OrderComplaint orderId={order.id} />
+        </div>
+      )}
+      {order.status === 'COMPLETED' && (
+        <div className="mt-6 card p-5">
+          <ProductReviews providerId={order.providerId} storeName={order.storeName} completedOrder={order} />
+        </div>
+      )}
     </div>
   )
 }

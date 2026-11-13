@@ -73,8 +73,24 @@ public class Promotion extends BaseEntity {
             case PERCENT_OFF -> quantity < minQuantity ? BigDecimal.ZERO
                     : unitPrice.multiply(BigDecimal.valueOf((long) quantity * percentOff))
                             .divide(BigDecimal.valueOf(100), 0, RoundingMode.FLOOR);
-            case BUY_X_GET_Y -> unitPrice.multiply(
-                    BigDecimal.valueOf((long) (quantity / (buyQuantity + freeQuantity)) * freeQuantity));
+            case BUY_X_GET_Y -> {
+                // Mua 3 tặng 1: setSize=4, mua 9 → 2 sets đủ (8 bánh) + 1 lẻ → tặng 2.25 bánh pro-rata
+                int setSize = buyQuantity + freeQuantity;
+                int fullSets = quantity / setSize;
+                int remaining = quantity % setSize;
+                
+                // Tặng full cho các bộ đủ
+                BigDecimal fullDiscount = unitPrice.multiply(BigDecimal.valueOf((long) fullSets * freeQuantity));
+                
+                // Tặng pro-rata cho phần lẻ nếu đã hoàn thành ít nhất 1 set đầy đủ
+                BigDecimal partialDiscount = fullSets > 0 && remaining > 0
+                    ? unitPrice.multiply(BigDecimal.valueOf(freeQuantity))
+                        .multiply(BigDecimal.valueOf(remaining))
+                        .divide(BigDecimal.valueOf(setSize), 0, RoundingMode.FLOOR)
+                    : BigDecimal.ZERO;
+                
+                yield fullDiscount.add(partialDiscount);
+            }
             case BUY_X_PAY_Y -> unitPrice.multiply(
                     BigDecimal.valueOf((long) (quantity / buyQuantity) * (buyQuantity - freeQuantity)));
         };

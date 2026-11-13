@@ -42,6 +42,9 @@ public class CheckoutServiceImpl implements CheckoutService {
     private static final int MAX_GROUPS = 20;
     private static final int MAX_ITEMS = 100;
     private static final BigDecimal THOUSAND = new BigDecimal("1000");
+    private static final BigDecimal TIER_1M = new BigDecimal("1000000");
+    private static final BigDecimal TIER_5M = new BigDecimal("5000000");
+    private static final BigDecimal TIER_10M = new BigDecimal("10000000");
 
     private final SecurityContextService security;
     private final ProductVariantRepository variants;
@@ -566,10 +569,24 @@ public class CheckoutServiceImpl implements CheckoutService {
                 .collect(java.util.stream.Collectors.joining(", "));
     }
 
-    /** Cọc tối thiểu 50%, làm tròn lên nghìn đồng cho dễ chuyển khoản (không vượt tổng) */
+    /**
+     * Cọc tối thiểu theo ngưỡng giá trị đơn hàng, làm tròn lên nghìn đồng:
+     * < 1M: 0% (COD allowed) | 1-5M: 30% | 5-10M: 50% | >= 10M: 60%
+     */
     static BigDecimal minDeposit(BigDecimal total) {
-        BigDecimal half = total.divide(BigDecimal.valueOf(2), 0, RoundingMode.CEILING);
-        return half.divide(THOUSAND, 0, RoundingMode.CEILING).multiply(THOUSAND).min(total);
+        BigDecimal rate;
+        if (total.compareTo(TIER_10M) >= 0) {
+            rate = new BigDecimal("0.60"); // >= 10M: 60%
+        } else if (total.compareTo(TIER_5M) >= 0) {
+            rate = new BigDecimal("0.50"); // 5-10M: 50%
+        } else if (total.compareTo(TIER_1M) >= 0) {
+            rate = new BigDecimal("0.30"); // 1-5M: 30%
+        } else {
+            return BigDecimal.ZERO; // < 1M: COD acceptable
+        }
+        
+        BigDecimal deposit = total.multiply(rate).setScale(0, RoundingMode.CEILING);
+        return deposit.divide(THOUSAND, 0, RoundingMode.CEILING).multiply(THOUSAND).min(total);
     }
 
     private ResponseStatusException badRequest(String message) {

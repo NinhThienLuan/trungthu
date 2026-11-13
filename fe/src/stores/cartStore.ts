@@ -34,6 +34,11 @@ export interface CartItem {
   note?: string
   /** Bảng tách giá 1 hộp (quy cách, vỏ hộp, logo, trà, chiết khấu) để hiện ở checkout */
   priceLines?: Array<{ label: string; amount: number }>
+  /** 
+   * User's promotion choice: "AUTO" (default) | promotionId | "NONE"
+   * Saved per item to preserve selection across sessions
+   */
+  promotionSelection?: string
 }
 
 export interface CartGroup {
@@ -75,12 +80,16 @@ export const useCartStore = create<CartState>()(
             return {
               items: state.items.map((i) =>
                 i.lineId === item.variantId ? { ...i, stock: item.stock, canPreorder: item.canPreorder,
-                  quantity: clamp(i.quantity + quantity, maxOrderQuantity(item)) } : i,
+                  quantity: clamp(i.quantity + quantity, maxOrderQuantity(item)),
+                  // Preserve user's promotion selection when adding more
+                  promotionSelection: item.promotionSelection || i.promotionSelection || 'AUTO' } : i,
               ),
             }
           }
           const line: CartItem = { ...item, lineId: item.variantId, kind: 'single',
-            quantity: clamp(quantity, maxOrderQuantity(item)) }
+            quantity: clamp(quantity, maxOrderQuantity(item)),
+            // Set default promotionSelection
+            promotionSelection: item.promotionSelection || 'AUTO' }
           return { items: [...state.items, line] }
         }),
 
@@ -113,8 +122,8 @@ export const useCartStore = create<CartState>()(
     }),
     {
       name: 'cart',
-      version: 2,
-      // Giỏ trước v2 chứa id sản phẩm mock -> BE thật trả 400 khi checkout, nên bỏ
+      version: 3,
+      // Giỏ trước v3 không có promotionSelection -> clear để tránh lỗi
       migrate: () => ({ items: [], deliveryDates: {} }) as unknown as CartState,
     },
   ),

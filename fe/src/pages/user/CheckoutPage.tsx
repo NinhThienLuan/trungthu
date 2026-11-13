@@ -97,12 +97,21 @@ export function CheckoutPage() {
   const active = recipients.map((r, i) => ({ r, cart: carts[i] })).filter((x) => x.cart.length > 0)
   const allocationKey = JSON.stringify(recipients.map((r) => r.qty))
 
+  // Lấy lựa chọn khuyến mãi từ cart items: ưu tiên cart, fallback sang promotionChoices state, cuối cùng mới AUTO
+  const getPromotionSelection = (cart: CartItem[], providerId: string): string => {
+    // Tìm item đầu tiên trong giỏ có promotionSelection
+    const firstSelection = cart.find((item) => item.promotionSelection)?.promotionSelection
+    if (firstSelection) return firstSelection
+    // Nếu không có trong cart thì lấy từ dropdown (nếu đã chọn)
+    return promotionChoices[providerId] ?? 'AUTO'
+  }
+
   // Mỗi người nhận một bản tính riêng: khuyến mãi tính theo số lượng trong từng đơn
   const { data: previews, loading: previewLoading, error: previewError } = useApi(
     (): Promise<CheckoutPreview[] | null> => ready && overAllocated.length === 0
       ? Promise.all(active.map(({ cart }) => orderService.preview(
           { receiverName: '', receiverPhone: '', shippingAddress: '', groups: toCheckoutGroups(cart, deliveryDates, {})
-            .map((g) => ({ ...g, promotionSelection: promotionChoices[g.providerId] ?? 'AUTO' })) })))
+            .map((g) => ({ ...g, promotionSelection: getPromotionSelection(cart, g.providerId) })) })))
       : Promise.resolve(null),
     [items, deliveryDates, allocationKey, promotionChoices],
   )
@@ -162,7 +171,7 @@ export function CheckoutPage() {
         shippingAddress: '',
         vat: vatCheck.success ? vatCheck.data.vat : undefined,
         groups: active.flatMap(({ r, cart }) => toCheckoutGroups(cart, deliveryDates, effectiveChoices).map((g) => ({
-          ...g, promotionSelection: promotionChoices[g.providerId] ?? 'AUTO',
+          ...g, promotionSelection: getPromotionSelection(cart, g.providerId),
           receiverName: r.name.trim(), receiverPhone: r.phone.trim(),
           shippingAddress: `${fullAddress(r)}\nKhung giờ nhận dự kiến: ${deliveryWindows[g.providerId] ?? '08:00–12:00'}`,
         }))),
@@ -264,6 +273,8 @@ export function CheckoutPage() {
                   const total = sum(rows.map((p) => p.totalAmount))
                   const minDeposit = sum(rows.map((p) => p.minDepositAmount))
                   const choice = effectiveChoices[g.providerId]
+                  // Fix: Đơn < 1M có minDeposit=0 nên rate=0%, không phải 50%
+                  const depositRate = total > 0 ? Math.round((minDeposit / total) * 100) : 0
                   const options: Array<{ value: PayChoice; title: string; note: string; disabled?: boolean }> = [
                     {
                       value: 'COD',
@@ -271,7 +282,13 @@ export function CheckoutPage() {
                       note: codAllowed(g.providerId) ? 'Không cần cọc trước' : `Không áp dụng: đơn từ ${formatVnd(COD_MAX_TOTAL)} hoặc có in tên`,
                       disabled: !codAllowed(g.providerId),
                     },
-                    { value: 'MIN_DEPOSIT', title: `VietQR — cọc ${DEPOSIT_RATE * 100}%`, note: `Chuyển ${formatVnd(minDeposit)} trong 5 giờ; xưởng xác nhận khi nhận tiền` },
+                    { 
+                      value: 'MIN_DEPOSIT', 
+                      title: `VietQR — cọc ${depositRate}%`, 
+                      note: depositRate === 50 
+                        ? `Chuyển ${formatVnd(minDeposit)} trong 5 giờ; xưởng xác nhận khi nhận tiền`
+                        : `Chuyển ${formatVnd(minDeposit)} trong 5 giờ (cọc ${depositRate}% theo giá trị đơn); xưởng xác nhận khi nhận tiền`
+                    },
                     { value: 'FULL', title: 'VietQR — trả đủ', note: `Chuyển ${formatVnd(total)} trong 5 giờ; xưởng xác nhận khi nhận tiền` },
                   ]
                   return (
@@ -279,6 +296,11 @@ export function CheckoutPage() {
                       <legend className="px-1 font-semibold text-navy">
                         {g.storeName} · {formatVnd(total)}{rows.length > 1 && ` (${rows.length} đơn)`}
                       </legend>
+                      {depositRate !== 50 && (
+                        <p className="mb-3 text-xs text-muted bg-champagne/20 rounded-sm p-2 border border-champagne/40">
+                          <strong>Chính sách cọc theo giá trị:</strong> Dưới 1 triệu: 0% · 1-5 triệu: 30% · 5-10 triệu: 50% · Trên 10 triệu: 60%
+                        </p>
+                      )}
                       <div className="grid gap-2 sm:grid-cols-3">
                         {options.map((o) => (
                           <label key={o.value} className={cn(
@@ -338,14 +360,21 @@ export function CheckoutPage() {
               {groups.map((g) => {
                 const offers = runningPromotions?.filter((p) => p.providerId === g.providerId) ?? []
                 if (!offers.length) return null
+                const cartSelection = items.find((item) => item.providerId === g.providerId)?.promotionSelection
+                const currentValue = promotionChoices[g.providerId] ?? cartSelection ?? 'AUTO'
                 return <label key={g.providerId} className="block text-small font-semibold text-navy">
                   Ưu đãi của {g.storeName}
-                  <select className="input mt-1" value={promotionChoices[g.providerId] ?? 'AUTO'}
+                  <select className="input mt-1" value={currentValue}
                     onChange={(e) => setPromotionChoices((current) => ({ ...current, [g.providerId]: e.target.value }))}>
                     <option value="AUTO">Tự chọn ưu đãi tốt nhất</option>
                     <option value="NONE">Không dùng ưu đãi</option>
                     {offers.map((p) => <option key={p.id} value={p.id}>{p.name} · {p.label}</option>)}
                   </select>
+                  {cartSelection && !promotionChoices[g.providerId] && (
+                    <span className="mt-1 block text-xs text-muted italic">
+                      (Đang dùng lựa chọn từ Product Detail)
+                    </span>
+                  )}
                 </label>
               })}
             </div>

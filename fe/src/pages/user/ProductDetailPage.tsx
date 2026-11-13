@@ -39,12 +39,14 @@ export function ProductDetailPage() {
   const [qtyDraft, setQtyDraft] = useState<string | null>(null)
   const [added, setAdded] = useState(false)
   const [tab, setTab] = useState<DetailTab>('story')
+  const [selectedPromotionId, setSelectedPromotionId] = useState<string | undefined>()
   useDocumentTitle(product?.name)
 
   useEffect(() => {
     setVariantId(product?.variants[0]?.id)
     setActiveImage(0)
     setQuantity(1)
+    setSelectedPromotionId(undefined)
   }, [product])
 
   if (loading) return <Spinner />
@@ -71,6 +73,7 @@ export function ProductDetailPage() {
     setVariantId(vid)
     setQuantity(1)
     setAdded(false)
+    setSelectedPromotionId(undefined)
   }
 
   const addToCart = () => {
@@ -93,6 +96,7 @@ export function ProductDetailPage() {
         stock: variant.stockQuantity,
         canPreorder,
         imageUrl: product.imageUrl,
+        promotionSelection: selectedPromotionId,
       },
       quantity,
     )
@@ -213,17 +217,21 @@ export function ProductDetailPage() {
                 </div>{' '}
                 <SetContents product={product} setPrice={price} />
               </div>{' '}
-              <PromotionBox promotions={promotions} quantity={quantity} unitPrice={price} />
+              <PromotionBox promotions={promotions} quantity={quantity} unitPrice={price} selectedPromotionId={selectedPromotionId} onSelectPromotion={setSelectedPromotionId} />
               <div className="space-y-space-xs">
                 {' '}
                 <div className="flex items-center justify-between">
                   {' '}
                   <span className="font-label-md text-label-md uppercase tracking-wider text-ink-dark font-bold">
-                    1. Chọn Quy Cách Hộp Quà
+                    {product.productType === 'LOOSE_CAKE' 
+                      ? '1. Chọn Khối Lượng Bánh Lẻ'
+                      : '1. Chọn Quy Cách Hộp Quà'}
                   </span>{' '}
+                  {/* Tạm ẩn: chưa có sơ đồ kích thước
                   <span className="font-body-sm text-body-sm text-secondary cursor-pointer hover:underline">
                     Xem sơ đồ kích thước
-                  </span>{' '}
+                  </span>
+                  */}
                 </div>{' '}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-space-xs" id="boxConfigGroup">
                   {configs.map((c) => {
@@ -377,7 +385,19 @@ export function ProductDetailPage() {
 }
 
 /** Khuyến mãi đang chạy của xưởng cho sản phẩm này; BE tự trừ khi đặt hàng */
-function PromotionBox({ promotions, quantity, unitPrice }: { promotions: Promotion[]; quantity: number; unitPrice: number }) {
+function PromotionBox({ 
+  promotions, 
+  quantity, 
+  unitPrice, 
+  selectedPromotionId, 
+  onSelectPromotion 
+}: { 
+  promotions: Promotion[]; 
+  quantity: number; 
+  unitPrice: number;
+  selectedPromotionId?: string;
+  onSelectPromotion: (id: string | undefined) => void;
+}) {
   if (promotions.length === 0) {
     return (
       <Link to={ROUTES.rfq} className="block p-space-md rounded-[0.25rem] bg-surface-container-lowest shadow-sm font-body-sm text-body-sm text-on-surface-variant hover:bg-champagne-light/40">
@@ -435,6 +455,11 @@ function PromotionBox({ promotions, quantity, unitPrice }: { promotions: Promoti
     bestId = [...evaluated].sort((a, b) => b.rate - a.rate)[0].p.id
   }
 
+  // Tự động chọn best nếu chưa có lựa chọn
+  const currentSelection = selectedPromotionId && evaluated.some((e) => e.p.id === selectedPromotionId)
+    ? selectedPromotionId
+    : bestId
+
   // Sắp xếp: Ưu đãi tốt nhất luôn đứng đầu tiên
   const sorted = [...evaluated].sort((a, b) => (a.p.id === bestId ? -1 : b.p.id === bestId ? 1 : b.rate - a.rate))
 
@@ -453,49 +478,65 @@ function PromotionBox({ promotions, quantity, unitPrice }: { promotions: Promoti
       <ul className="space-y-2">
         {sorted.map(({ p, isQualified, dynamicNote }) => {
           const isBest = p.id === bestId
+          const isSelected = p.id === currentSelection
           return (
             <li
               key={p.id}
               className={cn(
-                'flex flex-col gap-1 rounded-[0.125rem] p-2.5 transition-all',
-                isBest ? 'bg-primary/70 border border-secondary-fixed/60 shadow-inner' : 'border border-primary/40 opacity-80',
+                'flex gap-2 rounded-[0.125rem] p-2.5 transition-all cursor-pointer',
+                isSelected 
+                  ? 'bg-primary/70 border border-secondary-fixed/60 shadow-inner' 
+                  : 'border border-primary/40 opacity-80 hover:opacity-100',
               )}
+              onClick={() => onSelectPromotion(p.id)}
             >
-              <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="font-headline-sm text-headline-sm text-secondary-fixed font-bold">{p.label}</span>
-                  {isBest && promotions.length > 1 && (
-                    <span className="px-1.5 py-0.5 rounded-[0.125rem] bg-secondary text-on-secondary font-bold text-[9px] uppercase tracking-wider">
-                      Ưu đãi tốt nhất
-                    </span>
-                  )}
-                </div>
-                <span className="font-label-sm text-[11px] text-on-primary-container">
-                  {p.name} · đến {new Date(p.endDate).toLocaleDateString('vi-VN')}
-                </span>
+              <div className="flex items-start pt-0.5">
+                <input
+                  type="radio"
+                  name="promotion-selection"
+                  checked={isSelected}
+                  onChange={() => onSelectPromotion(p.id)}
+                  className="w-4 h-4 text-secondary-fixed bg-primary border-champagne-light focus:ring-secondary-fixed focus:ring-2 cursor-pointer"
+                  aria-label={`Chọn khuyến mãi ${p.label}`}
+                />
               </div>
-              {dynamicNote && (
-                <div
-                  className={cn(
-                    'mt-0.5 rounded-[0.125rem] px-2 py-1 text-[11px] font-medium flex items-center gap-1.5',
-                    isQualified
-                      ? 'bg-secondary-fixed/20 text-secondary-fixed font-semibold'
-                      : isBest
-                        ? 'bg-primary text-champagne-light'
-                        : 'bg-primary/40 text-champagne-light/80',
-                  )}
-                >
-                  <Icon name={isQualified ? 'check_circle' : 'auto_awesome'} className="text-[14px] shrink-0" aria-hidden />
-                  <span>{dynamicNote}</span>
+              <div className="flex-1 flex flex-col gap-1">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="font-headline-sm text-headline-sm text-secondary-fixed font-bold">{p.label}</span>
+                    {isBest && promotions.length > 1 && (
+                      <span className="px-1.5 py-0.5 rounded-[0.125rem] bg-secondary text-on-secondary font-bold text-[9px] uppercase tracking-wider">
+                        Ưu đãi tốt nhất
+                      </span>
+                    )}
+                  </div>
+                  <span className="font-label-sm text-[11px] text-on-primary-container">
+                    {p.name} · đến {new Date(p.endDate).toLocaleDateString('vi-VN')}
+                  </span>
                 </div>
-              )}
+                {dynamicNote && (
+                  <div
+                    className={cn(
+                      'mt-0.5 rounded-[0.125rem] px-2 py-1 text-[11px] font-medium flex items-center gap-1.5',
+                      isQualified
+                        ? 'bg-secondary-fixed/20 text-secondary-fixed font-semibold'
+                        : isBest
+                          ? 'bg-primary text-champagne-light'
+                          : 'bg-primary/40 text-champagne-light/80',
+                    )}
+                  >
+                    <Icon name={isQualified ? 'check_circle' : 'auto_awesome'} className="text-[14px] shrink-0" aria-hidden />
+                    <span>{dynamicNote}</span>
+                  </div>
+                )}
+              </div>
             </li>
           )
         })}
       </ul>
 
       <div className="pt-2 border-t border-primary/40 flex items-center justify-between text-[11px] text-on-primary-container">
-        <span>Tự động áp dụng ưu đãi giảm nhiều nhất khi đặt hàng (không cộng dồn ưu đãi).</span>
+        <span>Chọn 1 khuyến mãi. Hệ thống tự động đề xuất ưu đãi tốt nhất. Có thể thay đổi lại khi Checkout.</span>
       </div>
     </div>
   )

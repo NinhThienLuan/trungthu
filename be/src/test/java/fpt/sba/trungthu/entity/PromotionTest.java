@@ -21,11 +21,13 @@ class PromotionTest {
     }
 
     @Test
-    void buyXGetYCountsWholeBundlesOnly() {
+    void buyXGetYCountsProportionallyForPartialBundles() {
         Promotion p = Promotion.builder().type(PromotionType.BUY_X_GET_Y).buyQuantity(3).freeQuantity(1).build();
-        assertThat(p.discountFor(PRICE, 3)).isEqualByComparingTo("0");
-        assertThat(p.discountFor(PRICE, 4)).isEqualByComparingTo("95000");
-        assertThat(p.discountFor(PRICE, 9)).isEqualByComparingTo("190000");
+        assertThat(p.discountFor(PRICE, 3)).isEqualByComparingTo("0");      // Chưa đủ 1 set
+        assertThat(p.discountFor(PRICE, 4)).isEqualByComparingTo("95000");  // 1 set → 1 bánh tặng
+        assertThat(p.discountFor(PRICE, 6)).isEqualByComparingTo("142500"); // 1 set + 2 lẻ → 1.5 bánh tặng
+        assertThat(p.discountFor(PRICE, 9)).isEqualByComparingTo("213750"); // 2 set + 1 lẻ → 2.25 bánh tặng
+        assertThat(p.discountFor(PRICE, 11)).isEqualByComparingTo("261250"); // 2 set + 3 lẻ → 2.75 bánh tặng
         assertThat(p.label()).isEqualTo("Mua 3 tặng 1");
     }
 
