@@ -1,5 +1,5 @@
 import { useDocumentTitle } from '../../hooks/useDocumentTitle'
-import { BULK_LEAD_DAYS, BULK_ORDER_QUANTITY, DEPOSIT_RATE, HOLD_MINUTES, MIN_LEAD_DAYS } from '../../constants'
+import { BULK_LEAD_DAYS, BULK_ORDER_QUANTITY, HOLD_MINUTES, MIN_LEAD_DAYS } from '../../constants'
 import { PageHeader } from '../../components/ui/PageHeader'
 
 const SECTIONS = [
@@ -13,9 +13,9 @@ const SECTIONS = [
     ],
   },
   {
-    title: 'Đặt cọc',
+    title: 'Đặt cọc theo ngưỡng giá trị',
     points: [
-      `Đặt cọc tối thiểu ${DEPOSIT_RATE * 100}% giá trị đơn, chuyển khoản trực tiếp cho xưởng qua VietQR.`,
+      'Đặt cọc theo giá trị đơn hàng: từ 20% (đơn dưới 1.000.000đ), 30% (từ 1.000.000đ đến 3.000.000đ), và 50% (đơn từ 3.000.000đ trở lên hoặc có in lời chúc riêng).',
       `Đơn được giữ chỗ ${HOLD_MINUTES / 60} giờ. Quá thời gian chưa xác nhận cọc, đơn tự huỷ.`,
       'Sàn không thu hộ và không giữ tiền của người mua.',
     ],

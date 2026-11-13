@@ -53,7 +53,7 @@ class DemoFlowSeederTests {
                 // vỏ hộp chỉ bán kèm bánh (Tự phối / set quà) nên không có trong danh mục chung
                 .doesNotContain("Hộp đoàn viên", "Bánh dẻo hạt sen", "Bánh nướng gà quay");
 
-        var cake = variant(sellerProducts, "DEMO-THAPCAM-150");
+        var cake = variant(sellerProducts, "DEMO-THAPCAM-150-1T");
         var balance = stats.stats("seller@kinhdo.vn", cake.productId(), cake.variant().getId());
         assertThat(balance.getInbound()).isEqualTo(160);
         assertThat(balance.getBroken()).isEqualTo(2);
@@ -81,7 +81,7 @@ class DemoFlowSeederTests {
                     assertThat(order.getSubtotalAmount()).isEqualByComparingTo("700000.00");
                 });
 
-        var soldOut = variant(sellerProducts, "DEMO-THAPCAM-200").variant();
+        var soldOut = variant(sellerProducts, "DEMO-THAPCAM-200-2T").variant();
         assertThat(soldOut.getStockQuantity()).isZero();
         assertThat(soldOut.getStatus()).isEqualTo(VariantStatus.OUT_OF_STOCK);
         var restocked = variant(sellerProducts, "DEMO-DAUXANH-180").variant();

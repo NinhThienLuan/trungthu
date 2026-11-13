@@ -75,8 +75,8 @@ public class DemoFlowSeeder implements CommandLineRunner {
         if (orderRepository.count() > 0) {
             return;
         }
-        SkuRef cake150 = sku("DEMO-THAPCAM-150");
-        SkuRef cake200 = sku("DEMO-THAPCAM-200");
+        SkuRef cake150 = sku("DEMO-THAPCAM-150-1T") != null ? sku("DEMO-THAPCAM-150-1T") : sku("DEMO-THAPCAM-150");
+        SkuRef cake200 = sku("DEMO-THAPCAM-200-2T") != null ? sku("DEMO-THAPCAM-200-2T") : sku("DEMO-THAPCAM-200");
         SkuRef greenBean = sku("DEMO-DAUXANH-180");
         SkuRef giftBox = sku("DEMO-HOP-4");
         if (cake150 == null || cake200 == null || greenBean == null || giftBox == null) {

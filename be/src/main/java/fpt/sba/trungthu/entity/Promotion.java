@@ -67,16 +67,24 @@ public class Promotion extends BaseEntity {
         return product == null || product.getId().equals(target.getId());
     }
 
-    /** Số tiền giảm cho một dòng `quantity` cái giá `unitPrice` (làm tròn xuống đồng) */
+    /** Giá trị ưu đãi để chọn khuyến mãi tốt nhất; BUY_X_GET_Y trả giá trị bánh tặng thêm. */
     public BigDecimal discountFor(BigDecimal unitPrice, int quantity) {
         return switch (type) {
-            case PERCENT_OFF -> quantity < minQuantity ? BigDecimal.ZERO
-                    : unitPrice.multiply(BigDecimal.valueOf((long) quantity * percentOff))
+            case PERCENT_OFF -> quantity < (minQuantity == null ? 0 : minQuantity) ? BigDecimal.ZERO
+                    : unitPrice.multiply(BigDecimal.valueOf((long) quantity * (percentOff == null ? 0 : percentOff)))
                             .divide(BigDecimal.valueOf(100), 0, RoundingMode.FLOOR);
-            case BUY_X_GET_Y -> unitPrice.multiply(
-                    BigDecimal.valueOf((long) (quantity / (buyQuantity + freeQuantity)) * freeQuantity));
-            case BUY_X_PAY_Y -> unitPrice.multiply(
-                    BigDecimal.valueOf((long) (quantity / buyQuantity) * (buyQuantity - freeQuantity)));
+            case BUY_X_GET_Y -> {
+                if (buyQuantity == null || buyQuantity <= 0) yield BigDecimal.ZERO;
+                int free = freeQuantity == null ? 1 : freeQuantity;
+                long freeCount = (long) (quantity / buyQuantity) * free;
+                yield unitPrice.multiply(BigDecimal.valueOf(freeCount));
+            }
+            case BUY_X_PAY_Y -> {
+                if (buyQuantity == null || buyQuantity <= 0) yield BigDecimal.ZERO;
+                int free = freeQuantity == null ? 0 : freeQuantity;
+                long freeCount = (long) (quantity / buyQuantity) * (buyQuantity - free);
+                yield unitPrice.multiply(BigDecimal.valueOf(freeCount));
+            }
         };
     }
 

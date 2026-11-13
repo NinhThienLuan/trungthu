@@ -70,7 +70,7 @@ public class BulkOrderService {
         BulkOrder order = orders.saveAndFlush(BulkOrder.builder().quote(quote)
                 .quantity(quote.getOfferedQuantity()).cakesPerBox(quote.getCakesPerBox())
                 .unitPrice(quote.getQuotedPrice()).grossAmount(gross).discountAmount(discount)
-                .totalAmount(total).depositAmount(total.multiply(new BigDecimal("0.50")).setScale(2, RoundingMode.HALF_UP))
+                .totalAmount(total).depositAmount(CheckoutServiceImpl.minDeposit(total))
                 .deliveryDate(delivery).depositDeadline(depositDeadline)
                 .status(BulkOrderStatus.WAITING_DEPOSIT).build());
         int toReserve = Math.multiplyExact(order.getQuantity(), order.getCakesPerBox());

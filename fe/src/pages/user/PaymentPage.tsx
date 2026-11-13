@@ -98,12 +98,25 @@ function OrderSummary({ order }: { order: OrderDetail }) {
       <ul className="mt-3 flex flex-col gap-2">
         {lines.map((line) => (
           <li key={line.key} className="flex justify-between gap-3">
-            <span>
-              {line.name}{line.quantity && <span className="text-muted"> × {line.quantity}</span>}
+            <div>
+              <span className="font-medium text-navy">{line.productName}</span>
+              {line.variantName && <span className="ml-1.5 text-xs text-muted">({line.variantName})</span>}
+              {line.promotionLabel && (
+                <span className="ml-1.5 inline-flex items-center rounded bg-amber-50 px-1.5 py-0.5 text-[11px] text-amber-700">
+                  {line.promotionLabel}
+                </span>
+              )}
+              {line.quantity && <span className="text-muted"> × {line.purchasedQuantity ?? line.quantity}</span>}
+              {(line.quantity ?? 0) > (line.purchasedQuantity ?? line.quantity ?? 0) && (
+                <span className="text-success"> + {(line.quantity ?? 0) - (line.purchasedQuantity ?? 0)} bánh tặng</span>
+              )}
               {line.components && <span className="mt-1 block text-muted">
                 Gồm: {line.components.map((item) => `${item.productName} · ${item.variantName} × ${item.quantity}`).join('; ')}
               </span>}
-            </span>
+              {line.boxContents && line.boxContents.length > 0 && (
+                <span className="mt-0.5 block text-xs text-muted">Vị: {line.boxContents.join(', ')}</span>
+              )}
+            </div>
             <span className="shrink-0">{formatVnd(line.subtotal)}</span>
           </li>
         ))}

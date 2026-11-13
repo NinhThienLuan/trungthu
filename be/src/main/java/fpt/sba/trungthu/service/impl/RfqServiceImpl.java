@@ -1,5 +1,6 @@
 package fpt.sba.trungthu.service.impl;
 
+import fpt.sba.trungthu.dto.request.VnFormats;
 import fpt.sba.trungthu.common.security.SecurityContextService;
 import fpt.sba.trungthu.dto.request.CreateRfqRequest;
 import fpt.sba.trungthu.dto.request.SubmitQuoteRequest;
@@ -57,9 +58,30 @@ public class RfqServiceImpl implements RfqService {
     public RfqResponse create(CreateRfqRequest input) {
         User customer = security.getCurrentUser();
         LocalDate today = LocalDate.now(VIETNAM);
-        String companyName = input.companyName().trim();
-        if (companyName.length() < 3) {
-            throw badRequest("Tên doanh nghiệp phải có ít nhất 3 ký tự");
+        boolean isBusiness = "BUSINESS".equalsIgnoreCase(input.customerType())
+                || (input.taxCode() != null && !input.taxCode().isBlank());
+        String companyName = input.companyName() == null ? null : input.companyName().trim();
+        String taxCode = input.taxCode() == null ? null : input.taxCode().trim();
+        String contactPosition = input.contactPosition() == null ? null : input.contactPosition().trim();
+
+        if (isBusiness) {
+            if (companyName == null || companyName.length() < 3) {
+                throw badRequest("Tên doanh nghiệp phải có ít nhất 3 ký tự");
+            }
+            if (taxCode == null || !taxCode.matches(VnFormats.TAX_CODE)) {
+                throw badRequest(VnFormats.TAX_CODE_MESSAGE);
+            }
+            if (contactPosition == null || contactPosition.isBlank()) {
+                throw badRequest("Chức vụ người liên hệ không được để trống");
+            }
+        } else {
+            if (companyName == null || companyName.isBlank()) {
+                companyName = "Khách cá nhân (" + input.contactName().trim() + ")";
+            }
+            if (contactPosition == null || contactPosition.isBlank()) {
+                contactPosition = "Khách hàng cá nhân";
+            }
+            taxCode = null;
         }
         // Chọn sản phẩm thì gửi cho xưởng của sản phẩm đó; chọn cả hai thì sản phẩm phải thuộc xưởng đã chọn
         // Hàng sỉ xưởng nướng theo đơn: sản phẩm đang hiện công khai (kể cả hết tồn bán lẻ) đều nhận RFQ
@@ -88,8 +110,8 @@ public class RfqServiceImpl implements RfqService {
         }
         if (code == null) throw new ResponseStatusException(HttpStatus.CONFLICT, "Không tạo được mã RFQ");
         BulkRequest request = requests.saveAndFlush(BulkRequest.builder().customer(customer).requestCode(code)
-                .companyName(companyName).taxCode(input.taxCode().trim())
-                .contactName(input.contactName().trim()).contactPosition(input.contactPosition().trim())
+                .companyName(companyName).taxCode(taxCode)
+                .contactName(input.contactName().trim()).contactPosition(contactPosition)
                 .contactPhone(input.contactPhone().trim()).contactEmail(input.contactEmail().trim())
                 .requestedQuantity(input.requestedQuantity()).cakesPerBox(cakesPerBox)
                 .expectedDate(input.expectedDeliveryDate())

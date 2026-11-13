@@ -11,7 +11,7 @@ import { useApi } from '../../hooks/useApi'
 import { useLeadTimes } from '../../hooks/useLeadTimes'
 import { useDocumentTitle } from '../../hooks/useDocumentTitle'
 import { checkoutSchema, fieldErrors } from '../../schemas'
-import { COD_MAX_TOTAL, DEPOSIT_RATE, ROUTES } from '../../constants'
+import { COD_MAX_TOTAL, ROUTES } from '../../constants'
 import { cn, formatVnd } from '../../lib/format'
 import { addDays, toIsoDate } from '../../lib/format'
 import { toCheckoutGroups, type PayChoice } from '../../lib/checkoutGroups'
@@ -71,12 +71,12 @@ const fullAddress = (r: Recipient) =>
 
 export function CheckoutPage() {
   useDocumentTitle('Thanh toán')
-  const { items, deliveryDates, clear } = useCartStore()
+  const { items, deliveryDates, clear, selectedPromotions, setPromotionChoice } = useCartStore()
   const user = useAuthStore((s) => s.user)
   const navigate = useNavigate()
   const [wantVat, setWantVat] = useState(false)
   const [choices, setChoices] = useState<Record<string, PayChoice>>({})
-  const [promotionChoices, setPromotionChoices] = useState<Record<string, string>>({})
+  const [promotionChoices, setPromotionChoices] = useState<Record<string, string>>(() => ({ ...(selectedPromotions ?? {}) }))
   const [deliveryWindows, setDeliveryWindows] = useState<Record<string, string>>({})
   const [recipients, setRecipients] = useState<Recipient[]>(() => [newRecipient(user?.fullName ?? '', user?.phone ?? '')])
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -263,6 +263,7 @@ export function CheckoutPage() {
                   if (rows.length === 0) return null
                   const total = sum(rows.map((p) => p.totalAmount))
                   const minDeposit = sum(rows.map((p) => p.minDepositAmount))
+                  const depositPct = total > 0 ? Math.round((minDeposit / total) * 100) : 20
                   const choice = effectiveChoices[g.providerId]
                   const options: Array<{ value: PayChoice; title: string; note: string; disabled?: boolean }> = [
                     {
@@ -271,7 +272,7 @@ export function CheckoutPage() {
                       note: codAllowed(g.providerId) ? 'Không cần cọc trước' : `Không áp dụng: đơn từ ${formatVnd(COD_MAX_TOTAL)} hoặc có in tên`,
                       disabled: !codAllowed(g.providerId),
                     },
-                    { value: 'MIN_DEPOSIT', title: `VietQR — cọc ${DEPOSIT_RATE * 100}%`, note: `Chuyển ${formatVnd(minDeposit)} trong 5 giờ; xưởng xác nhận khi nhận tiền` },
+                    { value: 'MIN_DEPOSIT', title: `VietQR — cọc tối thiểu ${depositPct}%`, note: `Chuyển ${formatVnd(minDeposit)} trong 5 giờ; xưởng xác nhận khi nhận tiền` },
                     { value: 'FULL', title: 'VietQR — trả đủ', note: `Chuyển ${formatVnd(total)} trong 5 giờ; xưởng xác nhận khi nhận tiền` },
                   ]
                   return (
@@ -341,7 +342,11 @@ export function CheckoutPage() {
                 return <label key={g.providerId} className="block text-small font-semibold text-navy">
                   Ưu đãi của {g.storeName}
                   <select className="input mt-1" value={promotionChoices[g.providerId] ?? 'AUTO'}
-                    onChange={(e) => setPromotionChoices((current) => ({ ...current, [g.providerId]: e.target.value }))}>
+                    onChange={(e) => {
+                      const val = e.target.value
+                      setPromotionChoices((current) => ({ ...current, [g.providerId]: val }))
+                      setPromotionChoice(g.providerId, val)
+                    }}>
                     <option value="AUTO">Tự chọn ưu đãi tốt nhất</option>
                     <option value="NONE">Không dùng ưu đãi</option>
                     {offers.map((p) => <option key={p.id} value={p.id}>{p.name} · {p.label}</option>)}

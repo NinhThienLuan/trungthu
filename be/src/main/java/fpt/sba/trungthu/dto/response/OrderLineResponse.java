@@ -9,6 +9,7 @@ import java.util.UUID;
 @Getter
 @Builder
 public class OrderLineResponse {
+    private UUID productId;
     private UUID variantId;
     private UUID sourceSetId;
     private String sourceSetName;
@@ -19,4 +20,8 @@ public class OrderLineResponse {
     private String personalizationText;
     private BigDecimal personalizationFee;
     private BigDecimal subtotal;
+    private String promotionLabel;
+    private String boxContents;
+    private Integer freeQuantity;
+    private Integer purchasedQuantity;
 }

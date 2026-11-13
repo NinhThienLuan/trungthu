@@ -23,9 +23,13 @@ class PromotionTest {
     @Test
     void buyXGetYCountsWholeBundlesOnly() {
         Promotion p = Promotion.builder().type(PromotionType.BUY_X_GET_Y).buyQuantity(3).freeQuantity(1).build();
-        assertThat(p.discountFor(PRICE, 3)).isEqualByComparingTo("0");
+        assertThat(p.discountFor(PRICE, 2)).isEqualByComparingTo("0");
+        assertThat(p.discountFor(PRICE, 3)).isEqualByComparingTo("95000");
         assertThat(p.discountFor(PRICE, 4)).isEqualByComparingTo("95000");
-        assertThat(p.discountFor(PRICE, 9)).isEqualByComparingTo("190000");
+        assertThat(p.discountFor(PRICE, 5)).isEqualByComparingTo("95000");
+        assertThat(p.discountFor(PRICE, 6)).isEqualByComparingTo("190000");
+        assertThat(p.discountFor(PRICE, 9)).isEqualByComparingTo("285000");
+        assertThat(p.discountFor(PRICE, 11)).isEqualByComparingTo("285000");
         assertThat(p.label()).isEqualTo("Mua 3 tặng 1");
     }
 

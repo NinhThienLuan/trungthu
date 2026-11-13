@@ -30,6 +30,8 @@ export function ProductDetailPage() {
   const user = useAuthStore((st) => st.user)
   const isSeller = user?.role === 'PROVIDER'
   const add = useCartStore((st) => st.add)
+  const setPromotionChoice = useCartStore((st) => st.setPromotionChoice)
+  const selectedPromotions = useCartStore((st) => st.selectedPromotions)
   const { data: product, loading, error, reload } = useApi(() => productService.detail(id), [id])
   const providerId = product?.providerId
   const { data: running } = useApi(() => (providerId ? promotionService.running(providerId) : Promise.resolve([])), [providerId])
@@ -38,6 +40,13 @@ export function ProductDetailPage() {
   const [quantity, setQuantity] = useState(1)
   const [qtyDraft, setQtyDraft] = useState<string | null>(null)
   const [added, setAdded] = useState(false)
+  const [selectedPromoId, setSelectedPromoId] = useState<string>('AUTO')
+
+  useEffect(() => {
+    if (providerId && selectedPromotions[providerId]) {
+      setSelectedPromoId(selectedPromotions[providerId])
+    }
+  }, [providerId, selectedPromotions])
   const [tab, setTab] = useState<DetailTab>('story')
   useDocumentTitle(product?.name)
 
@@ -103,6 +112,9 @@ export function ProductDetailPage() {
       },
       quantity,
     )
+    if (product.providerId && selectedPromoId) {
+      setPromotionChoice(product.providerId, selectedPromoId)
+    }
     setAdded(true)
   }
 
@@ -220,7 +232,13 @@ export function ProductDetailPage() {
                 </div>{' '}
                 <SetContents product={product} setPrice={price} />
               </div>{' '}
-              <PromotionBox promotions={promotions} quantity={quantity} unitPrice={price} />
+              <PromotionBox
+                promotions={promotions}
+                quantity={quantity}
+                unitPrice={price}
+                selectedPromoId={selectedPromoId}
+                onSelectPromo={(id) => setSelectedPromoId(id)}
+              />
               {product.productType !== 'GIFT_SET' && (
               <div className="space-y-space-xs">
                 {' '}
@@ -366,7 +384,12 @@ export function ProductDetailPage() {
             )}
             {tab === 'reviews' && (
               <div className="tab-panel py-space-lg" id="tab-reviews">
-                <ProductReviews providerId={product.providerId} storeName={product.storeName} />
+                <ProductReviews
+                  productId={product.id}
+                  productName={product.name}
+                  providerId={product.providerId}
+                  storeName={product.storeName}
+                />
               </div>
             )}{' '}
           </div>{' '}
@@ -376,8 +399,20 @@ export function ProductDetailPage() {
   )
 }
 
-/** Khuyến mãi đang chạy của xưởng cho sản phẩm này; BE tự trừ khi đặt hàng */
-function PromotionBox({ promotions, quantity, unitPrice }: { promotions: Promotion[]; quantity: number; unitPrice: number }) {
+/** Khuyến mãi đang chạy của xưởng cho sản phẩm này; cho phép khách chọn ưu đãi */
+function PromotionBox({
+  promotions,
+  quantity,
+  unitPrice,
+  selectedPromoId,
+  onSelectPromo,
+}: {
+  promotions: Promotion[]
+  quantity: number
+  unitPrice: number
+  selectedPromoId: string
+  onSelectPromo: (id: string) => void
+}) {
   if (promotions.length === 0) {
     return (
       <Link to={ROUTES.rfq} className="block p-space-md rounded-[0.25rem] bg-surface-container-lowest shadow-sm font-body-sm text-body-sm text-on-surface-variant hover:bg-champagne-light/40">
@@ -394,23 +429,22 @@ function PromotionBox({ promotions, quantity, unitPrice }: { promotions: Promoti
     let dynamicNote = ''
 
     if (p.type === 'BUY_X_GET_Y' && p.buyQuantity && p.freeQuantity) {
-      const bundle = p.buyQuantity + p.freeQuantity
-      const sets = Math.floor(quantity / bundle)
-      const remainder = quantity % bundle
-      rate = p.freeQuantity / bundle
+      const buyQty = p.buyQuantity
+      const freeQty = p.freeQuantity
+      const sets = Math.floor(quantity / buyQty)
+      const remainder = quantity % buyQty
+      rate = freeQty / (buyQty + freeQty)
       if (sets > 0) {
         isQualified = true
-        const freeCakes = sets * p.freeQuantity
+        const freeCakes = sets * freeQty
         saved = freeCakes * unitPrice
         dynamicNote = `Đang chọn ${quantity} cái: Được tặng ${freeCakes} bánh miễn phí (Tiết kiệm ${vnd(saved)})!`
         if (remainder > 0) {
-          dynamicNote += ` Thêm ${bundle - remainder} cái nữa để nhận tiếp bánh tặng.`
+          dynamicNote += ` Thêm ${buyQty - remainder} cái nữa để nhận tiếp bánh tặng.`
         }
       } else {
-        const needed = bundle - remainder
-        dynamicNote = quantity >= p.buyQuantity && remainder === p.buyQuantity
-          ? `Bạn đã chọn ${quantity} cái! Thêm ${needed} bánh nữa để được TẶNG ${p.freeQuantity}!`
-          : `Chọn thêm ${needed} cái nữa (đủ ${bundle} cái) để được tặng ${p.freeQuantity} bánh miễn phí!`
+        const needed = buyQty - remainder
+        dynamicNote = `Chọn thêm ${needed} cái nữa (đủ ${buyQty} cái) để được tặng ${freeQty} bánh miễn phí!`
       }
     } else if (p.type === 'PERCENT_OFF' && p.minQuantity && p.percentOff) {
       rate = (p.percentOff ?? 0) / 100
@@ -440,33 +474,74 @@ function PromotionBox({ promotions, quantity, unitPrice }: { promotions: Promoti
 
   return (
     <div className="bg-primary-container text-champagne-light p-space-md rounded-[0.25rem] shadow-md space-y-space-sm">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-space-xs">
           <Icon name="sell" className="text-secondary-fixed text-[20px]" aria-hidden />
           <span className="font-label-lg text-label-lg text-secondary-fixed uppercase tracking-wider">Khuyến mãi của xưởng</span>
         </div>
-        {promotions.length > 1 && (
-          <span className="text-[11px] text-champagne-light/80 italic">Có {promotions.length} ưu đãi</span>
-        )}
+        <div className="flex items-center gap-1.5 text-[11px]">
+          <button
+            type="button"
+            onClick={() => onSelectPromo(selectedPromoId === 'AUTO' ? 'NONE' : 'AUTO')}
+            className={cn(
+              'px-2 py-0.5 rounded-[0.125rem] border transition-colors cursor-pointer',
+              selectedPromoId === 'AUTO'
+                ? 'bg-secondary text-on-secondary border-secondary font-bold'
+                : 'border-primary/50 text-champagne-light/70 hover:text-champagne-light',
+            )}
+          >
+            Tự chọn tốt nhất
+          </button>
+          <button
+            type="button"
+            onClick={() => onSelectPromo(selectedPromoId === 'NONE' ? 'AUTO' : 'NONE')}
+            className={cn(
+              'px-2 py-0.5 rounded-[0.125rem] border transition-colors cursor-pointer',
+              selectedPromoId === 'NONE'
+                ? 'bg-ink-dark text-champagne-light border-secondary-fixed font-bold'
+                : 'border-primary/50 text-champagne-light/70 hover:text-champagne-light',
+            )}
+          >
+            Không dùng KM
+          </button>
+        </div>
       </div>
 
       <ul className="space-y-2">
         {sorted.map(({ p, isQualified, dynamicNote }) => {
           const isBest = p.id === bestId
+          const isExplicitlySelected = selectedPromoId === p.id
+          const isAutoSelected = selectedPromoId === 'AUTO' && isBest
+          const isSelected = isExplicitlySelected || isAutoSelected
+
           return (
             <li
               key={p.id}
+              onClick={() => onSelectPromo(selectedPromoId === p.id ? 'AUTO' : p.id)}
               className={cn(
-                'flex flex-col gap-1 rounded-[0.125rem] p-2.5 transition-all',
-                isBest ? 'bg-primary/70 border border-secondary-fixed/60 shadow-inner' : 'border border-primary/40 opacity-80',
+                'flex flex-col gap-1 rounded-[0.125rem] p-2.5 transition-all cursor-pointer select-none',
+                isSelected
+                  ? 'bg-primary/80 border-2 border-secondary-fixed shadow-md ring-1 ring-secondary-fixed'
+                  : 'border border-primary/40 opacity-80 hover:opacity-100 hover:bg-primary/40',
               )}
             >
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <div className="flex items-center gap-2">
+                  <span className={cn(
+                    'size-4 rounded-full border flex items-center justify-center shrink-0 text-[10px]',
+                    isSelected ? 'border-secondary-fixed bg-secondary-fixed text-primary font-bold' : 'border-champagne-light/50',
+                  )}>
+                    {isSelected && '✓'}
+                  </span>
                   <span className="font-headline-sm text-headline-sm text-secondary-fixed font-bold">{p.label}</span>
                   {isBest && promotions.length > 1 && (
                     <span className="px-1.5 py-0.5 rounded-[0.125rem] bg-secondary text-on-secondary font-bold text-[9px] uppercase tracking-wider">
                       Ưu đãi tốt nhất
+                    </span>
+                  )}
+                  {isExplicitlySelected && (
+                    <span className="px-1.5 py-0.5 rounded-[0.125rem] bg-secondary-fixed text-primary font-bold text-[9px] uppercase tracking-wider">
+                      Đã chọn
                     </span>
                   )}
                 </div>
@@ -495,7 +570,7 @@ function PromotionBox({ promotions, quantity, unitPrice }: { promotions: Promoti
       </ul>
 
       <div className="pt-2 border-t border-primary/40 flex items-center justify-between text-[11px] text-on-primary-container">
-        <span>Tự động áp dụng ưu đãi giảm nhiều nhất khi đặt hàng (không cộng dồn ưu đãi).</span>
+        <span>Bấm vào ưu đãi để chọn; lựa chọn sẽ được giữ lại khi sang trang Thanh toán.</span>
       </div>
     </div>
   )

@@ -10,7 +10,7 @@ export const BULK_ORDER_QUANTITY = 20 // từ 20 sản phẩm/xưởng cần chu
 export const MAX_LINE_QUANTITY = 10_000 // trần mỗi dòng như BE (CheckoutServiceImpl); từ BULK_ORDER_QUANTITY cần BULK_LEAD_DAYS ngày
 export const BULK_LEAD_DAYS = 7
 export const RFQ_MIN_QUANTITY = 20 // RFQ sỉ từ 20 hộp
-export const DEPOSIT_RATE = 0.5 // cọc tối thiểu 50%
+export const DEPOSIT_RATE = 0.2 // cọc tối thiểu từ 20% theo ngưỡng giá trị đơn hàng
 export const HOLD_MINUTES = 300 // VietQR: tối đa 5 giờ từ lúc đặt
 export const COD_MAX_TOTAL = 2_000_000 // COD chỉ cho đơn (sau tách theo xưởng) dưới 2 triệu
 

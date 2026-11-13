@@ -156,8 +156,16 @@ function OrderPanel({ id, onChanged }: { id: string; onChanged: () => void }) {
       <ul className="flex flex-col gap-2 text-small">
         {order.lines.map((l) => (
           <li key={l.variantId} className="flex justify-between gap-3 border-t border-line pt-2">
-            <span>{l.productName}<span className="block text-muted">{l.variantName} · {l.quantity} × {formatVnd(l.unitPrice)}</span></span>
-            <span>{formatVnd(l.subtotal)}</span>
+            <div>
+              <span className="font-medium">{l.productName}</span>
+              {l.variantName && <span className="ml-1.5 rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-700">{l.variantName}</span>}
+              {l.promotionLabel && <span className="ml-1.5 rounded bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-xs text-amber-700">{l.promotionLabel}</span>}
+              <span className="block text-muted">{l.purchasedQuantity ?? l.quantity} × {formatVnd(l.unitPrice)}
+                {l.quantity > (l.purchasedQuantity ?? l.quantity) && ` + ${l.quantity - (l.purchasedQuantity ?? l.quantity)} bánh tặng`}
+              </span>
+              {l.boxContents && <span className="block text-xs text-muted">Vị bánh: {Array.isArray(l.boxContents) ? l.boxContents.join(', ') : l.boxContents}</span>}
+            </div>
+            <span className="font-medium">{formatVnd(l.subtotal)}</span>
           </li>
         ))}
         {!!order.discountAmount && <li className="flex justify-between border-t border-line pt-2 text-success"><span>Khuyến mãi đã giảm</span><span>{formatVnd(order.discountAmount)}</span></li>}
