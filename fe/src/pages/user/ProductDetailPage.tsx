@@ -65,7 +65,14 @@ export function ProductDetailPage() {
   const maxQty = Math.min(MAX_LINE_QUANTITY, canPreorder ? MAX_LINE_QUANTITY : Math.max(1, variant?.stockQuantity ?? 1))
   const inStock = !!variant && (variant.stockQuantity > 0 || canPreorder)
   const gallery = product.gallery?.length ? product.gallery : product.imageUrl ? [product.imageUrl] : []
-  const configs = product.variants.map((v) => ({ variantId: v.id, label: 'Quy Cách', title: v.variantName, sub: '' }))
+  const variantHeading = product.productType === 'BOX_SHELL' ? 'Chọn sức chứa hộp' : 'Chọn phân loại'
+  const configs = product.variants.map((v) => {
+    const sub = product.productType === 'LOOSE_CAKE' && v.weightGram ? `${v.weightGram}g`
+      : product.productType === 'BOX_SHELL' && v.boxCapacity ? `${v.boxCapacity} bánh`
+      : ''
+    const sameAsName = sub !== '' && v.variantName.replace(/\s+/g, '').toLowerCase() === sub.replace(/\s+/g, '').toLowerCase()
+    return { variantId: v.id, title: v.variantName, sub: sameAsName ? '' : sub }
+  })
 
   const selectVariant = (vid: string) => {
     setVariantId(vid)
@@ -214,17 +221,12 @@ export function ProductDetailPage() {
                 <SetContents product={product} setPrice={price} />
               </div>{' '}
               <PromotionBox promotions={promotions} quantity={quantity} unitPrice={price} />
+              {product.productType !== 'GIFT_SET' && (
               <div className="space-y-space-xs">
                 {' '}
-                <div className="flex items-center justify-between">
-                  {' '}
-                  <span className="font-label-md text-label-md uppercase tracking-wider text-ink-dark font-bold">
-                    1. Chọn Quy Cách Hộp Quà
-                  </span>{' '}
-                  <span className="font-body-sm text-body-sm text-secondary cursor-pointer hover:underline">
-                    Xem sơ đồ kích thước
-                  </span>{' '}
-                </div>{' '}
+                <span className="font-label-md text-label-md uppercase tracking-wider text-ink-dark font-bold">
+                  {variantHeading}
+                </span>{' '}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-space-xs" id="boxConfigGroup">
                   {configs.map((c) => {
                     const active = c.variantId === variant?.id
@@ -234,18 +236,16 @@ export function ProductDetailPage() {
                         type="button"
                         onClick={() => selectVariant(c.variantId)}
                         aria-pressed={active}
-                        className={`box-config-btn p-space-sm rounded-[0.125rem] text-left bg-surface-container-lowest shadow-sm hover:bg-surface-container transition-all ${active ? 'ring-2 ring-secondary' : ''}`}
+                        className={`box-config-btn flex items-center justify-between gap-3 p-space-sm rounded-[0.125rem] text-left bg-surface-container-lowest shadow-sm hover:bg-surface-container transition-all lg:flex-col lg:items-start lg:justify-start lg:gap-0.5 ${active ? 'ring-2 ring-secondary' : ''}`}
                       >
-                        <div className={`font-label-sm text-label-sm uppercase font-bold ${active ? 'text-secondary' : 'text-on-surface-variant'}`}>
-                          {c.label}
-                        </div>
-                        <div className="font-body-md text-body-md font-bold text-ink-dark">{c.title}</div>
-                        <div className="font-body-sm text-body-sm text-on-surface-variant">{c.sub}</div>
+                        <span className="font-body-md text-body-md font-bold text-ink-dark">{c.title}</span>
+                        {c.sub && <span className="shrink-0 font-body-sm text-body-sm text-on-surface-variant lg:shrink">{c.sub}</span>}
                       </button>
                     )
                   })}
                 </div>{' '}
-              </div>{' '}
+              </div>
+              )}{' '}
               <Link to={ROUTES.rfq} className="block p-space-md rounded-[0.25rem] bg-surface-container-lowest shadow-sm font-body-sm text-body-sm text-on-surface-variant hover:bg-champagne-light/40">
                 <span className="block font-label-md text-label-md uppercase tracking-wider text-ink-dark font-bold">In / khắc logo doanh nghiệp</span>
                 Áp dụng cho đơn sỉ từ 20 hộp: gửi yêu cầu báo giá sỉ, mô tả logo cần in; xưởng sẽ báo giá và liên hệ nhận file.
