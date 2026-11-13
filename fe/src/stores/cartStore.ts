@@ -49,11 +49,14 @@ interface CartState {
   items: CartItem[]
   /** Ngày nhận đã chọn cho từng Provider (yyyy-MM-dd) */
   deliveryDates: Record<string, string>
+  /** Lựa chọn khuyến mãi cho từng Provider ('AUTO', 'NONE', hoặc promotionId) */
+  selectedPromotions: Record<string, string>
   add: (item: NewItem, quantity: number) => void
   addBox: (item: NewItem & { slots: BoxSlot[]; note?: string }, quantity: number) => void
   setQuantity: (lineId: string, quantity: number) => void
   remove: (lineId: string) => void
   setDeliveryDate: (providerId: string, date: string) => void
+  setPromotionChoice: (providerId: string, promotionId: string) => void
   clear: () => void
 }
 
@@ -67,6 +70,7 @@ export const useCartStore = create<CartState>()(
     (set) => ({
       items: [],
       deliveryDates: {},
+      selectedPromotions: {},
 
       add: (item, quantity) =>
         set((state) => {
@@ -109,13 +113,16 @@ export const useCartStore = create<CartState>()(
       setDeliveryDate: (providerId, date) =>
         set((state) => ({ deliveryDates: { ...state.deliveryDates, [providerId]: date } })),
 
-      clear: () => set({ items: [], deliveryDates: {} }),
+      setPromotionChoice: (providerId, promotionId) =>
+        set((state) => ({ selectedPromotions: { ...state.selectedPromotions, [providerId]: promotionId } })),
+
+      clear: () => set({ items: [], deliveryDates: {}, selectedPromotions: {} }),
     }),
     {
       name: 'cart',
       version: 2,
       // Giỏ trước v2 chứa id sản phẩm mock -> BE thật trả 400 khi checkout, nên bỏ
-      migrate: () => ({ items: [], deliveryDates: {} }) as unknown as CartState,
+      migrate: () => ({ items: [], deliveryDates: {}, selectedPromotions: {} }) as unknown as CartState,
     },
   ),
 )

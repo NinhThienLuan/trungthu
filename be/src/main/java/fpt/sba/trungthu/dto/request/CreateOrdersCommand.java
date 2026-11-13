@@ -52,7 +52,10 @@ public record CreateOrdersCommand(
             int directUnits,
             @Size(max = 50) String personalizationText,
             @NotNull @DecimalMin("0") BigDecimal personalizationFee,
-            Integer stockReservedQuantity) {
+            Integer stockReservedQuantity,
+            String promotionLabel,
+            String boxContents,
+            Integer freeQuantity) {
 
         public ItemSnapshot {
             if (personalizationFee == null) {
@@ -66,9 +69,16 @@ public record CreateOrdersCommand(
 
         public ItemSnapshot(UUID variantId, String productName, String variantName, int quantity, BigDecimal unitPrice,
                 int bakeQuantity, UUID sourceSetId, int directUnits, String personalizationText,
+                BigDecimal personalizationFee, Integer stockReservedQuantity) {
+            this(variantId, productName, variantName, quantity, unitPrice, bakeQuantity, sourceSetId, directUnits,
+                    personalizationText, personalizationFee, stockReservedQuantity, null, null, null);
+        }
+
+        public ItemSnapshot(UUID variantId, String productName, String variantName, int quantity, BigDecimal unitPrice,
+                int bakeQuantity, UUID sourceSetId, int directUnits, String personalizationText,
                 BigDecimal personalizationFee) {
             this(variantId, productName, variantName, quantity, unitPrice, bakeQuantity, sourceSetId, directUnits,
-                    personalizationText, personalizationFee, quantity);
+                    personalizationText, personalizationFee, quantity, null, null, null);
         }
 
         public ItemSnapshot(UUID variantId, String productName, String variantName, int quantity, BigDecimal unitPrice,

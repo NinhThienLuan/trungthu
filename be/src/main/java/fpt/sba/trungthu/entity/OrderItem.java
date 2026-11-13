@@ -51,6 +51,17 @@ public class OrderItem extends CreatedEntity {
     @Column(name = "variant_name", nullable = false, length = 255)
     private String variantName;
 
+    @org.hibernate.annotations.Nationalized
+    @Column(name = "promotion_label", length = 255)
+    private String promotionLabel;
+
+    @org.hibernate.annotations.Nationalized
+    @Column(name = "box_contents", length = 500)
+    private String boxContents;
+
+    @Column(name = "free_quantity")
+    private Integer freeQuantity;
+
     @Column(name = "bake_quantity", nullable = false)
     private Integer bakeQuantity;
 

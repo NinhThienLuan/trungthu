@@ -90,28 +90,55 @@ export const checkoutSchema = z.object({
 })
 
 /** Form RFQ ở /rfq (B2bPortalView #rfq-form): tên trường = name của input = CreateRfqRequest bên BE */
-export const rfqSchema = z.object({
-  companyName: required('tên doanh nghiệp').min(3, 'Tên doanh nghiệp tối thiểu 3 ký tự').max(255),
-  taxCode,
-  contactName: required('người phụ trách').max(255),
-  contactPosition: required('chức vụ').max(255),
-  contactPhone: phone,
-  contactEmail: email,
-  expectedDeliveryDate: z
-    .string()
-    .min(1, 'Vui lòng chọn ngày nhận')
-    .refine((d) => d >= toIsoDate(addDays(new Date(), 1)), 'Ngày nhận phải sau hôm nay'),
-  requestedQuantity: z.coerce
-    .number({ invalid_type_error: 'Vui lòng nhập số lượng' })
-    .int('Số lượng phải là số nguyên')
-    .min(RFQ_MIN_QUANTITY, `Báo giá sỉ áp dụng từ ${RFQ_MIN_QUANTITY} hộp`),
-  cakesPerBox: z.coerce.number().int('Số bánh mỗi hộp phải là số nguyên').min(1).max(100),
-  expectedBudget: z.preprocess((v) => (v === '' ? undefined : v), z.coerce.number().min(0, 'Ngân sách không được âm').optional()),
-  description: z.string().trim().max(100000).optional().transform((v) => v || undefined),
-  // Ô chọn để trống = gửi mọi xưởng / chưa chọn sản phẩm
-  providerId: z.string().optional().transform((v) => v || undefined),
-  productId: z.string().optional().transform((v) => v || undefined),
-})
+export const rfqSchema = z
+  .object({
+    customerType: z.enum(['BUSINESS', 'INDIVIDUAL']).default('BUSINESS'),
+    companyName: z.string().trim().max(255).optional(),
+    taxCode: z.string().trim().optional(),
+    contactName: required('người phụ trách').max(255),
+    contactPosition: z.string().trim().max(255).optional(),
+    contactPhone: phone,
+    contactEmail: email,
+    expectedDeliveryDate: z
+      .string()
+      .min(1, 'Vui lòng chọn ngày nhận')
+      .refine((d) => d >= toIsoDate(addDays(new Date(), 1)), 'Ngày nhận phải sau hôm nay'),
+    requestedQuantity: z.coerce
+      .number({ invalid_type_error: 'Vui lòng nhập số lượng' })
+      .int('Số lượng phải là số nguyên')
+      .min(RFQ_MIN_QUANTITY, `Báo giá sỉ áp dụng từ ${RFQ_MIN_QUANTITY} hộp`),
+    cakesPerBox: z.coerce.number().int('Số bánh mỗi hộp phải là số nguyên').min(1).max(100),
+    expectedBudget: z.preprocess((v) => (v === '' ? undefined : v), z.coerce.number().min(0, 'Ngân sách không được âm').optional()),
+    description: z.string().trim().max(100000).optional().transform((v) => v || undefined),
+    // Ô chọn để trống = gửi mọi xưởng / chưa chọn sản phẩm
+    providerId: z.string().optional().transform((v) => v || undefined),
+    productId: z.string().optional().transform((v) => v || undefined),
+  })
+  .superRefine((data, ctx) => {
+    if (data.customerType === 'BUSINESS') {
+      if (!data.companyName || data.companyName.trim().length < 3) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Tên doanh nghiệp tối thiểu 3 ký tự',
+          path: ['companyName'],
+        })
+      }
+      if (!data.taxCode || !/^[0-9]{10}(-[0-9]{3})?$/.test(data.taxCode.trim())) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Mã số thuế gồm 10 hoặc 13 số (vd: 0123456789 hoặc 0123456789-001)',
+          path: ['taxCode'],
+        })
+      }
+      if (!data.contactPosition || !data.contactPosition.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Vui lòng nhập chức vụ',
+          path: ['contactPosition'],
+        })
+      }
+    }
+  })
 
 /** Gom lỗi zod thành { field: message } để hiển thị dưới từng ô */
 export function fieldErrors(error: z.ZodError): Record<string, string> {

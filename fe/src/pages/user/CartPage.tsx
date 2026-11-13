@@ -10,7 +10,7 @@ import { useApi } from '../../hooks/useApi'
 import { useLeadTimes } from '../../hooks/useLeadTimes'
 import type { LeadTime } from '../../types/product'
 import { errorMessage } from '../../apis/http'
-import { BULK_LEAD_DAYS, BULK_ORDER_QUANTITY, DEPOSIT_RATE, MIN_LEAD_DAYS, ROUTES } from '../../constants'
+import { BULK_LEAD_DAYS, BULK_ORDER_QUANTITY, MIN_LEAD_DAYS, ROUTES } from '../../constants'
 import { addDays, cn, formatVnd, toIsoDate } from '../../lib/format'
 import { bakeUnitsOf, leadDaysForItems, toCheckoutGroups } from '../../lib/checkoutGroups'
 import { DeliveryDateField } from '../../components/DeliveryDateField'
@@ -38,27 +38,25 @@ function evaluateItemPromotion(item: CartItem, promotions: Promotion[]): Promoti
 
   for (const p of matched) {
     if (p.type === 'BUY_X_GET_Y' && p.buyQuantity && p.freeQuantity) {
-      const bundle = p.buyQuantity + p.freeQuantity
-      const sets = Math.floor(item.quantity / bundle)
-      const remainder = item.quantity % bundle
-      const freeGained = sets * p.freeQuantity
+      const buyQty = p.buyQuantity
+      const freeQty = p.freeQuantity
+      const sets = Math.floor(item.quantity / buyQty)
+      const remainder = item.quantity % buyQty
+      const freeGained = sets * freeQty
       const savedAmount = freeGained * item.unitPrice
 
       if (sets > 0 && remainder === 0) {
         evals.push({
           promotion: p,
           status: 'achieved',
-          message: `Đã kích hoạt ${p.label}: Đã tặng ${freeGained} bánh miễn phí (${bundle} bánh chỉ tính tiền ${p.buyQuantity})!`,
+          message: `Đã kích hoạt ${p.label}: Đã tặng ${freeGained} bánh miễn phí (${item.quantity} bánh chỉ tính tiền ${item.quantity - freeGained})!`,
           savedAmount,
         })
       } else {
-        const needed = bundle - remainder
-        const isReadyForFreeCake = item.quantity >= p.buyQuantity && remainder === p.buyQuantity
+        const needed = buyQty - remainder
         const message = sets > 0
-          ? `Đã nhận ${freeGained} bánh miễn phí. Thêm ${needed} bánh nữa để nhận thêm ${p.freeQuantity} bánh tặng!`
-          : isReadyForFreeCake
-            ? `Bạn đã chọn ${item.quantity} bánh! Thêm ${needed} bánh nữa để được TẶNG ${p.freeQuantity} (${bundle} bánh chỉ tính tiền ${p.buyQuantity})`
-            : `Chọn đủ ${bundle} bánh (Mua ${p.buyQuantity} tặng ${p.freeQuantity}) để nhận ${p.freeQuantity} bánh miễn phí`
+          ? `Đã nhận ${freeGained} bánh miễn phí. Thêm ${needed} bánh nữa để nhận thêm ${freeQty} bánh tặng!`
+          : `Chọn thêm ${needed} cái nữa (đủ ${buyQty} cái) để được tặng ${freeQty} bánh miễn phí!`
 
         evals.push({
           promotion: p,
@@ -250,7 +248,7 @@ export function CartPage() {
                     {(() => {
                       const promo = itemEvals.get(item.lineId)
                       if (!promo) return null
-                      const isFreeCakeButton = promo.promotion.type === 'BUY_X_GET_Y' && item.quantity % ((promo.promotion.buyQuantity ?? 0) + (promo.promotion.freeQuantity ?? 0)) >= (promo.promotion.buyQuantity ?? 0)
+                      const isFreeCakeButton = false
                       return (
                         <div className={cn(
                           'mt-2 flex flex-wrap items-center justify-between gap-2 rounded-[0.125rem] px-3 py-1.5 text-xs transition-colors',
@@ -357,7 +355,7 @@ export function CartPage() {
               <span className="font-sans text-h3 text-navy">{formatVnd(Math.max(0, total - totalSavings))}</span>
             </div>
           </div>
-          <p className="mt-1 text-small text-muted">Cọc tối thiểu {DEPOSIT_RATE * 100}% khi đặt.</p>
+          <p className="mt-1 text-small text-muted">Cọc từ 20% (tuỳ giá trị đơn hàng) khi đặt.</p>
           <button type="button" className="btn btn-primary mt-5 w-full"
             disabled={missingDate || checkingDates || Object.keys(dateErrors).length > 0}
             onClick={() => navigate(ROUTES.checkout)}>

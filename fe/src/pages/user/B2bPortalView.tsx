@@ -22,6 +22,7 @@ export function B2bPortalView() {
   const catalog = useB2bCatalog()
   // Bảng tính và form RFQ dùng chung lựa chọn xưởng / bánh / số lượng
   const [draft, setDraft] = useState<RfqDraft>({ providerId: '', productId: '', quantity: 100, cakesPerBox: 4 })
+  const [customerType, setCustomerType] = useState<'BUSINESS' | 'INDIVIDUAL'>('BUSINESS')
   const [expectedDeliveryDate, setExpectedDeliveryDate] = useState('')
   const [dateTouched, setDateTouched] = useState(false)
   const deliveryEstimate = useApi(
@@ -523,63 +524,106 @@ export function B2bPortalView() {
                 </p>{' '}
               </div>{' '}
               <form className="space-y-space-md" id="rfq-form" noValidate>
-                {' '}
+                <input type="hidden" name="customerType" value={customerType} />
+                <div className="space-y-2 pb-2">
+                  <label className="font-label-md text-label-md text-primary uppercase block">
+                    Đối Tượng Đặt Hàng *
+                  </label>
+                  <div className="flex flex-wrap gap-4">
+                    <label className="inline-flex items-center gap-2 cursor-pointer font-body-md text-body-md text-primary">
+                      <input
+                        type="radio"
+                        name="customerTypeChoice"
+                        value="BUSINESS"
+                        checked={customerType === 'BUSINESS'}
+                        onChange={() => setCustomerType('BUSINESS')}
+                        className="accent-secondary"
+                      />
+                      Doanh Nghiệp / Tổ Chức (Xuất VAT)
+                    </label>
+                    <label className="inline-flex items-center gap-2 cursor-pointer font-body-md text-body-md text-primary">
+                      <input
+                        type="radio"
+                        name="customerTypeChoice"
+                        value="INDIVIDUAL"
+                        checked={customerType === 'INDIVIDUAL'}
+                        onChange={() => setCustomerType('INDIVIDUAL')}
+                        className="accent-secondary"
+                      />
+                      Khách Hàng Cá Nhân / Gia Đình Đặt Sỉ
+                    </label>
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-space-md">
-                  {' '}
                   <div className="space-y-1">
-                    {' '}
                     <label className="font-label-md text-label-md text-primary uppercase block">
-                      Tên Doanh Nghiệp / Tập Đoàn *
-                    </label>{' '}
+                      {customerType === 'BUSINESS' ? 'Tên Doanh Nghiệp / Tập Đoàn *' : 'Tên Nhóm / Gia Đình (Tùy chọn)'}
+                    </label>
                     <input
                       className="w-full px-space-md py-2.5 bg-surface-container-low text-primary rounded-[0.125rem] font-body-md text-body-md focus:outline-none focus:ring-1 focus:ring-secondary aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-error"
                       name="companyName"
-                      required
+                      required={customerType === 'BUSINESS'}
+                      placeholder={customerType === 'BUSINESS' ? 'Công ty TNHH...' : 'Gia đình / Bạn bè...'}
                       type="text"
-                    />{' '}
-                  </div>{' '}
-                  <div className="space-y-1">
-                    {' '}
-                    <label className="font-label-md text-label-md text-primary uppercase block">
-                      Mã Số Thuế (Xuất VAT) *
-                    </label>{' '}
-                    <input
-                      className="w-full px-space-md py-2.5 bg-surface-container-low text-primary rounded-[0.125rem] font-body-md text-body-md focus:outline-none focus:ring-1 focus:ring-secondary aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-error"
-                      name="taxCode"
-                      inputMode="numeric"
-                      maxLength={14}
-                      placeholder="0123456789 hoặc 0123456789-001"
-                      required
-                      type="text"
-                    />{' '}
-                  </div>{' '}
-                </div>{' '}
+                    />
+                  </div>
+                  {customerType === 'BUSINESS' ? (
+                    <div className="space-y-1">
+                      <label className="font-label-md text-label-md text-primary uppercase block">
+                        Mã Số Thuế (Xuất VAT) *
+                      </label>
+                      <input
+                        className="w-full px-space-md py-2.5 bg-surface-container-low text-primary rounded-[0.125rem] font-body-md text-body-md focus:outline-none focus:ring-1 focus:ring-secondary aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-error"
+                        name="taxCode"
+                        inputMode="numeric"
+                        maxLength={14}
+                        placeholder="0123456789 hoặc 0123456789-001"
+                        required
+                        type="text"
+                      />
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <label className="font-label-md text-label-md text-primary uppercase block">
+                        Phân Loại Đặt Hàng
+                      </label>
+                      <input
+                        className="w-full px-space-md py-2.5 bg-surface-container-low text-primary rounded-[0.125rem] font-body-md text-body-md focus:outline-none"
+                        name="contactPosition"
+                        defaultValue="Khách hàng cá nhân"
+                        type="text"
+                        readOnly
+                      />
+                    </div>
+                  )}
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-space-md">
-                  {' '}
                   <div className="space-y-1">
-                    {' '}
                     <label className="font-label-md text-label-md text-primary uppercase block">
-                      Người Phụ Trách Thu Mua *
-                    </label>{' '}
+                      {customerType === 'BUSINESS' ? 'Người Phụ Trách Thu Mua *' : 'Họ và Tên Khách Hàng *'}
+                    </label>
                     <input
                       className="w-full px-space-md py-2.5 bg-surface-container-low text-primary rounded-[0.125rem] font-body-md text-body-md focus:outline-none focus:ring-1 focus:ring-secondary aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-error"
                       name="contactName"
                       required
                       type="text"
-                    />{' '}
-                  </div>{' '}
-                  <div className="space-y-1">
-                    {' '}
-                    <label className="font-label-md text-label-md text-primary uppercase block">
-                      Chức Vụ / Phòng Ban
-                    </label>{' '}
-                    <input
-                      className="w-full px-space-md py-2.5 bg-surface-container-low text-primary rounded-[0.125rem] font-body-md text-body-md focus:outline-none focus:ring-1 focus:ring-secondary aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-error"
-                      name="contactPosition"
-                      required
-                      type="text"
-                    />{' '}
-                  </div>{' '}
+                    />
+                  </div>
+                  {customerType === 'BUSINESS' ? (
+                    <div className="space-y-1">
+                      <label className="font-label-md text-label-md text-primary uppercase block">
+                        Chức Vụ / Phòng Ban *
+                      </label>
+                      <input
+                        className="w-full px-space-md py-2.5 bg-surface-container-low text-primary rounded-[0.125rem] font-body-md text-body-md focus:outline-none focus:ring-1 focus:ring-secondary aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-error"
+                        name="contactPosition"
+                        placeholder="Trưởng phòng thu mua, HR..."
+                        required
+                        type="text"
+                      />
+                    </div>
+                  ) : null}
                 </div>{' '}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-space-md">
                   {' '}

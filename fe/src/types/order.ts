@@ -109,6 +109,7 @@ export interface OrderSummary {
 }
 
 export interface OrderLine {
+  productId?: string
   variantId: string
   /** Các thành phần cùng sourceSetId thuộc một set quà đã mua */
   sourceSetId?: string | null
@@ -118,8 +119,11 @@ export interface OrderLine {
   quantity: number
   unitPrice: number
   subtotal: number
-  /** [Phase 2 — FE] Tên bánh trong hộp tự phối */
-  boxContents?: string[]
+  personalizationText?: string | null
+  personalizationFee?: number
+  promotionLabel?: string | null
+  boxContents?: string[] | string | null
+  freeQuantity?: number | null
 }
 
 /** GET /api/orders/{id}/vietqr */
@@ -161,10 +165,11 @@ export interface OrderQuery {
 
 /** BE3: CreateRfqRequest (POST /api/rfqs) */
 export interface RfqRequest {
-  companyName: string
-  taxCode: string
+  customerType?: 'BUSINESS' | 'INDIVIDUAL'
+  companyName?: string
+  taxCode?: string
   contactName: string
-  contactPosition: string
+  contactPosition?: string
   contactPhone: string
   contactEmail: string
   requestedQuantity: number

@@ -1,13 +1,14 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ChevronLeft } from 'lucide-react'
+import { ChevronLeft, Tag, Package, Gift, Sparkles, Star, CheckCircle2, X } from 'lucide-react'
 import { orderService } from '../../services/orderService'
+import { productReviewService } from '../../services/productReviewService'
 import { errorMessage } from '../../apis/http'
 import { useApi } from '../../hooks/useApi'
 import { useDocumentTitle } from '../../hooks/useDocumentTitle'
 import { CANCELLABLE_STATUSES, PAYMENT_METHOD_LABEL, PAYMENT_STATUS_LABEL, ROUTES } from '../../constants'
 import { formatDate, formatDateTime, formatVnd } from '../../lib/format'
-import { displayOrderLines } from '../../lib/orderDisplay'
+import { displayOrderLines, type DisplayOrderLine } from '../../lib/orderDisplay'
 import { OrderPaymentPanel } from '../../components/OrderPaymentPanel'
 import { OrderStatusChip } from '../../components/OrderStatusChip'
 import { ErrorState, Notice, Spinner } from '../../components/ui/States'
@@ -30,6 +31,38 @@ export function OrderDetailPage() {
         <ErrorState message={error ?? 'Không tìm thấy đơn hàng'} onRetry={reload} />
       </div>
     )
+  }
+
+  const [reviewingLine, setReviewingLine] = useState<DisplayOrderLine | null>(null)
+  const [reviewRating, setReviewRating] = useState(5)
+  const [reviewComment, setReviewComment] = useState('')
+  const [submittingReview, setSubmittingReview] = useState(false)
+  const [reviewSuccess, setReviewSuccess] = useState('')
+  const { data: reviewedIds, reload: reloadReviewed } = useApi<string[]>(
+    () => (order?.status === 'COMPLETED' ? productReviewService.reviewedProductIds(order.id) : Promise.resolve([])),
+    [order?.id, order?.status],
+  )
+
+  const handleReviewSubmit = async (e: FormEvent) => {
+    e.preventDefault()
+    if (!reviewingLine?.productId || !order) return
+    setSubmittingReview(true)
+    setReviewSuccess('')
+    try {
+      await productReviewService.create(reviewingLine.productId, order.id, reviewRating, reviewComment)
+      setReviewSuccess('Đã gửi đánh giá thành công!')
+      reloadReviewed()
+      setTimeout(() => {
+        setReviewingLine(null)
+        setReviewComment('')
+        setReviewRating(5)
+        setReviewSuccess('')
+      }, 1000)
+    } catch (err) {
+      alert(errorMessage(err))
+    } finally {
+      setSubmittingReview(false)
+    }
   }
 
   const handleCancel = async () => {
@@ -80,23 +113,107 @@ export function OrderDetailPage() {
           </section>
 
           <section className="card p-5 md:p-6">
-            <h2 className="text-h3">Sản phẩm</h2>
-            <ul className="mt-4 flex flex-col gap-3">
-              {displayLines.map((line) => (
-                <li key={line.key} className="flex justify-between gap-4 text-small">
-                  <span>
-                    <span className="font-semibold text-navy">{line.name}{line.components && ` × ${line.quantity}`}</span>
-                    {line.components ? <span className="block text-muted">
-                      Gồm: {line.components.map((item) => `${item.productName} · ${item.variantName} × ${item.quantity}`).join('; ')}
-                    </span> : <span className="block text-muted">
-                      {line.quantity} × {formatVnd(line.unitPrice ?? line.subtotal / (line.quantity ?? 1))}
-                    </span>}
-                    {line.boxContents && <span className="block text-muted">Gồm: {line.boxContents.join(', ')}</span>}
-                  </span>
-                  <span className="shrink-0 font-semibold text-navy">{formatVnd(line.subtotal)}</span>
-                </li>
-              ))}
-            </ul>
+            <div className="flex items-center justify-between pb-3 border-b border-line">
+              <h2 className="text-h3">Chi tiết sản phẩm</h2>
+              <span className="text-small text-muted">{displayLines.length} món</span>
+            </div>
+
+            <div className="mt-2 flex flex-col divide-y divide-line">
+              {displayLines.map((line) => {
+                const unitPrice = line.unitPrice ?? (line.quantity ? line.subtotal / line.quantity : 0)
+                return (
+                  <div key={line.key} className="py-4 first:pt-3 last:pb-0">
+                    <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                      {/* Product details */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-semibold text-navy text-base">{line.productName}</span>
+                          {line.variantName && (
+                            <span className="inline-flex items-center rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
+                              {line.variantName}
+                            </span>
+                          )}
+                          {line.promotionLabel && (
+                            <span className="inline-flex items-center gap-1 rounded bg-amber-50 border border-amber-200 px-2 py-0.5 text-xs font-medium text-amber-700">
+                              <Tag className="size-3 text-amber-600" aria-hidden />
+                              {line.promotionLabel}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Gift set components */}
+                        {line.components && line.components.length > 0 && (
+                          <div className="mt-2.5 rounded-md bg-stone-50 p-2.5 text-xs text-muted border border-stone-200">
+                            <p className="font-medium text-slate-700 mb-1 flex items-center gap-1">
+                              <Gift className="size-3 text-primary" aria-hidden /> Thành phần trong set ({line.components.length} bánh):
+                            </p>
+                            <ul className="list-disc list-inside space-y-0.5 pl-1">
+                              {line.components.map((item, idx) => (
+                                <li key={idx}>
+                                  <span className="text-slate-800 font-medium">{item.productName}</span>
+                                  {item.variantName && <span className="text-muted"> ({item.variantName})</span>}
+                                  <span className="text-muted"> × {item.quantity}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
+                        {/* Custom box contents */}
+                        {line.boxContents && line.boxContents.length > 0 && (
+                          <div className="mt-2 text-xs text-muted flex items-start gap-1.5">
+                            <Package className="size-3.5 text-slate-400 mt-0.5 shrink-0" aria-hidden />
+                            <span>Vị bánh: {line.boxContents.join(', ')}</span>
+                          </div>
+                        )}
+
+                        {/* Personalization text */}
+                        {line.personalizationText && (
+                          <div className="mt-2 text-xs text-primary flex items-start gap-1.5">
+                            <Sparkles className="size-3.5 text-primary mt-0.5 shrink-0" aria-hidden />
+                            <span>In lời chúc riêng: &quot;{line.personalizationText}&quot;</span>
+                            {line.personalizationFee ? <span>(+{formatVnd(line.personalizationFee)})</span> : null}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Pricing & Quantity & Review Action */}
+                      <div className="flex md:flex-col md:items-end justify-between items-center shrink-0 text-small pt-2 md:pt-0 border-t md:border-t-0 border-line/60">
+                        <div className="text-muted">
+                          {formatVnd(unitPrice)} <span className="text-ink font-medium">× {line.quantity}</span>
+                        </div>
+                        <div className="font-semibold text-navy text-base md:mt-1">
+                          {formatVnd(line.subtotal)}
+                        </div>
+                        {order.status === 'COMPLETED' && line.productId && (
+                          <div className="mt-2.5">
+                            {reviewedIds?.includes(line.productId) ? (
+                              <span className="inline-flex items-center gap-1 text-xs text-success font-medium">
+                                <CheckCircle2 className="size-3.5" aria-hidden /> Đã đánh giá bánh
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                className="inline-flex items-center gap-1 rounded border border-amber-300 bg-amber-50/80 px-2 py-1 text-xs font-medium text-amber-800 hover:bg-amber-100 transition-colors"
+                                onClick={() => {
+                                  setReviewingLine(line)
+                                  setReviewRating(5)
+                                  setReviewComment('')
+                                  setReviewSuccess('')
+                                }}
+                              >
+                                <Star className="size-3 text-amber-500 fill-amber-400" aria-hidden />
+                                Đánh giá bánh
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
           </section>
         </div>
 
@@ -146,6 +263,89 @@ export function OrderDetailPage() {
       {order.status === 'COMPLETED' && <div className="mt-6 card p-5">
         <ProductReviews providerId={order.providerId} storeName={order.storeName} completedOrder={order} />
       </div>}
+
+      {/* Modal đánh giá bánh */}
+      {reviewingLine && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="card w-full max-w-md p-6 bg-white shadow-xl">
+            <div className="flex items-center justify-between pb-3 border-b border-line">
+              <h3 className="text-h3 font-semibold text-navy">Đánh giá bánh</h3>
+              <button
+                type="button"
+                onClick={() => setReviewingLine(null)}
+                className="text-muted hover:text-navy p-1"
+                aria-label="Đóng"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+            <form onSubmit={handleReviewSubmit} className="mt-4 space-y-4">
+              <div>
+                <p className="text-small font-semibold text-navy">{reviewingLine.productName}</p>
+                {reviewingLine.variantName && (
+                  <p className="text-xs text-muted">{reviewingLine.variantName}</p>
+                )}
+              </div>
+              <div>
+                <label className="block text-small font-medium text-slate-700 mb-1.5">Số sao đánh giá</label>
+                <div className="flex items-center gap-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setReviewRating(star)}
+                      className="p-1 focus:outline-none"
+                    >
+                      <Star
+                        className={`size-6 transition-colors ${
+                          star <= reviewRating ? 'fill-amber-400 text-amber-500' : 'text-slate-300'
+                        }`}
+                      />
+                    </button>
+                  ))}
+                  <span className="text-small font-medium text-amber-700 ml-1">{reviewRating} sao</span>
+                </div>
+              </div>
+              <div>
+                <label className="block text-small font-medium text-slate-700 mb-1">
+                  Nhận xét về bánh (hương vị, độ ngọt, chất lượng):
+                </label>
+                <textarea
+                  value={reviewComment}
+                  onChange={(e) => setReviewComment(e.target.value)}
+                  className="input w-full text-small"
+                  rows={3}
+                  maxLength={2000}
+                  placeholder="Bánh thơm ngon, vỏ mềm vừa ăn, nhân thập cẩm đậm đà..."
+                />
+              </div>
+              {reviewSuccess ? (
+                <div className="text-center text-small text-success font-medium flex items-center justify-center gap-1.5 py-1">
+                  <CheckCircle2 className="size-4" /> {reviewSuccess}
+                </div>
+              ) : (
+                <div className="flex justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    className="btn btn-outline btn-sm"
+                    onClick={() => setReviewingLine(null)}
+                    disabled={submittingReview}
+                  >
+                    Huỷ
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn btn-primary btn-sm"
+                    disabled={submittingReview}
+                  >
+                    {submittingReview ? 'Đang gửi...' : 'Gửi đánh giá'}
+                  </button>
+                </div>
+              )}
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

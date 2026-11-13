@@ -1,0 +1,3 @@
+ALTER TABLE order_item ADD COLUMN IF NOT EXISTS promotion_label VARCHAR(255);
+ALTER TABLE order_item ADD COLUMN IF NOT EXISTS box_contents VARCHAR(500);
+ALTER TABLE order_item ADD COLUMN IF NOT EXISTS free_quantity INTEGER;

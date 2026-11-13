@@ -257,8 +257,8 @@ class CheckoutFlowTests {
     void runningPromotionLowersUnitPriceAndOrderTotal() {
         User cakeProvider = users.findById(products.findById(cake.getProduct().getId()).orElseThrow()
                 .getProvider().getId()).orElseThrow();
-        promotions.save(Promotion.builder().provider(cakeProvider).name("Mua 1 tang 1")
-                .type(PromotionType.BUY_X_GET_Y).buyQuantity(1).freeQuantity(1)
+        promotions.save(Promotion.builder().provider(cakeProvider).name("Mua 2 tang 1")
+                .type(PromotionType.BUY_X_GET_Y).buyQuantity(2).freeQuantity(1)
                 .startDate(LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh"))).endDate(delivery).build());
         // promotion hết hạn của cùng xưởng không được áp
         promotions.save(Promotion.builder().provider(cakeProvider).name("Old").type(PromotionType.PERCENT_OFF)
@@ -268,7 +268,7 @@ class CheckoutFlowTests {
         var cod = preview.groups().stream().filter(g -> g.paymentMethod() == PaymentMethod.COD).findFirst().orElseThrow();
         assertThat(cod.totalAmount()).isEqualByComparingTo("100000");
         assertThat(cod.discountAmount()).isEqualByComparingTo("100000");
-        assertThat(cod.lines().getFirst().promotion()).isEqualTo("Mua 1 tặng 1");
+        assertThat(cod.lines().getFirst().promotion()).isEqualTo("Mua 2 tặng 1");
         assertThat(cod.shippingFee()).isEqualByComparingTo("0");
         assertThat(preview.grandTotal()).isEqualByComparingTo("420000");
 

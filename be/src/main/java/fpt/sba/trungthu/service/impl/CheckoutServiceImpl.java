@@ -91,9 +91,10 @@ public class CheckoutServiceImpl implements CheckoutService {
                 reserveLines.add(new ReserveStockCommand.ReserveLine(line.variant().getId(), line.quantity(),
                         plan.deliveryDate(), null, futureBake));
                 snaps.add(new Snap(plan.provider().getId(), line.variant().getId(),
-                        line.variant().getProduct().getName(), orderVariantName(line), line.quantity(),
+                        line.variant().getProduct().getName(), line.variant().getVariantName(), line.quantity(),
                         line.promotion() == null ? line.unitPrice() : line.variant().getPrice(),
-                        line.personalizationText(), line.personalizationFee()));
+                        line.personalizationText(), line.personalizationFee(),
+                        promotionLabel(line), line.contents(), freeQuantity(line)));
             }
             List<ReservedLineResponse> reserved = inventory.reserve(new ReserveStockCommand(reserveLines));
             UUID capacityId = reserved.stream().map(ReservedLineResponse::capacityId).filter(Objects::nonNull)
@@ -109,7 +110,7 @@ public class CheckoutServiceImpl implements CheckoutService {
                 return new CreateOrdersCommand.ItemSnapshot(snap.variantId(), snap.productName(),
                         snap.variantName(), snap.quantity(), snap.unitPrice(), held.bakeQuantity(),
                         null, 0, snap.personalizationText(), snap.personalizationFee(),
-                        held.stockReservedQuantity());
+                        held.stockReservedQuantity(), snap.promotionLabel(), snap.boxContents(), snap.freeQuantity());
             }).toList());
             reserved.stream()
                     .filter(line -> line.sourceSetId() != null)
@@ -338,7 +339,7 @@ public class CheckoutServiceImpl implements CheckoutService {
             }
             boolean payInFull = Boolean.TRUE.equals(group.payInFull()) || "FULL".equals(group.depositOption());
             BigDecimal deposit = group.paymentMethod() == PaymentMethod.COD ? BigDecimal.ZERO
-                    : payInFull ? total : minDeposit(total);
+                    : payInFull ? total : minDeposit(total, personalization.signum() > 0);
             if (group.paymentMethod() != PaymentMethod.COD && deposit.signum() <= 0) {
                 throw badRequest("Online payment requires a positive amount");
             }
@@ -506,10 +507,10 @@ public class CheckoutServiceImpl implements CheckoutService {
         if (promo == null) return 0;
         return switch (promo.getType()) {
             case PERCENT_OFF -> 0;
-            case BUY_X_GET_Y -> line.quantity() / (promo.getBuyQuantity() + promo.getFreeQuantity())
-                    * promo.getFreeQuantity();
-            case BUY_X_PAY_Y -> line.quantity() / promo.getBuyQuantity()
-                    * (promo.getBuyQuantity() - promo.getFreeQuantity());
+            case BUY_X_GET_Y -> promo.getBuyQuantity() == null || promo.getBuyQuantity() <= 0 ? 0
+                    : (line.quantity() / promo.getBuyQuantity()) * (promo.getFreeQuantity() == null ? 1 : promo.getFreeQuantity());
+            case BUY_X_PAY_Y -> promo.getBuyQuantity() == null || promo.getBuyQuantity() <= 0 ? 0
+                    : (line.quantity() / promo.getBuyQuantity()) * (promo.getBuyQuantity() - (promo.getFreeQuantity() == null ? 0 : promo.getFreeQuantity()));
         };
     }
 
@@ -566,10 +567,29 @@ public class CheckoutServiceImpl implements CheckoutService {
                 .collect(java.util.stream.Collectors.joining(", "));
     }
 
-    /** Cọc tối thiểu 50%, làm tròn lên nghìn đồng cho dễ chuyển khoản (không vượt tổng) */
-    static BigDecimal minDeposit(BigDecimal total) {
-        BigDecimal half = total.divide(BigDecimal.valueOf(2), 0, RoundingMode.CEILING);
-        return half.divide(THOUSAND, 0, RoundingMode.CEILING).multiply(THOUSAND).min(total);
+    /**
+     * Chính sách đặt cọc theo ngưỡng giá trị đơn hàng:
+     * - Dưới 1.000.000đ: cọc tối thiểu 20%
+     * - Từ 1.000.000đ đến dưới 3.000.000đ: cọc tối thiểu 30%
+     * - Từ 3.000.000đ trở lên hoặc có yêu cầu in lời chúc riêng: cọc tối thiểu 50%
+     * Làm tròn lên nghìn đồng cho tiện chuyển khoản VietQR, không vượt quá tổng tiền.
+     */
+    public static BigDecimal minDeposit(BigDecimal total) {
+        return minDeposit(total, false);
+    }
+
+    public static BigDecimal minDeposit(BigDecimal total, boolean hasPersonalization) {
+        if (total == null || total.signum() <= 0) return BigDecimal.ZERO;
+        BigDecimal rate;
+        if (hasPersonalization || total.compareTo(BigDecimal.valueOf(3_000_000)) >= 0) {
+            rate = new BigDecimal("0.50");
+        } else if (total.compareTo(BigDecimal.valueOf(1_000_000)) >= 0) {
+            rate = new BigDecimal("0.30");
+        } else {
+            rate = new BigDecimal("0.20");
+        }
+        BigDecimal raw = total.multiply(rate);
+        return raw.divide(THOUSAND, 0, RoundingMode.CEILING).multiply(THOUSAND).min(total);
     }
 
     private ResponseStatusException badRequest(String message) {
@@ -581,7 +601,8 @@ public class CheckoutServiceImpl implements CheckoutService {
     }
 
     private record Snap(UUID providerId, UUID variantId, String productName, String variantName, int quantity,
-            BigDecimal unitPrice, String personalizationText, BigDecimal personalizationFee) {}
+            BigDecimal unitPrice, String personalizationText, BigDecimal personalizationFee,
+            String promotionLabel, String boxContents, Integer freeQuantity) {}
 
     /** variant = dòng lẻ; set = dòng set quà (variant null). amount = tiền hàng, listAmount = theo giá gốc */
     private record Line(ProductVariant variant, Product set, int quantity, int bakeQuantity,
@@ -629,7 +650,7 @@ public class CheckoutServiceImpl implements CheckoutService {
                             line.listAmount(), line.promotion() == null ? null : line.promotion().label(),
                             freeQuantity(line))).toList(),
                     merchandise, personalization, shippingFee, total, deposit,
-                    merchandise.add(personalization), minDeposit(total),
+                    merchandise.add(personalization), minDeposit(total, personalization.signum() > 0),
                     total.compareTo(COD_LIMIT) < 0 && personalization.signum() == 0,
                     lines.stream().map(Line::listAmount).reduce(BigDecimal.ZERO, BigDecimal::add).subtract(merchandise));
         }
