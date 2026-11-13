@@ -8,6 +8,8 @@ export interface AdminComplianceDoc extends ComplianceDoc {
   providerEmail: string
   providerName: string | null
   verifiedByEmail: string | null
+  /** Số lần tài khoản này đã bị từ chối giấy tờ (mọi loại) */
+  rejectedCount: number | null
 }
 
 export interface RecentSubscriptionItem {

@@ -47,6 +47,28 @@ class ComplianceApprovalTests {
         assertThat(reviewed.getVerifiedByEmail()).isEqualTo(admin.getEmail());
     }
 
+    @Test
+    void adminSeesHowManyTimesTheAccountWasRejected() {
+        User admin = user(UserRole.PLATFORM_ADMIN);
+        User seller = user(UserRole.PROVIDER);
+        User other = user(UserRole.PROVIDER);
+        when(security.getCurrentUser()).thenReturn(admin);
+
+        StoreComplianceDoc first = doc(seller, ComplianceDocType.FOOD_SAFETY_CERT);
+        compliance.reviewDocument(first.getId(), review(ComplianceDocStatus.REJECTED, "Giấy mờ"));
+        StoreComplianceDoc second = doc(seller, ComplianceDocType.BUSINESS_LICENSE);
+        compliance.reviewDocument(second.getId(), review(ComplianceDocStatus.REJECTED, "Sai tên"));
+        doc(other, ComplianceDocType.BUSINESS_LICENSE);
+
+        StoreComplianceDoc resent = doc(seller, ComplianceDocType.FOOD_SAFETY_CERT);
+        var pending = compliance.getDocumentsByStatus(ComplianceDocStatus.PENDING);
+
+        var resentView = pending.stream().filter(d -> d.getId().equals(resent.getId())).findFirst().orElseThrow();
+        assertThat(resentView.getRejectedCount()).isEqualTo(2);
+        var otherView = pending.stream().filter(d -> d.getProviderEmail().equals(other.getEmail())).findFirst().orElseThrow();
+        assertThat(otherView.getRejectedCount()).isZero();
+    }
+
     private fpt.sba.trungthu.dto.response.ComplianceDocResponse approve(StoreComplianceDoc doc) {
         return compliance.reviewDocument(doc.getId(), review(ComplianceDocStatus.APPROVED, null));
     }

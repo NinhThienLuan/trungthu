@@ -25,4 +25,6 @@ public class ComplianceDocResponse {
     private String verifiedByEmail;
     private LocalDateTime verifiedAt;
     private LocalDateTime submittedAt;
+    /** Chỉ cho admin: số lần tài khoản này đã bị từ chối giấy tờ (mọi loại) */
+    private Integer rejectedCount;
 }

@@ -2,6 +2,7 @@ package fpt.sba.trungthu;
 
 import com.jayway.jsonpath.JsonPath;
 import fpt.sba.trungthu.common.security.SecurityContextService;
+import fpt.sba.trungthu.dto.request.AcceptQuotesRequest;
 import fpt.sba.trungthu.dto.request.CreateRfqRequest;
 import fpt.sba.trungthu.dto.request.SubmitQuoteRequest;
 import fpt.sba.trungthu.entity.Subscription;
@@ -33,6 +34,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.*;
@@ -419,6 +421,58 @@ class RfqFlowTests {
         as(buyer);
         rfq.acceptQuote(request.id(), quote.id());
         assertThat(bulkOrders.findByQuoteId(quote.id()).orElseThrow().getQuantity()).isEqualTo(50);
+    }
+
+    @Test
+    void customerSplitsOneRfqAcrossTwoProvidersAndReordersShortfallAfterCancel() {
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh"));
+        User buyer = createUser(UserRole.CUSTOMER, false);
+        User small = createUser(UserRole.PROVIDER, true);
+        User big = createUser(UserRole.PROVIDER, true);
+        User late = createUser(UserRole.PROVIDER, true);
+        for (User p : List.of(small, big, late)) { subscribe(p, today); capacity(p, today.plusDays(6), 1000); }
+
+        as(buyer);
+        var request = rfq.create(new CreateRfqRequest("Công ty Mặt Trăng", "0123456789", "Lan",
+                "Thu mua", "0901234567", "lan@example.com", 1000, today.plusDays(7),
+                null, "Hộp đỏ", null, null, null));
+        as(small);
+        var q1 = rfq.submitQuote(request.id(), new SubmitQuoteRequest(new BigDecimal("100000"),
+                400, today.plusDays(7), today.plusDays(8), "Chỉ làm được 400"));
+        as(big);
+        var q2 = rfq.submitQuote(request.id(), new SubmitQuoteRequest(new BigDecimal("120000"),
+                700, today.plusDays(7), today.plusDays(8), null));
+        as(late);
+        var q3 = rfq.submitQuote(request.id(), new SubmitQuoteRequest(new BigDecimal("90000"),
+                1000, today.plusDays(7), today.plusDays(8), null));
+
+        as(buyer);
+        // Chọn quá số hộp xưởng báo: cả lần chốt bị từ chối, không tạo đơn nào
+        assertThatThrownBy(() -> rfq.acceptQuotes(request.id(), List.of(
+                new AcceptQuotesRequest.Item(q1.id(), 500), new AcceptQuotesRequest.Item(q2.id(), 500))))
+                .isInstanceOf(ResponseStatusException.class);
+        assertThat(bulkOrders.findByQuoteRequestId(request.id())).isEmpty();
+
+        var accepted = rfq.acceptQuotes(request.id(), List.of(
+                new AcceptQuotesRequest.Item(q1.id(), 400), new AcceptQuotesRequest.Item(q2.id(), 600)));
+        assertThat(accepted).extracting("acceptedQuantity").containsExactlyInAnyOrder(400, 600);
+        assertThat(accepted.stream().filter(q -> q.id().equals(q2.id())).findFirst().orElseThrow().totalAmount())
+                .isEqualByComparingTo("50400000"); // 600 × 120.000 − 30%
+        assertThat(bulkOrders.findByQuoteRequestId(request.id())).extracting("quantity").containsExactlyInAnyOrder(400, 600);
+        assertThat(capacities.findByProviderIdAndCapacityDate(big.getId(), today.plusDays(6))
+                .orElseThrow().getReservedQuantity()).isEqualTo(600);
+        assertThat(quotations.findById(q3.id()).orElseThrow().getStatus()).isEqualTo(QuoteStatus.REJECTED);
+        assertThat(requests.findById(request.id()).orElseThrow().getStatus()).isEqualTo(BulkRequestStatus.WON);
+        assertThat(bulkOrderService.mine()).filteredOn(o -> o.requestId().equals(request.id()))
+                .extracting("requestedQuantity").containsOnly(1000);
+        assertThatThrownBy(() -> rfq.reorderShortfall(request.id())).isInstanceOf(ResponseStatusException.class);
+
+        // Một đơn con bị huỷ: đơn tổng thiếu 400 hộp, khách mở RFQ mới đúng phần thiếu
+        bulkOrderService.cancel(bulkOrders.findByQuoteId(q1.id()).orElseThrow().getId());
+        var refill = rfq.reorderShortfall(request.id());
+        assertThat(refill.requestedQuantity()).isEqualTo(400);
+        assertThat(refill.providerId()).isNull();
+        assertThat(refill.description()).contains(request.code(), "Hộp đỏ");
     }
 
     private void subscribe(User provider, LocalDate today) {

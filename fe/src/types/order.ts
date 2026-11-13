@@ -239,6 +239,8 @@ export interface QuoteResponse {
   discountAmount: number
   totalAmount: number
   depositAmount: number
+  /** Số hộp khách chốt với xưởng (chia nhiều xưởng có thể ít hơn offeredQuantity); null khi chưa chốt */
+  acceptedQuantity: number | null
 }
 
 export type BulkOrderStatus = 'WAITING_DEPOSIT' | 'PRODUCTION' | 'READY_TO_SHIP' | 'DELIVERING'
@@ -249,6 +251,8 @@ export interface BulkOrderResponse {
   requestId: string
   quoteId: string
   requestCode: string
+  /** Số hộp của đơn tổng (RFQ) chứa đơn con này */
+  requestedQuantity: number
   providerName: string
   quantity: number
   cakesPerBox: number

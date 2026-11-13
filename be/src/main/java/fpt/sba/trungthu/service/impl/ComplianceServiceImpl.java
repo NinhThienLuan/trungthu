@@ -153,7 +153,7 @@ public class ComplianceServiceImpl implements ComplianceService {
 
             log.info("Found {} documents with status: {}", documents.size(), status);
             return documents.stream()
-                    .map(this::mapToResponse)
+                    .map(this::mapForAdmin)
                     .collect(Collectors.toList());
         } catch (Exception e) {
             log.error("Error getting documents by status: {}", status, e);
@@ -219,6 +219,14 @@ public class ComplianceServiceImpl implements ComplianceService {
         } finally {
             log.debug("Finished reviewDocument for ID: {}", docId);
         }
+    }
+
+    /** Admin thấy thêm số lần tài khoản này đã bị từ chối giấy tờ (mỗi lần nộp lại là một dòng mới) */
+    private ComplianceDocResponse mapForAdmin(StoreComplianceDoc doc) {
+        ComplianceDocResponse response = mapToResponse(doc);
+        response.setRejectedCount((int) complianceDocRepository.countByProviderIdAndVerificationStatus(
+                doc.getProvider().getId(), ComplianceDocStatus.REJECTED));
+        return response;
     }
 
     private ComplianceDocResponse mapToResponse(StoreComplianceDoc doc) {

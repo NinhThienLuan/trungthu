@@ -30,16 +30,19 @@ public class BulkOrderService {
     private final DailyCapacityRepository capacities;
     private final SecurityContextService security;
 
-    // Called inside the RFQ row lock and its transaction. All days are locked in date order.
+    /**
+     * Đơn sỉ con cho một xưởng trong RFQ; {@code boxes} là số hộp khách chốt với xưởng này (≤ số xưởng báo).
+     * Called inside the RFQ row lock and its transaction. All days are locked in date order.
+     */
     @Transactional
-    public BulkOrder createForAcceptedQuote(ProviderQuotation quote) {
+    public BulkOrder createForAcceptedQuote(ProviderQuotation quote, int boxes) {
         if (orders.findByQuoteId(quote.getId()).isPresent()) throw conflict("Đơn sỉ đã được tạo");
         LocalDate today = LocalDate.now(VIETNAM);
         LocalDate delivery = quote.getEstimatedDeliveryDate();
         if (delivery == null || !delivery.isAfter(today)) throw conflict("Ngày giao phải sau ngày chốt đơn");
         int remaining;
         try {
-            remaining = Math.multiplyExact(quote.getOfferedQuantity(), quote.getCakesPerBox());
+            remaining = Math.multiplyExact(boxes, quote.getCakesPerBox());
         } catch (ArithmeticException e) {
             throw conflict("Số bánh vượt giới hạn");
         }
@@ -55,7 +58,8 @@ public class BulkOrderService {
                 remaining -= Math.min(remaining, free);
             }
         }
-        if (remaining > 0) throw conflict("Xưởng không còn đủ suất nướng trước ngày giao; cần báo giá lại");
+        if (remaining > 0) throw conflict(quote.getProvider().getStoreName()
+                + " không còn đủ suất nướng trước ngày giao; cần báo giá lại");
 
         LocalDateTime now = LocalDateTime.now(VIETNAM);
         LocalDateTime firstBake = selected.stream().map(DailyCapacity::getCapacityDate)
@@ -64,11 +68,11 @@ public class BulkOrderService {
         if (!depositDeadline.isBefore(firstBake)) depositDeadline = firstBake;
         if (!depositDeadline.isAfter(now)) throw conflict("Không đủ thời gian xác nhận cọc trước ngày nướng đầu tiên");
 
-        BigDecimal gross = quote.getQuotedPrice().multiply(BigDecimal.valueOf(quote.getOfferedQuantity()));
+        BigDecimal gross = quote.getQuotedPrice().multiply(BigDecimal.valueOf(boxes));
         BigDecimal discount = gross.multiply(new BigDecimal("0.30")).setScale(2, RoundingMode.HALF_UP);
         BigDecimal total = gross.subtract(discount);
         BulkOrder order = orders.saveAndFlush(BulkOrder.builder().quote(quote)
-                .quantity(quote.getOfferedQuantity()).cakesPerBox(quote.getCakesPerBox())
+                .quantity(boxes).cakesPerBox(quote.getCakesPerBox())
                 .unitPrice(quote.getQuotedPrice()).grossAmount(gross).discountAmount(discount)
                 .totalAmount(total).depositAmount(CheckoutServiceImpl.minDeposit(total))
                 .deliveryDate(delivery).depositDeadline(depositDeadline)
@@ -206,7 +210,8 @@ public class BulkOrderService {
     private BulkOrderResponse response(BulkOrder order) {
         ProviderQuotation quote = order.getQuote();
         return new BulkOrderResponse(order.getId(), quote.getRequest().getId(), quote.getId(),
-                quote.getRequest().getRequestCode(), quote.getProvider().getStoreName(),
+                quote.getRequest().getRequestCode(), quote.getRequest().getRequestedQuantity(),
+                quote.getProvider().getStoreName(),
                 order.getQuantity(), order.getCakesPerBox(), order.getUnitPrice(),
                 order.getGrossAmount(), order.getDiscountAmount(), order.getTotalAmount(),
                 order.getDepositAmount(), order.getDeliveryDate(), order.getDepositDeadline(),
