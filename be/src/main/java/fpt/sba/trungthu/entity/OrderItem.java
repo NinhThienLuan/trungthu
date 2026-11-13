@@ -62,6 +62,10 @@ public class OrderItem extends CreatedEntity {
     @Column(name = "free_quantity")
     private Integer freeQuantity;
 
+    // NULL on legacy orders means the displayed quantity was also the purchased quantity.
+    @Column(name = "purchased_quantity")
+    private Integer purchasedQuantity;
+
     @Column(name = "bake_quantity", nullable = false)
     private Integer bakeQuantity;
 

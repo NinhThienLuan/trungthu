@@ -106,7 +106,10 @@ function OrderSummary({ order }: { order: OrderDetail }) {
                   {line.promotionLabel}
                 </span>
               )}
-              {line.quantity && <span className="text-muted"> × {line.quantity}</span>}
+              {line.quantity && <span className="text-muted"> × {line.purchasedQuantity ?? line.quantity}</span>}
+              {(line.quantity ?? 0) > (line.purchasedQuantity ?? line.quantity ?? 0) && (
+                <span className="text-success"> + {(line.quantity ?? 0) - (line.purchasedQuantity ?? 0)} bánh tặng</span>
+              )}
               {line.components && <span className="mt-1 block text-muted">
                 Gồm: {line.components.map((item) => `${item.productName} · ${item.variantName} × ${item.quantity}`).join('; ')}
               </span>}

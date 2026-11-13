@@ -160,7 +160,9 @@ function OrderPanel({ id, onChanged }: { id: string; onChanged: () => void }) {
               <span className="font-medium">{l.productName}</span>
               {l.variantName && <span className="ml-1.5 rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-700">{l.variantName}</span>}
               {l.promotionLabel && <span className="ml-1.5 rounded bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-xs text-amber-700">{l.promotionLabel}</span>}
-              <span className="block text-muted">{l.quantity} × {formatVnd(l.unitPrice)}</span>
+              <span className="block text-muted">{l.purchasedQuantity ?? l.quantity} × {formatVnd(l.unitPrice)}
+                {l.quantity > (l.purchasedQuantity ?? l.quantity) && ` + ${l.quantity - (l.purchasedQuantity ?? l.quantity)} bánh tặng`}
+              </span>
               {l.boxContents && <span className="block text-xs text-muted">Vị bánh: {Array.isArray(l.boxContents) ? l.boxContents.join(', ') : l.boxContents}</span>}
             </div>
             <span className="font-medium">{formatVnd(l.subtotal)}</span>

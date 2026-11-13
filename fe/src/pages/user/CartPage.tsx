@@ -27,10 +27,12 @@ interface PromotionEval {
   savedAmount: number
 }
 
-function evaluateItemPromotion(item: CartItem, promotions: Promotion[]): PromotionEval | null {
+function evaluateItemPromotion(item: CartItem, promotions: Promotion[], selection: string): PromotionEval | null {
   if (item.kind !== 'single' || item.setProductId) return null
+  if (selection === 'NONE') return null
   const matched = promotions.filter(
-    (p) => p.providerId === item.providerId && (!p.productId || p.productId === item.productId),
+    (p) => p.providerId === item.providerId && (!p.productId || p.productId === item.productId)
+      && (selection === 'AUTO' || p.id === selection),
   )
   if (!matched.length) return null
 
@@ -49,7 +51,7 @@ function evaluateItemPromotion(item: CartItem, promotions: Promotion[]): Promoti
         evals.push({
           promotion: p,
           status: 'achieved',
-          message: `Đã kích hoạt ${p.label}: Đã tặng ${freeGained} bánh miễn phí (${item.quantity} bánh chỉ tính tiền ${item.quantity - freeGained})!`,
+          message: `Đã kích hoạt ${p.label}: Mua ${item.quantity} bánh, được tặng thêm ${freeGained} bánh!`,
           savedAmount,
         })
       } else {
@@ -111,7 +113,7 @@ function LeadNote({ lead, days, bulk }: { lead: LeadTime | null | undefined; day
 
 export function CartPage() {
   useDocumentTitle('Giỏ hàng')
-  const { items, deliveryDates, setQuantity, remove, setDeliveryDate } = useCartStore()
+  const { items, deliveryDates, selectedPromotions, setQuantity, remove, setDeliveryDate } = useCartStore()
   const user = useAuthStore((state) => state.user)
   const { data: promotions } = useApi(() => promotionService.running(), [])
   const [dateErrors, setDateErrors] = useState<Record<string, string>>({})
@@ -125,16 +127,18 @@ export function CartPage() {
 
   const itemEvals = new Map<string, PromotionEval | null>()
   let totalSavings = 0
+  let giftValue = 0
   for (const item of items) {
-    const ev = evaluateItemPromotion(item, promotions ?? [])
+    const ev = evaluateItemPromotion(item, promotions ?? [], selectedPromotions[item.providerId] ?? 'AUTO')
     // Như BE (CheckoutServiceImpl.promote): đơn giá sau giảm làm tròn xuống đồng, tổng = đơn giá × số lượng
-    if (ev && ev.savedAmount > 0) {
+    if (ev && ev.promotion.type !== 'BUY_X_GET_Y' && ev.savedAmount > 0) {
       const list = item.unitPrice * item.quantity
       ev.savedAmount = list - Math.floor((list - ev.savedAmount) / item.quantity) * item.quantity
     }
     itemEvals.set(item.lineId, ev)
     if (ev && ev.savedAmount > 0) {
-      totalSavings += ev.savedAmount
+      if (ev.promotion.type === 'BUY_X_GET_Y') giftValue += ev.savedAmount
+      else totalSavings += ev.savedAmount
     }
   }
 
@@ -221,10 +225,11 @@ export function CartPage() {
                       {(() => {
                         const promo = itemEvals.get(item.lineId)
                         const lineTotal = item.unitPrice * item.quantity
-                        const finalLineTotal = Math.max(0, lineTotal - (promo?.savedAmount ?? 0))
+                        const cashSaving = promo?.promotion.type === 'BUY_X_GET_Y' ? 0 : promo?.savedAmount ?? 0
+                        const finalLineTotal = Math.max(0, lineTotal - cashSaving)
                         return (
                           <div className="w-28 text-right shrink-0">
-                            {promo && promo.savedAmount > 0 ? (
+                            {cashSaving > 0 ? (
                               <>
                                 <span className="block text-xs text-muted line-through">{formatVnd(lineTotal)}</span>
                                 <span className="font-semibold text-secondary">{formatVnd(finalLineTotal)}</span>
@@ -265,7 +270,9 @@ export function CartPage() {
                             <span className="font-medium truncate">{promo.message}</span>
                             {promo.savedAmount > 0 && (
                               <span className="font-bold text-secondary shrink-0">
-                                (−{formatVnd(promo.savedAmount)})
+                                {promo.promotion.type === 'BUY_X_GET_Y'
+                                  ? `(quà tặng trị giá ${formatVnd(promo.savedAmount)})`
+                                  : `(−${formatVnd(promo.savedAmount)})`}
                               </span>
                             )}
                           </div>
@@ -319,7 +326,10 @@ export function CartPage() {
           <h2 className="text-h3">Tóm tắt</h2>
           <dl className="mt-4 flex flex-col gap-2 text-small">
             {groups.map((g) => {
-              const groupSavings = g.items.reduce((sum, item) => sum + (itemEvals.get(item.lineId)?.savedAmount ?? 0), 0)
+              const groupSavings = g.items.reduce((sum, item) => {
+                const ev = itemEvals.get(item.lineId)
+                return sum + (ev?.promotion.type === 'BUY_X_GET_Y' ? 0 : ev?.savedAmount ?? 0)
+              }, 0)
               return (
                 <div key={g.providerId} className="flex justify-between gap-4">
                   <dt className="truncate text-muted">{g.storeName}</dt>
@@ -343,6 +353,12 @@ export function CartPage() {
                   <span>Ưu đãi xưởng tiết kiệm</span>
                 </dt>
                 <dd>−{formatVnd(totalSavings)}</dd>
+              </div>
+            )}
+            {giftValue > 0 && (
+              <div className="flex justify-between gap-4 text-secondary font-medium pt-1 border-t border-line/60">
+                <dt>Giá trị bánh tặng thêm</dt>
+                <dd>{formatVnd(giftValue)}</dd>
               </div>
             )}
           </dl>

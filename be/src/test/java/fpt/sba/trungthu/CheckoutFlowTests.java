@@ -254,7 +254,7 @@ class CheckoutFlowTests {
     }
 
     @Test
-    void runningPromotionLowersUnitPriceAndOrderTotal() {
+    void buyXGetYChargesBoughtCakesAndReservesGifts() {
         User cakeProvider = users.findById(products.findById(cake.getProduct().getId()).orElseThrow()
                 .getProvider().getId()).orElseThrow();
         promotions.save(Promotion.builder().provider(cakeProvider).name("Mua 2 tang 1")
@@ -266,17 +266,23 @@ class CheckoutFlowTests {
 
         CheckoutPreviewResponse preview = checkout.preview(request());
         var cod = preview.groups().stream().filter(g -> g.paymentMethod() == PaymentMethod.COD).findFirst().orElseThrow();
-        assertThat(cod.totalAmount()).isEqualByComparingTo("100000");
-        assertThat(cod.discountAmount()).isEqualByComparingTo("100000");
+        assertThat(cod.totalAmount()).isEqualByComparingTo("200000");
+        assertThat(cod.discountAmount()).isEqualByComparingTo("0");
         assertThat(cod.lines().getFirst().promotion()).isEqualTo("Mua 2 tặng 1");
+        assertThat(cod.lines().getFirst().freeQuantity()).isEqualTo(1);
         assertThat(cod.shippingFee()).isEqualByComparingTo("0");
-        assertThat(preview.grandTotal()).isEqualByComparingTo("420000");
+        assertThat(preview.grandTotal()).isEqualByComparingTo("520000");
 
         Order order = checkout.checkout(request()).stream().map(d -> orders.findById(d.getId()).orElseThrow())
                 .filter(o -> o.getPaymentMethod() == PaymentMethod.COD).findFirst().orElseThrow();
-        assertThat(order.getTotalAmount()).isEqualByComparingTo("100000");
+        assertThat(order.getTotalAmount()).isEqualByComparingTo("200000");
         assertThat(order.getListAmount()).isEqualByComparingTo("200000");
-        assertThat(order.getDiscountAmount()).isEqualByComparingTo("100000");
+        assertThat(order.getDiscountAmount()).isEqualByComparingTo("0");
+        var item = orderItems.findByOrderBatchOrderId(order.getId()).getFirst();
+        assertThat(item.getQuantity()).isEqualTo(3);
+        assertThat(item.getFreeQuantity()).isEqualTo(1);
+        assertThat(item.getSubtotal()).isEqualByComparingTo("200000");
+        assertThat(variants.findById(cake.getId()).orElseThrow().getStockQuantity()).isEqualTo(7);
     }
 
     @Test
@@ -294,7 +300,25 @@ class CheckoutFlowTests {
         var detail = checkout.checkout(cakeRequest(delivery, 6)).getFirst();
         assertThat(detail.getTotalAmount()).isEqualByComparingTo("200000");
         assertThat(detail.getLines().getFirst().getUnitPrice()).isEqualByComparingTo("100000");
-        assertThat(detail.getLines().getFirst().getVariantName()).contains("tặng 4 bánh");
+        assertThat(detail.getLines().getFirst().getPromotionLabel()).contains("tặng 4 bánh");
+        assertThat(detail.getLines().getFirst().getSubtotal()).isEqualByComparingTo("200000");
+    }
+
+    @Test
+    void freePersonalizationStillRequiresHalfDepositAndDisablesCod() {
+        CheckoutRequest.Item personalized = new CheckoutRequest.Item(box.getId(), null, 5,
+                "Chuc mung", List.of(boxCake.getId(), boxCake.getId()));
+        CheckoutRequest request = new CheckoutRequest("Buyer", "0123456789", "Address", null,
+                List.of(new CheckoutRequest.Group(delivery, "Hồ Chí Minh", "Quận 1", PaymentMethod.VIETQR,
+                        false, List.of(personalized))));
+
+        var preview = checkout.preview(request).groups().getFirst();
+        assertThat(preview.personalizationFee()).isEqualByComparingTo("0");
+        assertThat(preview.minDepositAmount()).isEqualByComparingTo("750000");
+        assertThat(preview.codAllowed()).isFalse();
+
+        var detail = checkout.checkout(request).getFirst();
+        assertThat(detail.getDepositAmount()).isEqualByComparingTo("750000");
     }
 
     @Test

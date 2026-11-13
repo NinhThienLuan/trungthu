@@ -55,7 +55,9 @@ public record CreateOrdersCommand(
             Integer stockReservedQuantity,
             String promotionLabel,
             String boxContents,
-            Integer freeQuantity) {
+            Integer freeQuantity,
+            BigDecimal lineSubtotal,
+            @Positive Integer purchasedQuantity) {
 
         public ItemSnapshot {
             if (personalizationFee == null) {
@@ -65,6 +67,34 @@ public record CreateOrdersCommand(
             if (stockReservedQuantity < 0 || stockReservedQuantity > quantity) {
                 throw new IllegalArgumentException("Reserved stock quantity must be between 0 and ordered quantity");
             }
+            if (lineSubtotal == null) {
+                lineSubtotal = unitPrice.multiply(BigDecimal.valueOf(quantity)).add(personalizationFee);
+            }
+            if (lineSubtotal.signum() < 0) {
+                throw new IllegalArgumentException("Line subtotal must be nonnegative");
+            }
+            if (purchasedQuantity == null) purchasedQuantity = quantity;
+            if (quantity > 0 && purchasedQuantity > quantity) {
+                throw new IllegalArgumentException("Purchased quantity must be between 1 and delivered quantity");
+            }
+        }
+
+        public ItemSnapshot(UUID variantId, String productName, String variantName, int quantity, BigDecimal unitPrice,
+                int bakeQuantity, UUID sourceSetId, int directUnits, String personalizationText,
+                BigDecimal personalizationFee, Integer stockReservedQuantity, String promotionLabel,
+                String boxContents, Integer freeQuantity, BigDecimal lineSubtotal) {
+            this(variantId, productName, variantName, quantity, unitPrice, bakeQuantity, sourceSetId, directUnits,
+                    personalizationText, personalizationFee, stockReservedQuantity, promotionLabel, boxContents,
+                    freeQuantity, lineSubtotal, null);
+        }
+
+        public ItemSnapshot(UUID variantId, String productName, String variantName, int quantity, BigDecimal unitPrice,
+                int bakeQuantity, UUID sourceSetId, int directUnits, String personalizationText,
+                BigDecimal personalizationFee, Integer stockReservedQuantity, String promotionLabel,
+                String boxContents, Integer freeQuantity) {
+            this(variantId, productName, variantName, quantity, unitPrice, bakeQuantity, sourceSetId, directUnits,
+                    personalizationText, personalizationFee, stockReservedQuantity, promotionLabel, boxContents,
+                    freeQuantity, null, null);
         }
 
         public ItemSnapshot(UUID variantId, String productName, String variantName, int quantity, BigDecimal unitPrice,

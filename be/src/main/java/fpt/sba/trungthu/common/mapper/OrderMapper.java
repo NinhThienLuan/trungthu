@@ -60,7 +60,8 @@ public class OrderMapper {
                 variantName = parts[0];
                 for (int i = 1; i < parts.length; i++) {
                     String part = parts[i].trim();
-                    if (part.contains("Mua ") || part.contains("Giảm ") || part.contains("tặng ")) {
+                    if (part.startsWith("Mua ") || part.startsWith("Giảm ") || part.startsWith("Lấy ")
+                            || part.startsWith("tặng ")) {
                         promoLabel = promoLabel == null ? part : promoLabel + " · " + part;
                     } else {
                         boxContents = boxContents == null ? part : boxContents + ", " + part;
@@ -85,6 +86,7 @@ public class OrderMapper {
                 .promotionLabel(promoLabel)
                 .boxContents(boxContents)
                 .freeQuantity(freeQuantity)
+                .purchasedQuantity(item.getPurchasedQuantity() == null ? item.getQuantity() : item.getPurchasedQuantity())
                 .build();
     }
 }

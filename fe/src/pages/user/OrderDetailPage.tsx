@@ -180,7 +180,10 @@ export function OrderDetailPage() {
                       {/* Pricing & Quantity & Review Action */}
                       <div className="flex md:flex-col md:items-end justify-between items-center shrink-0 text-small pt-2 md:pt-0 border-t md:border-t-0 border-line/60">
                         <div className="text-muted">
-                          {formatVnd(unitPrice)} <span className="text-ink font-medium">× {line.quantity}</span>
+                          {formatVnd(unitPrice)} <span className="text-ink font-medium">× {line.purchasedQuantity ?? line.quantity}</span>
+                          {(line.quantity ?? 0) > (line.purchasedQuantity ?? line.quantity ?? 0) && (
+                            <span className="ml-1 text-success">+ {(line.quantity ?? 0) - (line.purchasedQuantity ?? 0)} bánh tặng</span>
+                          )}
                         </div>
                         <div className="font-semibold text-navy text-base md:mt-1">
                           {formatVnd(line.subtotal)}

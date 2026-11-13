@@ -206,8 +206,8 @@ class GiftSetCheckoutTests {
         JsonNode created = call("/api/checkout", """
                 {"receiverName":"Mua","receiverPhone":"0903000003","shippingAddress":"12 Tràng Tiền","groups":[%s]}"""
                 .formatted(group), buyer);
-        assertThat(created.at("/data/0/lines").valueStream().map(line -> line.path("variantName").asText()))
-                .anyMatch(name -> name.contains("×4"));
+        assertThat(created.at("/data/0/lines").valueStream().map(line -> line.path("boxContents").asText()))
+                .anyMatch(contents -> contents.contains("×4"));
         assertThat(variants.findById(choice.boxVariantId()).orElseThrow().getStockQuantity())
                 .isEqualTo(choice.boxStockBefore() - 1);
     }

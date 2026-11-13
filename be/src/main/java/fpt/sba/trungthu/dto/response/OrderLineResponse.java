@@ -23,4 +23,5 @@ public class OrderLineResponse {
     private String promotionLabel;
     private String boxContents;
     private Integer freeQuantity;
+    private Integer purchasedQuantity;
 }

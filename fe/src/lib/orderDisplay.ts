@@ -10,6 +10,7 @@ export interface DisplayOrderLine {
   unitPrice?: number
   promotionLabel?: string | null
   freeQuantity?: number | null
+  purchasedQuantity?: number | null
   personalizationText?: string | null
   personalizationFee?: number
   boxContents?: string[]
@@ -44,6 +45,7 @@ export function displayOrderLines(lines: OrderLine[]): DisplayOrderLine[] {
         subtotal: line.subtotal,
         promotionLabel: line.promotionLabel,
         freeQuantity: line.freeQuantity,
+        purchasedQuantity: line.purchasedQuantity,
         personalizationText: line.personalizationText,
         personalizationFee: line.personalizationFee,
         boxContents: boxList,

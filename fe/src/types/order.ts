@@ -124,6 +124,7 @@ export interface OrderLine {
   promotionLabel?: string | null
   boxContents?: string[] | string | null
   freeQuantity?: number | null
+  purchasedQuantity?: number | null
 }
 
 /** GET /api/orders/{id}/vietqr */

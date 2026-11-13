@@ -67,7 +67,7 @@ public class Promotion extends BaseEntity {
         return product == null || product.getId().equals(target.getId());
     }
 
-    /** Số tiền giảm cho một dòng `quantity` cái giá `unitPrice` (làm tròn xuống đồng) */
+    /** Giá trị ưu đãi để chọn khuyến mãi tốt nhất; BUY_X_GET_Y trả giá trị bánh tặng thêm. */
     public BigDecimal discountFor(BigDecimal unitPrice, int quantity) {
         return switch (type) {
             case PERCENT_OFF -> quantity < (minQuantity == null ? 0 : minQuantity) ? BigDecimal.ZERO
