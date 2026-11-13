@@ -13,6 +13,8 @@ import java.util.UUID;
 
 public interface BulkOrderRepository extends JpaRepository<BulkOrder, UUID> {
     Optional<BulkOrder> findByQuoteId(UUID quoteId);
+    /** Các đơn sỉ con của một đơn tổng (RFQ) */
+    List<BulkOrder> findByQuoteRequestId(UUID requestId);
     List<BulkOrder> findTop100ByQuoteRequestCustomerIdOrderByCreatedAtDesc(UUID customerId);
     List<BulkOrder> findTop100ByQuoteProviderIdOrderByCreatedAtDesc(UUID providerId);
     List<BulkOrder> findByStatusAndDepositDeadlineBefore(BulkOrderStatus status, LocalDateTime deadline);

@@ -87,6 +87,13 @@ function DocRow({ doc, run }: { doc: AdminComplianceDoc; run: (action: () => Pro
         <div>
           <h2 className="text-h3">{DOC_LABEL[doc.documentType]}</h2>
           <p className="text-small text-muted">{who} · {doc.providerEmail}</p>
+          {doc.rejectedCount != null && (
+            <p className={cn('mt-1 inline-block rounded px-2 py-0.5 text-xs font-semibold',
+              doc.rejectedCount === 0 ? 'bg-emerald-500/10 text-emerald-800'
+                : doc.rejectedCount >= 3 ? 'bg-danger/15 text-danger' : 'bg-amber-500/15 text-amber-900')}>
+              {doc.rejectedCount === 0 ? 'Chưa từng bị từ chối' : `Tài khoản đã bị từ chối ${doc.rejectedCount} lần`}
+            </p>
+          )}
           <p className="text-small text-muted">Nộp {formatDateTime(doc.submittedAt)}
             {doc.verifiedAt && ` · Xử lý ${formatDateTime(doc.verifiedAt)}${doc.verifiedByEmail ? ` bởi ${doc.verifiedByEmail}` : ''}`}</p>
         </div>

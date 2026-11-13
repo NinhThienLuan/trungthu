@@ -104,7 +104,7 @@ export function SellerRfqPage() {
             {ownQuote && ownQuote.status !== 'SUBMITTED' ? (
               <div className="mt-5 rounded-sm bg-champagne-light p-4 text-small">
                 <p className="font-semibold text-primary">Báo giá của xưởng: {formatVnd(ownQuote.unitPrice)}/hộp</p>
-                <p>{ownQuote.offeredQuantity} hộp × {ownQuote.cakesPerBox} bánh · giảm 30%: {formatVnd(ownQuote.discountAmount)} · cần thanh toán {formatVnd(ownQuote.totalAmount)}</p>
+                <p>{ownQuote.acceptedQuantity ?? ownQuote.offeredQuantity} hộp × {ownQuote.cakesPerBox} bánh · giảm 30%: {formatVnd(ownQuote.discountAmount)} · cần thanh toán {formatVnd(ownQuote.totalAmount)}</p>
                 <p>Trạng thái {ownQuote.status}</p>
               </div>
             ) : (

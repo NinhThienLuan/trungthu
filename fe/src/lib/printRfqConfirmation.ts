@@ -20,8 +20,8 @@ th{width:34%;background:#f6f3ec}h2{font-size:16px;margin:20px 0 8px}.sign{displa
 <h2>Bên mua</h2><table>${row('Doanh nghiệp', rfq.companyName)}${row('Mã số thuế', rfq.taxCode)}
 ${row('Người liên hệ', `${rfq.contactName ?? ''} — ${rfq.contactPosition ?? ''}`)}${row('Điện thoại', rfq.contactPhone)}${row('Email', rfq.contactEmail)}</table>
 <h2>Bên bán</h2><table>${row('Xưởng', quote.providerName)}${row('Điện thoại', quote.providerPhone)}${row('Email', quote.providerEmail)}${row('Địa chỉ', quote.providerAddress)}</table>
-<h2>Nội dung đơn</h2><table>${row('Số lượng', `${quote.offeredQuantity} hộp`)}${row('Đơn giá', formatVnd(quote.unitPrice))}
-${row('Giá gốc (chưa gồm VAT, phí giao)', formatVnd(quote.grossAmount))}${row('Chiết khấu 30%', formatVnd(quote.discountAmount))}${row('Sau chiết khấu', formatVnd(quote.totalAmount))}${row('Cọc 50%', formatVnd(quote.depositAmount))}${row('Số bánh cần nướng', quote.offeredQuantity * quote.cakesPerBox)}${row('Ngày giao dự kiến', formatDate(quote.estimatedDeliveryDate))}${row('Ghi chú của xưởng', quote.note)}
+<h2>Nội dung đơn</h2><table>${row('Số lượng', `${quote.acceptedQuantity ?? quote.offeredQuantity} hộp`)}${row('Đơn giá', formatVnd(quote.unitPrice))}
+${row('Giá gốc (chưa gồm VAT, phí giao)', formatVnd(quote.grossAmount))}${row('Chiết khấu 30%', formatVnd(quote.discountAmount))}${row('Sau chiết khấu', formatVnd(quote.totalAmount))}${row('Cọc tối thiểu', formatVnd(quote.depositAmount))}${row('Số bánh cần nướng', (quote.acceptedQuantity ?? quote.offeredQuantity) * quote.cakesPerBox)}${row('Ngày giao dự kiến', formatDate(quote.estimatedDeliveryDate))}${row('Ghi chú của xưởng', quote.note)}
 ${row('Yêu cầu của khách', rfq.description)}</table>
 <div class="sign"><div>ĐẠI DIỆN BÊN MUA<br><br><br><br>(Ký, ghi rõ họ tên)</div><div>ĐẠI DIỆN BÊN BÁN<br><br><br><br>(Ký, ghi rõ họ tên)</div></div>
 <script>window.onload=()=>document.fonts.ready.then(()=>window.print())</script></body></html>`

@@ -6,7 +6,7 @@ import { useAuthStore } from '../stores/authStore'
 import { errorMessage } from '../apis/http'
 import { formatDate, formatVnd, toIsoDate } from '../lib/format'
 import { printRfqConfirmation } from '../lib/printRfqConfirmation'
-import type { RfqResponse } from '../types/order'
+import type { QuoteResponse, RfqResponse } from '../types/order'
 import { Icon } from './Icon'
 import { BulkOrdersPanel } from './BulkOrdersPanel'
 import { EmptyState, Notice, Spinner } from './ui/States'
@@ -27,20 +27,38 @@ export function BuyerRfqDashboard({ created }: { created?: RfqResponse | null })
   const [version, setVersion] = useState(0)
   const [message, setMessage] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  /** quoteId -> số hộp khách muốn chốt với xưởng đó (chia đơn tổng cho nhiều xưởng) */
+  const [picks, setPicks] = useState<Record<string, number>>({})
   const list = useApi(() => (isBuyer ? rfqService.mine() : Promise.resolve([])), [isBuyer, created?.id, version])
   const requestId = selected ?? created?.id ?? list.data?.[0]?.id
+  const currentRfq = list.data?.find((item) => item.id === requestId)
   const quotes = useApi(
     () => (requestId && isBuyer ? rfqService.quotes(requestId) : Promise.resolve([])),
     [requestId, isBuyer, version],
   )
+  const picked = (quotes.data ?? []).filter((quote) => picks[quote.id])
+  const pickedBoxes = picked.reduce((sum, quote) => sum + picks[quote.id], 0)
 
-  const accept = async (quoteId: string) => {
+  const togglePick = (quote: QuoteResponse) =>
+    setPicks((current) => {
+      const next = { ...current }
+      if (next[quote.id]) delete next[quote.id]
+      else {
+        // Mặc định lấy phần còn thiếu của đơn tổng, không vượt số hộp xưởng báo
+        const left = (currentRfq?.requestedQuantity ?? quote.offeredQuantity) - pickedBoxes
+        next[quote.id] = Math.max(1, Math.min(quote.offeredQuantity, left))
+      }
+      return next
+    })
+
+  const run = async (action: () => Promise<unknown>, done: string) => {
     if (!requestId || busy) return
     setBusy(true)
     setMessage(null)
     try {
-      await rfqService.acceptQuote(requestId, quoteId)
-      setMessage('Đã tạo đơn sỉ và giữ lịch nướng. Vui lòng bổ sung địa chỉ giao và chuyển cọc theo hướng dẫn của xưởng.')
+      await action()
+      setMessage(done)
+      setPicks({})
       setVersion((value) => value + 1)
     } catch (error) {
       setMessage(errorMessage(error))
@@ -48,6 +66,13 @@ export function BuyerRfqDashboard({ created }: { created?: RfqResponse | null })
       setBusy(false)
     }
   }
+
+  const acceptPicked = () => run(
+    () => rfqService.acceptQuotes(requestId!, picked.map((quote) => ({ quoteId: quote.id, quantity: picks[quote.id] }))),
+    picked.length > 1
+      ? `Đã chia đơn cho ${picked.length} xưởng và giữ lịch nướng. Mỗi xưởng là một đơn sỉ con: bổ sung địa chỉ giao và chuyển cọc riêng cho từng xưởng.`
+      : 'Đã tạo đơn sỉ và giữ lịch nướng. Vui lòng bổ sung địa chỉ giao và chuyển cọc theo hướng dẫn của xưởng.',
+  )
 
   if (!ready) return <Spinner label="Đang kiểm tra tài khoản..." />
   if (!isBuyer) {
@@ -113,6 +138,7 @@ export function BuyerRfqDashboard({ created }: { created?: RfqResponse | null })
                     onClick={() => {
                       setSelected(rfq.id)
                       setMessage(null)
+                      setPicks({})
                     }}
                     className={`w-full rounded-md border p-4 text-left transition-all cursor-pointer ${
                       active
@@ -153,6 +179,10 @@ export function BuyerRfqDashboard({ created }: { created?: RfqResponse | null })
 
             {message && <Notice tone="success">{message}</Notice>}
 
+            {currentRfq?.status === 'QUOTES_RECEIVED' && (quotes.data?.length ?? 0) > 0 && (
+              <SplitSummary rfq={currentRfq} picked={picked} picks={picks} busy={busy} onSubmit={acceptPicked} />
+            )}
+
             {quotes.loading ? (
               <Spinner label="Đang tải báo giá..." />
             ) : quotes.error ? (
@@ -168,7 +198,6 @@ export function BuyerRfqDashboard({ created }: { created?: RfqResponse | null })
             ) : (
               <div className="space-y-3.5">
                 {quotes.data.map((quote) => {
-                  const currentRfq = list.data?.find((item) => item.id === requestId)
                   const isAccepted = quote.status === 'ACCEPTED'
                   const canAccept =
                     quote.status === 'SUBMITTED' &&
@@ -194,7 +223,8 @@ export function BuyerRfqDashboard({ created }: { created?: RfqResponse | null })
                           </div>
                           <p className="text-small text-muted mt-0.5">
                             Cung ứng: <b>{quote.offeredQuantity} hộp</b>
-                            {currentRfq && quote.offeredQuantity < currentRfq.requestedQuantity && <span className="text-danger"> · Thiếu {currentRfq.requestedQuantity - quote.offeredQuantity} hộp so với yêu cầu</span>}
+                            {isAccepted && quote.acceptedQuantity != null && <> · Đã chốt <b className="text-emerald-800">{quote.acceptedQuantity} hộp</b></>}
+                            {!isAccepted && currentRfq && quote.offeredQuantity < currentRfq.requestedQuantity && <span className="text-amber-800"> · Làm được {quote.offeredQuantity}/{currentRfq.requestedQuantity} hộp, có thể chọn thêm xưởng khác</span>}
                             {' · '}Giao hàng: <b>{formatDate(quote.estimatedDeliveryDate)}</b>
                           </p>
                         </div>
@@ -206,8 +236,7 @@ export function BuyerRfqDashboard({ created }: { created?: RfqResponse | null })
                           </span>
                         </div>
                       </div>
-                      <p className="mt-1 text-xs text-muted">{quote.offeredQuantity * quote.cakesPerBox} bánh · Thành tiền {formatVnd(quote.grossAmount)} · Chiết khấu {formatVnd(quote.discountAmount)} · Cọc 50% {formatVnd(quote.depositAmount)}</p>
-                      {canAccept && <p className="mt-1 text-xs text-muted">Suất nướng được giữ khi chấp nhận; cọc cần được xác nhận trong 48 giờ hoặc trước khi bắt đầu nướng.</p>}
+                      <p className="mt-1 text-xs text-muted">{(quote.acceptedQuantity ?? quote.offeredQuantity) * quote.cakesPerBox} bánh · Thành tiền {formatVnd(quote.grossAmount)} · Chiết khấu {formatVnd(quote.discountAmount)} · Cọc tối thiểu {formatVnd(quote.depositAmount)}</p>
 
                       {quote.note && (
                         <div className="mt-2.5 rounded bg-white p-2.5 border border-line/60 text-small text-ink">
@@ -243,14 +272,25 @@ export function BuyerRfqDashboard({ created }: { created?: RfqResponse | null })
                           {quote.validUntil ? `Hiệu lực báo giá đến ${formatDate(quote.validUntil)}` : 'Chưa có hạn'}
                         </span>
                         {canAccept && (
-                          <button
-                            type="button"
-                            disabled={busy}
-                            className="btn btn-primary btn-sm cursor-pointer"
-                            onClick={() => accept(quote.id)}
-                          >
-                            Chấp nhận báo giá xưởng này
-                          </button>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <label className="flex items-center gap-1.5 cursor-pointer font-semibold text-navy">
+                              <input type="checkbox" className="size-4 accent-secondary" checked={!!picks[quote.id]}
+                                disabled={busy} onChange={() => togglePick(quote)} />
+                              Chọn xưởng này
+                            </label>
+                            {picks[quote.id] ? (
+                              <label className="flex items-center gap-1">
+                                <input type="number" min={1} max={quote.offeredQuantity} value={picks[quote.id]}
+                                  aria-label={`Số hộp đặt ${quote.providerName}`}
+                                  className="input w-24 py-1 text-right"
+                                  onChange={(e) => {
+                                    const value = Math.max(1, Math.min(quote.offeredQuantity, Math.round(Number(e.target.value)) || 1))
+                                    setPicks((current) => ({ ...current, [quote.id]: value }))
+                                  }} />
+                                / {quote.offeredQuantity} hộp
+                              </label>
+                            ) : null}
+                          </div>
                         )}
                       </div>
                     </div>
@@ -261,7 +301,67 @@ export function BuyerRfqDashboard({ created }: { created?: RfqResponse | null })
           </div>
         </div>
       )}
-      <BulkOrdersPanel role="buyer" />
+      <BulkOrdersPanel role="buyer" refreshKey={version} onChanged={() => setVersion((value) => value + 1)} />
+    </div>
+  )
+}
+
+/** Đơn tổng khi chia cho nhiều xưởng: so sánh các xưởng đã chọn, tổng hộp/tiền, ngày hoàn tất, phần còn thiếu */
+function SplitSummary({ rfq, picked, picks, busy, onSubmit }: {
+  rfq: RfqResponse
+  picked: QuoteResponse[]
+  picks: Record<string, number>
+  busy: boolean
+  onSubmit: () => void
+}) {
+  const boxes = picked.reduce((sum, quote) => sum + picks[quote.id], 0)
+  // Ước tính theo đơn giá xưởng báo, đã trừ chiết khấu sỉ 30% như BE tính cho từng đơn con
+  const total = picked.reduce((sum, quote) => sum + Math.round(quote.unitPrice * picks[quote.id] * 0.7), 0)
+  const finish = picked.map((quote) => quote.estimatedDeliveryDate).sort().pop()
+  const late = finish && rfq.expectedDeliveryDate && finish > rfq.expectedDeliveryDate
+  const missing = rfq.requestedQuantity - boxes
+  const percent = Math.min(100, Math.round((boxes / rfq.requestedQuantity) * 100))
+  return (
+    <div className="rounded-md border border-secondary/50 bg-champagne/30 p-4 text-small space-y-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <b className="text-navy">Đơn tổng {rfq.code}: đã chọn {boxes.toLocaleString('vi-VN')} / {rfq.requestedQuantity.toLocaleString('vi-VN')} hộp</b>
+        <span className="text-muted">Một xưởng làm không đủ? Tích chọn thêm xưởng và chia số hộp.</span>
+      </div>
+      <div className="h-2 rounded bg-white" role="progressbar" aria-label="Số hộp đã chọn" aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100}>
+        <div className={`h-2 rounded ${missing > 0 ? 'bg-amber-500' : 'bg-emerald-600'}`} style={{ width: `${percent}%` }} />
+      </div>
+      {picked.length > 0 && (
+        <table className="w-full text-xs">
+          <thead className="text-muted text-left"><tr><th className="py-1">Xưởng</th><th>Số hộp</th><th>Đơn giá</th><th>Ngày giao</th></tr></thead>
+          <tbody>
+            {picked.map((quote) => (
+              <tr key={quote.id} className="border-t border-line/60">
+                <td className="py-1 font-semibold text-navy">{quote.providerName}</td>
+                <td>{picks[quote.id]}</td>
+                <td>{formatVnd(quote.unitPrice)}</td>
+                <td className={quote.estimatedDeliveryDate > rfq.expectedDeliveryDate ? 'text-danger font-semibold' : ''}>{formatDate(quote.estimatedDeliveryDate)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      {picked.length > 1 && (
+        <p className="text-xs text-muted">
+          Mỗi xưởng làm bánh theo công thức và vỏ hộp riêng: hãy so sánh lời nhắn và giá trước khi chốt. Logo và yêu cầu in trong RFQ được gửi cho mọi xưởng bạn chọn.
+        </p>
+      )}
+      {picked.length > 0 && (
+        <ul className="text-xs space-y-1">
+          <li>Tổng tạm tính (đã giảm 30% sỉ): <b>{formatVnd(total)}</b>. Mỗi xưởng là <b>một đơn sỉ con</b>, cọc và thanh toán riêng cho từng xưởng.</li>
+          <li>Đơn tổng hoàn tất khi xưởng giao muộn nhất xong: <b>{finish ? formatDate(finish) : "—"}</b>
+            {late && <span className="text-danger"> (muộn hơn ngày bạn cần {formatDate(rfq.expectedDeliveryDate)})</span>}</li>
+          {missing > 0 && <li className="text-amber-800">Còn thiếu <b>{missing} hộp</b>. Bạn vẫn có thể chốt trước, rồi mở yêu cầu báo giá cho phần thiếu ở mục "Đơn sỉ đã chốt".</li>}
+          {missing < 0 && <li className="text-amber-800">Đang chọn dư <b>{-missing} hộp</b> so với yêu cầu.</li>}
+        </ul>
+      )}
+      <button type="button" className="btn btn-primary btn-sm" disabled={busy || picked.length === 0} onClick={onSubmit}>
+        {picked.length > 1 ? `Chốt đơn với ${picked.length} xưởng` : 'Chốt báo giá đã chọn'}
+      </button>
     </div>
   )
 }
