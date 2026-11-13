@@ -23,16 +23,6 @@ export function OrderDetailPage() {
   const [cancelling, setCancelling] = useState(false)
   const [cancelError, setCancelError] = useState<string>()
   useDocumentTitle(order ? `Đơn ${order.code}` : 'Chi tiết đơn')
-
-  if (loading) return <Spinner />
-  if (error || !order) {
-    return (
-      <div className="page section">
-        <ErrorState message={error ?? 'Không tìm thấy đơn hàng'} onRetry={reload} />
-      </div>
-    )
-  }
-
   const [reviewingLine, setReviewingLine] = useState<DisplayOrderLine | null>(null)
   const [reviewRating, setReviewRating] = useState(5)
   const [reviewComment, setReviewComment] = useState('')
@@ -42,6 +32,15 @@ export function OrderDetailPage() {
     () => (order?.status === 'COMPLETED' ? productReviewService.reviewedProductIds(order.id) : Promise.resolve([])),
     [order?.id, order?.status],
   )
+
+  if (loading) return <Spinner />
+  if (error || !order) {
+    return (
+      <div className="page section">
+        <ErrorState message={error ?? 'Không tìm thấy đơn hàng'} onRetry={reload} />
+      </div>
+    )
+  }
 
   const handleReviewSubmit = async (e: FormEvent) => {
     e.preventDefault()
