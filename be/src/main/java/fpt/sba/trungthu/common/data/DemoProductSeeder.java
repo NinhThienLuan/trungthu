@@ -65,18 +65,18 @@ public class DemoProductSeeder implements CommandLineRunner {
 
     private void seedOtherShops() {
         seedShop("seller@dongkhanh.vn",
-                "Bánh nướng sen nhụy", "Nhân sen nhụy, vỏ nướng mỏng.", "DK-SEN-150", 98000, 20,
+                "Bánh nướng sen nhụy", "Nhân sen nhụy, vỏ nướng mỏng.", "DK-SEN-150-1T", 98000, 20,
                 new String[] { "dk-sen.jpg", "dk-sen-2.jpg" },
-                "Bánh nướng hạt dưa", "Nhân hạt dưa rang, vị ngọt vừa.", "DK-HATDUA-200", 88000, 12,
+                "Bánh nướng hạt dưa", "Nhân hạt dưa rang, vị ngọt vừa.", "DK-HATDUA-200-2T", 88000, 12,
                 new String[] { "dk-hatdua.jpg", "dk-hatdua-2.jpg" },
                 "Hộp Đồng Khánh", "Hộp 4 bánh, nắp gấm đỏ.", "DK-HOP-4", 380000,
                 new String[] { "dk-hop.jpg", "dk-hop-mo.jpg" },
                 "Set sen nhụy", "Một hộp 4 bánh sen nhụy. Giá bán thấp hơn giá gốc.", "690000", 3,
                 new String[] { "dk-set.jpg", "dk-set-2.jpg", "dk-hop-mo.jpg" });
         seedShop("seller@givral.vn",
-                "Bánh dẻo trứng muối", "Vỏ dẻo, nhân đậu xanh trứng muối.", "GV-DEO-180", 105000, 16,
+                "Bánh dẻo trứng muối", "Vỏ dẻo, nhân đậu xanh trứng muối.", "GV-DEO-180-1T", 105000, 16,
                 new String[] { "gv-deo.jpg", "gv-deo-2.jpg" },
-                "Bánh nướng thập cẩm Givral", "Nhân thập cẩm, lò Givral.", "GV-THAPCAM-150", 92000, 18,
+                "Bánh nướng thập cẩm Givral", "Nhân thập cẩm, lò Givral.", "GV-THAPCAM-150-2T", 92000, 18,
                 new String[] { "gv-thapcam.jpg", "gv-thapcam-2.jpg" },
                 "Hộp Givral", "Hộp 4 bánh, dùng để biếu.", "GV-HOP-4", 450000,
                 new String[] { "gv-hop.jpg", "gv-hop-mo.jpg" },
@@ -103,7 +103,7 @@ public class DemoProductSeeder implements CommandLineRunner {
                 .productType(ProductType.LOOSE_CAKE)
                 .build());
         var cakeVariant = productService.addVariant(email, cake.getId(),
-                variant("150 g", cakeSku, cakePrice, cakeStock, 150, null));
+                variant("1 trứng", cakeSku, cakePrice, cakeStock, 150, null));
         productService.replaceImages(email, cake.getId(), DemoAlbum.of(cakeImages));
         publish(email, cake.getId(), cakeName, cakeDescription, ProductType.LOOSE_CAKE, null);
 
@@ -113,7 +113,7 @@ public class DemoProductSeeder implements CommandLineRunner {
                 .productType(ProductType.LOOSE_CAKE)
                 .build());
         productService.addVariant(email, extra.getId(),
-                variant("200 g", extraSku, extraPrice, extraStock, 200, null));
+                variant("2 trứng", extraSku, extraPrice, extraStock, 200, null));
         productService.replaceImages(email, extra.getId(), DemoAlbum.of(extraImages));
         publish(email, extra.getId(), extraName, extraDescription, ProductType.LOOSE_CAKE, null);
 
@@ -157,8 +157,8 @@ public class DemoProductSeeder implements CommandLineRunner {
                 .description("Nhân thập cẩm, trứng muối, vỏ nướng vàng.")
                 .productType(ProductType.LOOSE_CAKE)
                 .build());
-        productService.addVariant(SELLER, product.getId(), variant("150 g", "DEMO-THAPCAM-150", 85000, 24, 150, null));
-        productService.addVariant(SELLER, product.getId(), variant("200 g", "DEMO-THAPCAM-200", 110000, 8, 200, null));
+        productService.addVariant(SELLER, product.getId(), variant("1 trứng", "DEMO-THAPCAM-150-1T", 85000, 24, 150, null));
+        productService.addVariant(SELLER, product.getId(), variant("2 trứng", "DEMO-THAPCAM-200-2T", 110000, 8, 200, null));
         productService.addVariant(SELLER, product.getId(), variant("Đậu xanh 1 trứng", "DEMO-DAUXANH-180", 95000, 1, 180, null));
         productService.replaceImages(SELLER, product.getId(), DemoAlbum.of("thap-cam.jpg", "dau-xanh.jpg"));
         publish(product.getId(), "Bánh nướng thập cẩm", "Nhân thập cẩm, trứng muối, vỏ nướng vàng.",
@@ -183,7 +183,7 @@ public class DemoProductSeeder implements CommandLineRunner {
                 .description("Bản nháp, chưa hiện trên cửa hàng.")
                 .productType(ProductType.LOOSE_CAKE)
                 .build());
-        productService.addVariant(SELLER, product.getId(), variant("150 g", "DEMO-DEO-SEN-150", 90000, 10, 150, null));
+        productService.addVariant(SELLER, product.getId(), variant("1 trứng", "DEMO-DEO-SEN-150-1T", 90000, 10, 150, null));
         productService.replaceImages(SELLER, product.getId(), DemoAlbum.of("deo-sen.jpg"));
     }
 
@@ -206,7 +206,7 @@ public class DemoProductSeeder implements CommandLineRunner {
                 .description("Đã ngừng cả dòng, không bán lại.")
                 .productType(type)
                 .build());
-        productService.addVariant(SELLER, product.getId(), variant("150 g", "DEMO-GAQUAY-150", 120000, 4, 150, null));
+        productService.addVariant(SELLER, product.getId(), variant("1 trứng", "DEMO-GAQUAY-150-1T", 120000, 4, 150, null));
         productService.replaceImages(SELLER, product.getId(), DemoAlbum.of("ga-quay.jpg"));
         publish(product.getId(), "Bánh nướng gà quay", "Đã ngừng cả dòng, không bán lại.", type);
         productService.updateProduct(SELLER, product.getId(), ProductRequest.builder()
@@ -223,8 +223,8 @@ public class DemoProductSeeder implements CommandLineRunner {
                 .description("Cả hai cỡ đều hết, cửa hàng hiện hết hàng.")
                 .productType(ProductType.LOOSE_CAKE)
                 .build());
-        var small = productService.addVariant(SELLER, product.getId(), variant("150 g", "DEMO-DAUXANH-SOLD-150", 90000, 1, 150, null));
-        var large = productService.addVariant(SELLER, product.getId(), variant("200 g", "DEMO-DAUXANH-SOLD-200", 115000, 1, 200, null));
+        var small = productService.addVariant(SELLER, product.getId(), variant("1 trứng", "DEMO-DAUXANH-SOLD-150-1T", 90000, 1, 150, null));
+        var large = productService.addVariant(SELLER, product.getId(), variant("2 trứng", "DEMO-DAUXANH-SOLD-200-2T", 115000, 1, 200, null));
         productService.replaceImages(SELLER, product.getId(), DemoAlbum.of("dau-xanh.jpg"));
         publish(product.getId(), "Bánh nướng đậu xanh", "Cả hai cỡ đều hết, cửa hàng hiện hết hàng.", ProductType.LOOSE_CAKE);
         sellOut(product.getId(), small.getId());
