@@ -13,24 +13,24 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 public class ProductRequest {
 
-    @NotBlank(message = "Product name cannot be blank")
-    @Size(max = 255, message = "Product name cannot exceed 255 characters")
+    @NotBlank(message = "Tên sản phẩm không được để trống")
+    @Size(max = 255, message = "Tên sản phẩm tối đa 255 ký tự")
     private String name;
 
-    @Size(max = 100000, message = "Description is too long")
+    @Size(max = 100000, message = "Mô tả quá dài")
     private String description;
-    @Size(max = 100000, message = "Story is too long")
+    @Size(max = 100000, message = "Câu chuyện sản phẩm quá dài")
     private String story;
-    @Size(max = 100000, message = "Ingredients text is too long")
+    @Size(max = 100000, message = "Nguyên liệu quá dài")
     private String ingredients;
 
-    @NotNull(message = "Product type is required (LOOSE_CAKE, BOX_SHELL, GREETING_CARD, ADDON_SERVICE)")
+    @NotNull(message = "Loại sản phẩm là bắt buộc")
     private ProductType productType;
 
-    @Pattern(regexp = "DRAFT|ACTIVE|ARCHIVED", message = "Status must be DRAFT, ACTIVE, or ARCHIVED")
+    @Pattern(regexp = "DRAFT|ACTIVE|ARCHIVED", message = "Trạng thái phải là DRAFT, ACTIVE hoặc ARCHIVED")
     private String status;
 
-    @DecimalMin(value = "0", message = "Discounted price cannot be negative")
+    @DecimalMin(value = "0", message = "Giá chiết khấu không được âm")
     @Digits(integer = 16, fraction = 2)
     private BigDecimal salePrice;
 }

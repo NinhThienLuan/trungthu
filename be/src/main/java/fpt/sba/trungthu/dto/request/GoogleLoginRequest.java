@@ -13,6 +13,6 @@ import java.io.Serializable;
 public class GoogleLoginRequest implements Serializable {
     private static final long serialVersionUID = 1L;
 
-    @NotBlank(message = "Google ID token cannot be blank")
+    @NotBlank(message = "Mã đăng nhập Google không được để trống")
     private String idToken;
 }

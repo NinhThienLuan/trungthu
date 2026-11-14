@@ -13,7 +13,7 @@ import java.util.UUID;
 public class AddSetComponentRequest {
 
     @NotNull
-    @Pattern(regexp = "STOCK|DIRECT", message = "Source must be STOCK or DIRECT")
+    @Pattern(regexp = "STOCK|DIRECT", message = "Nguồn phải là STOCK hoặc DIRECT")
     private String source;
 
     @NotNull

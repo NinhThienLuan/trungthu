@@ -13,7 +13,7 @@ import lombok.Setter;
 @AllArgsConstructor
 public class DiscontinueVariantRequest {
 
-    @NotBlank(message = "Reason is required")
-    @Size(max = 500, message = "Reason cannot exceed 500 characters")
+    @NotBlank(message = "Lý do là bắt buộc")
+    @Size(max = 500, message = "Lý do tối đa 500 ký tự")
     private String reason;
 }

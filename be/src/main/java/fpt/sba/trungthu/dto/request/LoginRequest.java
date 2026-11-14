@@ -14,10 +14,10 @@ import java.io.Serializable;
 public class LoginRequest implements Serializable {
     private static final long serialVersionUID = 1L;
 
-    @NotBlank(message = "Email cannot be blank")
-    @Email(message = "Email should be valid")
+    @NotBlank(message = "Vui lòng nhập email")
+    @Email(message = "Email không hợp lệ")
     private String email;
 
-    @NotBlank(message = "Password cannot be blank")
+    @NotBlank(message = "Vui lòng nhập mật khẩu")
     private String password;
 }

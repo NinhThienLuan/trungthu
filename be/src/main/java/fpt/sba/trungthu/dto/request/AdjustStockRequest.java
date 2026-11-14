@@ -16,14 +16,14 @@ import lombok.Setter;
 @AllArgsConstructor
 public class AdjustStockRequest {
 
-    @NotNull(message = "Adjustment type is required")
+    @NotNull(message = "Loại điều chỉnh là bắt buộc")
     private InventoryAuditType type;
 
-    @NotNull(message = "Quantity is required")
-    @Positive(message = "Adjustment quantity must be greater than 0")
+    @NotNull(message = "Số lượng là bắt buộc")
+    @Positive(message = "Số lượng điều chỉnh phải lớn hơn 0")
     private Integer quantity;
 
-    @NotBlank(message = "Reason is required")
-    @Size(max = 500, message = "Reason cannot exceed 500 characters")
+    @NotBlank(message = "Lý do là bắt buộc")
+    @Size(max = 500, message = "Lý do tối đa 500 ký tự")
     private String reason;
 }
