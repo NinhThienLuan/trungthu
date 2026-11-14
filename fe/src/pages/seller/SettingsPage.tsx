@@ -49,11 +49,12 @@ function BankAccountFields({ settings }: { settings: SellerSettings }) {
 }
 
 /** Một khối form: gửi, báo lỗi/thành công tại chỗ */
-function Section({ title, hint, submitLabel, onSubmit, children }: {
+function Section({ title, hint, submitLabel, onSubmit, validate, children }: {
   title: string
   hint?: string
   submitLabel: string
   onSubmit: (data: Record<string, string>) => Promise<string>
+  validate?: (data: Record<string, string>) => string | null
   children: ReactNode
 }) {
   const [busy, setBusy] = useState(false)
@@ -61,10 +62,16 @@ function Section({ title, hint, submitLabel, onSubmit, children }: {
 
   const handle = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    const values = Object.fromEntries(new FormData(e.currentTarget)) as Record<string, string>
+    const validationError = validate?.(values)
+    if (validationError) {
+      setResult({ ok: false, text: validationError })
+      return
+    }
     setBusy(true)
     setResult(undefined)
     try {
-      setResult({ ok: true, text: await onSubmit(Object.fromEntries(new FormData(e.currentTarget)) as Record<string, string>) })
+      setResult({ ok: true, text: await onSubmit(values) })
     } catch (err) {
       setResult({ ok: false, text: errorMessage(err) })
     } finally {
@@ -110,6 +117,17 @@ export function SettingsPage() {
           title="Năng lực nướng"
           hint={`30 ngày tới: ${openDays} ngày đang nhận đơn. Bánh nướng hôm trước cho đơn giao hôm sau.`}
           submitLabel="Áp dụng"
+          validate={(f) => {
+            if (!f.from || !f.to) return 'Vui lòng chọn khoảng ngày nướng.'
+            if (f.from > f.to) return 'Ngày kết thúc phải sau hoặc bằng ngày bắt đầu.'
+            if (f.from < from) return 'Không thể thay đổi năng lực của ngày đã qua.'
+            if (f.to > toIsoDate(addDays(new Date(`${f.from}T00:00:00`), 120))) return 'Khoảng ngày tối đa là 120 ngày.'
+            const quantity = Number(f.maxQuantity)
+            if (!f.maxQuantity || !Number.isInteger(quantity) || quantity < 0 || quantity > 1_000_000) {
+              return 'Số bánh mỗi ngày phải là số nguyên từ 0 đến 1.000.000.'
+            }
+            return null
+          }}
           onSubmit={async (f) => {
             const rows = await sellerSettingsService.setCapacity({ from: f.from, to: f.to, maxQuantity: Number(f.maxQuantity) })
             capacity.reload()
@@ -128,10 +146,13 @@ export function SettingsPage() {
           title="Tài khoản nhận tiền (VietQR)"
           hint="Khách chuyển khoản cọc vào tài khoản này; bạn xác nhận đã nhận tiền ở trang đơn hàng."
           submitLabel="Lưu tài khoản"
+          validate={(f) => {
+            if (!banks.some((bank) => bank.bin === f.bankCode)) return 'Vui lòng chọn ngân hàng trong danh sách.'
+            if (!/^[0-9]{4,19}$/.test(f.accountNumber?.trim() ?? '')) return 'Số tài khoản gồm 4–19 chữ số.'
+            if (!f.accountName?.trim() || f.accountName.trim().length > 150) return 'Tên chủ tài khoản phải từ 1 đến 150 ký tự.'
+            return null
+          }}
           onSubmit={async (f) => {
-            if (!banks.some((bank) => bank.bin === f.bankCode)) {
-              throw new Error('Vui lòng chọn ngân hàng trong danh sách.')
-            }
             await sellerSettingsService.setBankAccount({ bankCode: f.bankCode, accountNumber: f.accountNumber, accountName: f.accountName })
             reload()
             return 'Đã lưu tài khoản ngân hàng.'

@@ -9,6 +9,7 @@ import type { ProductType } from '../../types/product'
 import { Field, TextArea, TextInput } from '../../components/ui/Field'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { EmptyState, ErrorState, Notice, Spinner } from '../../components/ui/States'
+import { productFormError, variantFormError } from '../../schemas/sellerProduct'
 
 const STATUS_LABEL: Record<SellerProductStatus, string> = { DRAFT: 'Nháp', ACTIVE: 'Đang bán', SOLD_OUT: 'Hết hàng', ARCHIVED: 'Đã lưu trữ' }
 const CREATABLE: ProductType[] = ['LOOSE_CAKE', 'BOX_SHELL', 'GIFT_SET', 'GREETING_CARD', 'ADDON_SERVICE']
@@ -46,6 +47,7 @@ export function BakeBatchPage() {
   const { data, loading, error, reload } = useApi(() => sellerService.products(), [])
   const [creating, setCreating] = useState(false)
   const [notice, setNotice] = useState<{ ok: boolean; text: string }>()
+  const [createError, setCreateError] = useState<string>()
 
   /** Gọi API, báo kết quả, tải lại danh sách. Trả về true nếu thành công */
   const run = async (action: () => Promise<unknown>, done: string) => {
@@ -74,6 +76,9 @@ export function BakeBatchPage() {
       {creating && (
         <form noValidate className="card grid gap-4 p-5 sm:grid-cols-2" onSubmit={async (e) => {
           const f = read(e)
+          const validationError = productFormError(f)
+          setCreateError(validationError ?? undefined)
+          if (validationError) return
           const ok = await run(() => sellerService.createProduct({ name: f.name, description: f.description || undefined, productType: f.productType as ProductType }), 'Đã tạo sản phẩm nháp.')
           if (ok) setCreating(false)
         }}>
@@ -84,6 +89,7 @@ export function BakeBatchPage() {
             </select>
           </Field>
           <TextArea label="Mô tả" name="description" className="sm:col-span-2" rows={3} />
+          {createError && <div className="sm:col-span-2"><Notice tone="danger">{createError}</Notice></div>}
           <button type="submit" className="btn btn-primary self-start">Tạo sản phẩm</button>
         </form>
       )}
@@ -102,6 +108,7 @@ type Panel = { kind: 'variant' | 'info' | 'recipe' | 'pack' } | { kind: 'import'
 
 function ProductCard({ product: p, catalog, run }: { product: SellerProduct; catalog: SellerProduct[]; run: (action: () => Promise<unknown>, done: string) => Promise<boolean> }) {
   const [panel, setPanel] = useState<Panel>()
+  const [infoError, setInfoError] = useState<string>()
   const toggle = (next: Panel) => setPanel(JSON.stringify(panel) === JSON.stringify(next) ? undefined : next)
 
   const close = (ok: boolean) => ok && setPanel(undefined)
@@ -175,6 +182,9 @@ function ProductCard({ product: p, catalog, run }: { product: SellerProduct; cat
       {panel?.kind === 'info' && (
         <form noValidate className="grid gap-3 border-t border-line pt-4" onSubmit={async (e) => {
           const f = read(e)
+          const validationError = productFormError(f, isSet)
+          setInfoError(validationError ?? undefined)
+          if (validationError) return
           close(await run(() => sellerService.updateProduct(p.id, {
             name: f.name, description: f.description || undefined, story: f.story || undefined,
             ingredients: f.ingredients || undefined, productType: p.productType,
@@ -188,11 +198,12 @@ function ProductCard({ product: p, catalog, run }: { product: SellerProduct; cat
             placeholder="Nguồn gốc công thức, nghệ nhân, cách làm..." />
           <TextArea label="Nguyên liệu & dinh dưỡng (hiện ở tab Dinh dưỡng)" name="ingredients" defaultValue={p.ingredients ?? ''} rows={4}
             placeholder="Nguyên liệu, năng lượng (kcal), chất gây dị ứng, cách bảo quản..." />
+          {infoError && <Notice tone="danger">{infoError}</Notice>}
           <button type="submit" className="btn btn-primary self-start">Lưu thông tin</button>
         </form>
       )}
       {panel?.kind === 'variant' && (
-        <InlineForm submitLabel="Thêm phân loại" onSubmit={async (f) => close(await run(() => sellerService.addVariant(p.id, {
+        <InlineForm submitLabel="Thêm phân loại" validate={(f) => variantFormError(f, p.productType)} onSubmit={async (f) => close(await run(() => sellerService.addVariant(p.id, {
           variantName: f.variantName, sku: f.sku, price: Number(f.price), stockQuantity: optionalNumber(f.stockQuantity),
           weightGram: optionalNumber(f.weightGram), boxCapacity: optionalNumber(f.boxCapacity),
         }), 'Đã thêm phân loại.'))}>
@@ -208,7 +219,7 @@ function ProductCard({ product: p, catalog, run }: { product: SellerProduct; cat
         const v = p.variants.find((x) => x.id === panel.variantId)
         if (!v) return null
         return (
-          <InlineForm key={v.id} submitLabel="Lưu phân loại" onSubmit={async (f) => close(await run(() => sellerService.updateVariant(p.id, v.id, {
+          <InlineForm key={v.id} submitLabel="Lưu phân loại" validate={(f) => variantFormError(f, p.productType, v.sku)} onSubmit={async (f) => close(await run(() => sellerService.updateVariant(p.id, v.id, {
             variantName: f.variantName, sku: v.sku, price: Number(f.price),
             stockQuantity: p.status === 'DRAFT' ? optionalNumber(f.stockQuantity) : undefined,
             weightGram: p.productType === 'LOOSE_CAKE' ? optionalNumber(f.weightGram) : undefined,
@@ -237,10 +248,17 @@ function ProductCard({ product: p, catalog, run }: { product: SellerProduct; cat
   )
 }
 
-function InlineForm({ submitLabel, onSubmit, children }: { submitLabel: string; onSubmit: (f: Form) => void; children: ReactNode }) {
+function InlineForm({ submitLabel, onSubmit, validate, children }: { submitLabel: string; onSubmit: (f: Form) => void; validate?: (f: Form) => string | null; children: ReactNode }) {
+  const [validationError, setValidationError] = useState<string>()
   return (
-    <form noValidate className="grid gap-3 border-t border-line pt-4 sm:grid-cols-3" onSubmit={(e) => onSubmit(read(e))}>
+    <form noValidate className="grid gap-3 border-t border-line pt-4 sm:grid-cols-3" onSubmit={(e) => {
+      const values = read(e)
+      const error = validate?.(values)
+      setValidationError(error ?? undefined)
+      if (!error) onSubmit(values)
+    }}>
       {children}
+      {validationError && <div className="sm:col-span-3"><Notice tone="danger">{validationError}</Notice></div>}
       <button type="submit" className="btn btn-primary self-end">{submitLabel}</button>
     </form>
   )

@@ -31,7 +31,9 @@ public class ProductVariantRequest {
     @Positive(message = "Khối lượng phải lớn hơn 0")
     private Integer weightGram;
 
+    @Positive(message = "Sức chứa hộp phải lớn hơn 0")
     private Integer boxCapacity;
 
+    @Pattern(regexp = "IN_STOCK|OUT_OF_STOCK", message = "Trạng thái phân loại không hợp lệ")
     private String status;
 }

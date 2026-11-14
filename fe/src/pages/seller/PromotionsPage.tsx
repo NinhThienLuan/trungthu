@@ -8,6 +8,7 @@ import { Field, TextInput } from '../../components/ui/Field'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { EmptyState, ErrorState, Notice, Spinner } from '../../components/ui/States'
 import { Icon } from '../../components/Icon'
+import { promotionFormError } from '../../schemas/sellerPromotion'
 
 const today = () => toIsoDate(new Date())
 
@@ -55,6 +56,11 @@ export function PromotionsPage() {
     e.preventDefault()
     const form = e.currentTarget
     const f = Object.fromEntries(new FormData(form)) as Record<string, string>
+    const validationError = promotionFormError(f)
+    if (validationError) {
+      setNotice({ ok: false, text: validationError })
+      return
+    }
     const num = (k: string) => (f[k] ? Number(f[k]) : undefined)
     const ok = await run(() => promotionService.create({
       name: f.name, type, productId: f.productId || undefined,

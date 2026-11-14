@@ -24,12 +24,19 @@ export function SellerRfqPage() {
     const unitPrice = Number(data.get('unitPrice'))
     const offeredQuantity = Number(data.get('offeredQuantity'))
     const cakesPerBox = Number(data.get('cakesPerBox'))
-    if (!Number.isFinite(unitPrice) || unitPrice <= 0 || !Number.isInteger(offeredQuantity)
+    if (!data.get('unitPrice') || !data.get('offeredQuantity') || !data.get('cakesPerBox')
+      || !Number.isFinite(unitPrice) || unitPrice <= 0 || !Number.isInteger(offeredQuantity)
       || offeredQuantity < 1 || !Number.isInteger(cakesPerBox) || cakesPerBox < 1) {
       setMessage('Đơn giá và số lượng chào phải lớn hơn 0.')
       return
     }
-    if (String(data.get('validUntil')) <= String(data.get('estimatedDeliveryDate'))) {
+    const deliveryDate = String(data.get('estimatedDeliveryDate') ?? '')
+    const validUntil = String(data.get('validUntil') ?? '')
+    if (!deliveryDate || !validUntil || deliveryDate < toIsoDate(new Date())) {
+      setMessage('Vui lòng chọn ngày giao từ hôm nay và ngày hết hiệu lực báo giá.')
+      return
+    }
+    if (validUntil <= deliveryDate) {
       setMessage('Ngày hết hiệu lực báo giá phải sau ngày giao dự kiến.')
       return
     }
@@ -40,8 +47,8 @@ export function SellerRfqPage() {
         unitPrice,
         offeredQuantity,
         cakesPerBox,
-        estimatedDeliveryDate: String(data.get('estimatedDeliveryDate')),
-        validUntil: String(data.get('validUntil')),
+        estimatedDeliveryDate: deliveryDate,
+        validUntil,
         note: String(data.get('note') ?? '').trim() || undefined,
       }
       if (ownQuote?.status === 'SUBMITTED') await rfqService.reviseQuote(selected.id, ownQuote.id, body)
