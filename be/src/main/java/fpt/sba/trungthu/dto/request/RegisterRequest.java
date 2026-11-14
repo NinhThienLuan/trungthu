@@ -20,15 +20,15 @@ import java.io.Serializable;
 public class RegisterRequest implements Serializable {
     private static final long serialVersionUID = 1L;
 
-    @NotBlank(message = "Email cannot be blank")
-    @Email(message = "Email should be valid")
+    @NotBlank(message = "Vui lòng nhập email")
+    @Email(message = "Email không hợp lệ")
     private String email;
 
-    @NotBlank(message = "Full name cannot be blank")
-    @Size(max = 255, message = "Full name cannot exceed 255 characters")
+    @NotBlank(message = "Họ tên không được để trống")
+    @Size(max = 255, message = "Họ tên tối đa 255 ký tự")
     private String fullName;
 
-    @Pattern(regexp = "(84|0[3|5|7|8|9])+([0-9]{8})\\b", message = "Phone number is not a valid Vietnamese format")
+    @Pattern(regexp = "(84|0[3|5|7|8|9])+([0-9]{8})\\b", message = "Số điện thoại không hợp lệ")
     private String phone;
 
     /** Khách tự đặt mật khẩu khi đăng ký (cùng quy tắc với đặt lại / đổi mật khẩu) */
@@ -36,7 +36,7 @@ public class RegisterRequest implements Serializable {
     @Pattern(regexp = PasswordPolicy.REGEX, message = PasswordPolicy.MESSAGE)
     private String password;
 
-    @NotNull(message = "User role is required (CUSTOMER, PROVIDER)")
+    @NotNull(message = "Vai trò là bắt buộc (CUSTOMER hoặc PROVIDER)")
     private UserRole role;
 
     private String storeName;

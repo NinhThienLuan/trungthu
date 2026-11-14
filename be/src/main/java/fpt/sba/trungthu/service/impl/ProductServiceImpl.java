@@ -247,7 +247,7 @@ public class ProductServiceImpl implements ProductService {
             }
         } else if (product.getVariants() == null || product.getVariants().isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "A product needs at least one variant before it can be active");
+                    "Cần có ít nhất một phân loại trước khi đăng bán");
         }
         product.setStatus(ProductStatus.ACTIVE);
         saleStatus.refresh(product.getId());

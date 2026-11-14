@@ -12,23 +12,23 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 public class ProductVariantRequest {
 
-    @NotBlank(message = "Variant name cannot be blank")
-    @Size(max = 255, message = "Variant name cannot exceed 255 characters")
+    @NotBlank(message = "Tên phân loại không được để trống")
+    @Size(max = 255, message = "Tên phân loại tối đa 255 ký tự")
     private String variantName;
 
-    @NotBlank(message = "SKU cannot be blank")
-    @Pattern(regexp = "[A-Za-z0-9_-]{1,50}", message = "SKU may only contain letters, digits, '-' or '_' (max 50)")
+    @NotBlank(message = "SKU không được để trống")
+    @Pattern(regexp = "[A-Za-z0-9_-]{1,50}", message = "SKU chỉ gồm chữ, số, '-' hoặc '_' (tối đa 50 ký tự)")
     private String sku;
 
-    @NotNull(message = "Price is required")
-    @DecimalMin(value = "0", message = "Price must not be negative")
-    @Digits(integer = 16, fraction = 2, message = "Price has invalid format")
+    @NotNull(message = "Giá là bắt buộc")
+    @DecimalMin(value = "0", message = "Giá không được âm")
+    @Digits(integer = 16, fraction = 2, message = "Giá không đúng định dạng")
     private BigDecimal price;
 
-    @PositiveOrZero(message = "Stock quantity must not be negative")
+    @PositiveOrZero(message = "Tồn kho không được âm")
     private Integer stockQuantity;
 
-    @Positive(message = "Weight must be positive")
+    @Positive(message = "Khối lượng phải lớn hơn 0")
     private Integer weightGram;
 
     private Integer boxCapacity;

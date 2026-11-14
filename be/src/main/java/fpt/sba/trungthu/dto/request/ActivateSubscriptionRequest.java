@@ -16,6 +16,6 @@ public class ActivateSubscriptionRequest {
     
     private LocalDate startDate; // Optional: null = today
     
-    @NotNull(message = "End date is required")
+    @NotNull(message = "Ngày kết thúc là bắt buộc")
     private LocalDate endDate;
 }

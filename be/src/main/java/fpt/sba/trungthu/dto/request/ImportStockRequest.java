@@ -15,8 +15,8 @@ import lombok.Setter;
 @AllArgsConstructor
 public class ImportStockRequest {
 
-    @NotNull(message = "Quantity is required")
-    @Positive(message = "Imported quantity must be greater than 0")
+    @NotNull(message = "Số lượng là bắt buộc")
+    @Positive(message = "Số lượng nhập phải lớn hơn 0")
     private Integer quantity;
 
     @NotBlank(message = "Lý do nhập kho là bắt buộc")

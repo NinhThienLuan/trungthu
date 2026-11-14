@@ -18,7 +18,7 @@ import java.util.List;
 @AllArgsConstructor
 public class ProductImagesRequest {
 
-    @NotNull(message = "Images are required")
+    @NotNull(message = "Danh sách ảnh là bắt buộc")
     @Valid
     @Builder.Default
     private List<ProductImageRequest> images = new ArrayList<>();

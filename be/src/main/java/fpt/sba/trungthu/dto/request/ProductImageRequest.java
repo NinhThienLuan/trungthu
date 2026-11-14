@@ -21,10 +21,10 @@ public class ProductImageRequest {
     @Size(max = 2_000_000, message = "Ảnh quá lớn")
     private String imageUrl;
 
-    @NotNull(message = "Primary flag is required")
+    @NotNull(message = "Cần chỉ rõ ảnh đại diện")
     private Boolean isPrimary;
 
-    @NotNull(message = "Display order is required")
-    @PositiveOrZero(message = "Display order must not be negative")
+    @NotNull(message = "Thứ tự hiển thị là bắt buộc")
+    @PositiveOrZero(message = "Thứ tự hiển thị không được âm")
     private Integer displayOrder;
 }
