@@ -5,6 +5,25 @@ import { errorMessage } from '../apis/http'
 import { formatDate, formatVnd } from '../lib/format'
 import type { BulkOrderResponse } from '../types/order'
 
+/** Mã VietQR chuyển cọc cho một đơn con: tiền vào thẳng tài khoản của xưởng đó */
+function DepositQr({ order }: { order: BulkOrderResponse }) {
+  const { data, loading, error, reload } = useApi(() => rfqService.vietQr(order.id), [order.id])
+  if (loading) return <p>Đang lấy mã QR chuyển cọc...</p>
+  if (error || !data) return <p role="alert" className="text-danger">Không lấy được mã QR: {error ?? 'Thiếu thông tin thanh toán'} <button type="button" className="underline" onClick={reload}>Thử lại</button></p>
+  return (
+    <div className="flex flex-wrap items-center gap-4 rounded-md border border-line bg-ivory p-4">
+      <img src={data.imageUrl} alt={`Mã QR chuyển cọc đơn ${order.requestCode} cho ${order.providerName}`} className="size-48 rounded bg-white object-contain p-1" />
+      <div className="space-y-1">
+        <p className="font-semibold">Quét mã để chuyển cọc {formatVnd(data.amount)}</p>
+        <p>Ngân hàng: {data.bankCode} · Số tài khoản: <b>{data.accountNumber}</b></p>
+        <p>Chủ tài khoản: {data.accountName}</p>
+        <p>Nội dung chuyển khoản: <b>{data.transferContent}</b></p>
+        <p className="text-muted">Xưởng xác nhận đơn sau khi nhận được tiền.</p>
+      </div>
+    </div>
+  )
+}
+
 const statusLabel: Record<BulkOrderResponse['status'], string> = {
   WAITING_DEPOSIT: 'Chờ xác nhận cọc',
   PRODUCTION: 'Đang sản xuất',
@@ -82,6 +101,7 @@ export function BulkOrdersPanel({ role, refreshKey = 0, onChanged }: {
               <p>Giá gốc {formatVnd(order.grossAmount)} · giảm 30% {formatVnd(order.discountAmount)} · <b>thanh toán {formatVnd(order.totalAmount)}</b></p>
               <p>Cọc tối thiểu: <b>{formatVnd(order.depositAmount)}</b> · còn lại {formatVnd(order.totalAmount - order.depositAmount)}</p>
               {order.status === 'WAITING_DEPOSIT' && <p>Giữ suất nướng đến {new Date(order.depositDeadline).toLocaleString('vi-VN')}. Chuyển khoản và gửi chứng từ cho xưởng; xưởng xác nhận thủ công.</p>}
+              {role === 'buyer' && order.status === 'WAITING_DEPOSIT' && <DepositQr order={order} />}
               <div>
                 <b>Lịch nướng</b>
                 <ul className="mt-1 flex flex-wrap gap-2">

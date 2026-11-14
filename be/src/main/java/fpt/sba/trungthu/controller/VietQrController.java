@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
@@ -42,24 +43,28 @@ public class VietQrController {
                 || order.getHoldExpiresAt() == null || !Instant.now().isBefore(order.getHoldExpiresAt())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Deposit hold is no longer active");
         }
-        User provider = order.getProvider();
+        String content = order.getOrderCode().replace("-", "");
+        return ResponseEntity.ok(ApiResponseDTO.success(
+                build(order.getProvider(), order.getDepositAmount(), content, order.getHoldExpiresAt())));
+    }
+
+    /** Mã VietQR chuyển tiền vào tài khoản của xưởng; dùng chung cho đơn lẻ và đơn sỉ. */
+    static VietQrResponse build(User provider, BigDecimal amount, String content, Instant holdExpiresAt) {
         String bank = provider.getBankCode();
         String account = provider.getBankAccountNumber();
         String name = provider.getBankAccountName();
         if (bank == null || !bank.matches("[A-Za-z0-9]{2,20}")
                 || account == null || !account.matches("[0-9]{4,19}")
                 || name == null || name.isBlank()) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Provider bank account is missing");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Xưởng chưa cấu hình tài khoản nhận tiền");
         }
-        String content = order.getOrderCode().replace("-", "");
         String url = "https://img.vietqr.io/image/" + bank + "-" + account
-                + "-compact2.svg?amount=" + order.getDepositAmount().toBigIntegerExact()
+                + "-compact2.svg?amount=" + amount.setScale(0, RoundingMode.CEILING).toBigInteger()
                 + "&addInfo=" + encode(content) + "&accountName=" + encode(name);
-        return ResponseEntity.ok(ApiResponseDTO.success(new VietQrResponse(url, bank, account,
-                name, order.getDepositAmount(), content, order.getHoldExpiresAt())));
+        return new VietQrResponse(url, bank, account, name, amount, content, holdExpiresAt);
     }
 
-    private String encode(String value) {
+    private static String encode(String value) {
         return URLEncoder.encode(value, StandardCharsets.UTF_8).replace("+", "%20");
     }
 }

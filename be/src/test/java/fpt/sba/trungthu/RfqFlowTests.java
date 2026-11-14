@@ -274,6 +274,22 @@ class RfqFlowTests {
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.status").value("ACCEPTED"));
         mvc.perform(get("/api/bulk-orders/me").with(user("buyer").roles("CUSTOMER")))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data[0].totalAmount").value(14700000));
+        UUID bulkId = bulkOrders.findByQuoteId(UUID.fromString(quoteId)).orElseThrow().getId();
+        mvc.perform(get("/api/bulk-orders/{id}/vietqr", bulkId).with(user("buyer").roles("CUSTOMER")))
+                .andExpect(status().isConflict());
+        seller.setBankCode("VCB");
+        seller.setBankAccountNumber("1234567890");
+        seller.setBankAccountName("XUONG THU");
+        users.saveAndFlush(seller);
+        mvc.perform(get("/api/bulk-orders/{id}/vietqr", bulkId).with(user("buyer").roles("CUSTOMER")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.amount").value(7350000))
+                .andExpect(jsonPath("$.data.accountNumber").value("1234567890"))
+                .andExpect(jsonPath("$.data.imageUrl").value(org.hamcrest.Matchers.containsString("amount=7350000")));
+        as(createUser(UserRole.CUSTOMER, false));
+        mvc.perform(get("/api/bulk-orders/{id}/vietqr", bulkId).with(user("other").roles("CUSTOMER")))
+                .andExpect(status().isNotFound());
+        as(buyer);
         mvc.perform(get("/api/provider/bulk-orders").with(user("buyer").roles("CUSTOMER")))
                 .andExpect(status().isForbidden());
         as(seller);
