@@ -30,7 +30,7 @@ public class ProductRequest {
     @Pattern(regexp = "DRAFT|ACTIVE|ARCHIVED", message = "Trạng thái phải là DRAFT, ACTIVE hoặc ARCHIVED")
     private String status;
 
-    @DecimalMin(value = "0", message = "Giá chiết khấu không được âm")
+    @DecimalMin(value = "1000", message = "Giá bán set phải từ 1.000đ trở lên")
     @Digits(integer = 16, fraction = 2)
     private BigDecimal salePrice;
 }

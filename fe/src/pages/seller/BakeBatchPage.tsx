@@ -182,7 +182,7 @@ function ProductCard({ product: p, catalog, run }: { product: SellerProduct; cat
       {panel?.kind === 'info' && (
         <form noValidate className="grid gap-3 border-t border-line pt-4" onSubmit={async (e) => {
           const f = read(e)
-          const validationError = productFormError(f, isSet)
+          const validationError = productFormError(f)
           setInfoError(validationError ?? undefined)
           if (validationError) return
           close(await run(() => sellerService.updateProduct(p.id, {
@@ -192,7 +192,7 @@ function ProductCard({ product: p, catalog, run }: { product: SellerProduct; cat
           }), `Đã cập nhật thông tin "${f.name}".`))
         }}>
           <TextInput label="Tên sản phẩm" name="name" defaultValue={p.name} required />
-          {isSet && <TextInput label={`Giá bán set (đ) — phải nhỏ hơn giá gốc ${formatVnd(p.listPrice ?? 0)}`} name="salePrice" type="number" min={0} defaultValue={p.salePrice ?? ''} />}
+          {isSet && <TextInput label={`Giá bán set (đ) — phải nhỏ hơn giá gốc ${formatVnd(p.listPrice ?? 0)}`} name="salePrice" type="number" min={1000} defaultValue={p.salePrice ?? ''} />}
           <TextArea label="Mô tả ngắn" name="description" defaultValue={p.description ?? ''} rows={2} />
           <TextArea label="Câu chuyện sản phẩm (hiện ở tab Câu chuyện)" name="story" defaultValue={p.story ?? ''} rows={4}
             placeholder="Nguồn gốc công thức, nghệ nhân, cách làm..." />
@@ -209,7 +209,7 @@ function ProductCard({ product: p, catalog, run }: { product: SellerProduct; cat
         }), 'Đã thêm phân loại.'))}>
           <TextInput label="Tên phân loại" name="variantName" placeholder={variantNameExample(p.productType)} required />
           <TextInput label="SKU" name="sku" placeholder="Ví dụ: KD-THAPCAM-180" required />
-          <TextInput label={p.productType === 'BOX_SHELL' ? 'Giá vỏ hộp (đ) — bánh tính riêng' : 'Giá (đ)'} name="price" type="number" min={0} required />
+          <TextInput label={p.productType === 'BOX_SHELL' ? 'Giá vỏ hộp (đ) — bánh tính riêng' : 'Giá (đ)'} name="price" type="number" min={1000} required />
           <TextInput label="Tồn ban đầu" name="stockQuantity" type="number" min={0} defaultValue={0} />
           {p.productType === 'LOOSE_CAKE' && <TextInput label="Khối lượng (gram)" name="weightGram" type="number" min={1} placeholder="Ví dụ: 180" required />}
           {p.productType === 'BOX_SHELL' && <TextInput label="Sức chứa (số bánh)" name="boxCapacity" type="number" min={1} placeholder="Ví dụ: 8" required />}
@@ -226,7 +226,7 @@ function ProductCard({ product: p, catalog, run }: { product: SellerProduct; cat
             boxCapacity: p.productType === 'BOX_SHELL' ? optionalNumber(f.boxCapacity) : undefined,
           }), `Đã cập nhật "${f.variantName}".`))}>
             <TextInput label="Tên phân loại" name="variantName" defaultValue={v.variantName} required />
-            <TextInput label={p.productType === 'BOX_SHELL' ? 'Giá vỏ hộp (đ) — bánh tính riêng' : 'Giá (đ)'} name="price" type="number" min={0} defaultValue={v.price} required />
+            <TextInput label={p.productType === 'BOX_SHELL' ? 'Giá vỏ hộp (đ) — bánh tính riêng' : 'Giá (đ)'} name="price" type="number" min={1000} defaultValue={v.price} required />
             {p.status === 'DRAFT' && <TextInput label="Tồn ban đầu" name="stockQuantity" type="number" min={0} defaultValue={v.stockQuantity ?? 0} />}
             {p.productType === 'LOOSE_CAKE' && <TextInput label="Khối lượng (gram)" name="weightGram" type="number" min={1} placeholder="Ví dụ: 180" defaultValue={v.weightGram ?? ''} required />}
             {p.productType === 'BOX_SHELL' && <TextInput label="Sức chứa (số bánh)" name="boxCapacity" type="number" min={1} placeholder="Ví dụ: 8" defaultValue={v.boxCapacity ?? ''} required />}

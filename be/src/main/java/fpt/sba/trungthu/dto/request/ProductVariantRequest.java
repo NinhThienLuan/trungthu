@@ -14,6 +14,7 @@ public class ProductVariantRequest {
 
     @NotBlank(message = "Tên phân loại không được để trống")
     @Size(max = 255, message = "Tên phân loại tối đa 255 ký tự")
+    @Pattern(regexp = "(?s).*\\p{L}.*", message = "Tên phân loại phải có ít nhất một chữ cái")
     private String variantName;
 
     @NotBlank(message = "SKU không được để trống")
@@ -21,7 +22,7 @@ public class ProductVariantRequest {
     private String sku;
 
     @NotNull(message = "Giá là bắt buộc")
-    @DecimalMin(value = "0", message = "Giá không được âm")
+    @DecimalMin(value = "1000", message = "Giá phải từ 1.000đ trở lên")
     @Digits(integer = 16, fraction = 2, message = "Giá không đúng định dạng")
     private BigDecimal price;
 
