@@ -1,21 +1,30 @@
 package fpt.sba.trungthu.common.data;
 
+import fpt.sba.trungthu.common.security.CustomUserDetailService;
+import fpt.sba.trungthu.dto.request.AddCartItemRequest;
 import fpt.sba.trungthu.dto.request.AdjustStockRequest;
 import fpt.sba.trungthu.dto.request.ProductRequest;
 import fpt.sba.trungthu.dto.request.ProductVariantRequest;
 import fpt.sba.trungthu.dto.request.SaveSetCompositionRequest;
 import fpt.sba.trungthu.dto.request.StockSetRequest;
-import fpt.sba.trungthu.entity.Product;
+import fpt.sba.trungthu.dto.request.UpdateCartItemRequest;
+import fpt.sba.trungthu.dto.response.DummyOrderResponse;
 import fpt.sba.trungthu.entity.enumeration.InventoryAuditType;
 import fpt.sba.trungthu.entity.enumeration.ProductType;
 import fpt.sba.trungthu.repository.ProductRepository;
+import fpt.sba.trungthu.service.CartService;
 import fpt.sba.trungthu.service.InventoryService;
 import fpt.sba.trungthu.service.ProductService;
+import fpt.sba.trungthu.service.impl.DummyPaymentService;
 import fpt.sba.trungthu.service.impl.GiftSetService;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.annotation.Order;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
@@ -31,35 +40,29 @@ import java.util.UUID;
 public class DemoProductSeeder implements CommandLineRunner {
 
     private static final String SELLER = "seller@kinhdo.vn";
+    private static final String BUYER = "buyer@gmail.com";
 
     private final ProductRepository productRepository;
     private final ProductService productService;
     private final InventoryService inventoryService;
     private final GiftSetService giftSetService;
+    private final CartService cartService;
+    private final DummyPaymentService dummyPaymentService;
+    private final CustomUserDetailService userDetailsService;
 
     @Override
     public void run(String... args) {
-        List<Product> existing = productRepository.findByProviderEmailOrderByCreatedAtDesc(SELLER);
-        if (existing.isEmpty()) {
-            seedLooseCake();
-            seedGiftBox();
-            seedDraft();
-            seedArchived();
-            seedSoldOut();
-            seedGreetingCard();
-            log.info("Seeded demo mooncakes and greeting cards for {}", SELLER);
-            seedOtherShops();
+        if (productRepository.findByProviderEmail(SELLER, PageRequest.of(0, 1)).hasContent()) {
+            log.info("Skip demo catalog, {} already has products", SELLER);
             return;
         }
-        if (existing.stream().noneMatch(product -> "Bánh nướng đậu xanh".equals(product.getName()))) {
-            seedSoldOut();
-            log.info("Seeded sold-out mooncake for {}", SELLER);
-        }
-        if (existing.stream().noneMatch(product -> "Thiệp trung thu".equals(product.getName()))) {
-            seedGreetingCard();
-            log.info("Seeded greeting card for {}", SELLER);
-        }
-        refreshAlbums(existing);
+        seedLooseCake();
+        seedGiftBox();
+        seedDraft();
+        seedArchived();
+        seedSoldOut();
+        seedGreetingCard();
+        log.info("Seeded demo mooncakes and greeting cards for {}", SELLER);
         seedOtherShops();
     }
 
@@ -72,7 +75,7 @@ public class DemoProductSeeder implements CommandLineRunner {
                 "Hộp Đồng Khánh", "Hộp 4 bánh, nắp gấm đỏ.", "DK-HOP-4", 380000,
                 new String[] { "dk-hop.jpg", "dk-hop-mo.jpg" },
                 "Set sen nhụy", "Một hộp 4 bánh sen nhụy. Giá bán thấp hơn giá gốc.", "690000", 3,
-                new String[] { "dk-set.jpg", "dk-set-2.jpg", "dk-hop-mo.jpg" });
+                new String[] { "dk-set.jpg", "dk-set-2.jpg" });
         seedShop("seller@givral.vn",
                 "Bánh dẻo trứng muối", "Vỏ dẻo, nhân đậu xanh trứng muối.", "GV-DEO-180-1T", 105000, 16,
                 new String[] { "gv-deo.jpg", "gv-deo-2.jpg" },
@@ -81,7 +84,125 @@ public class DemoProductSeeder implements CommandLineRunner {
                 "Hộp Givral", "Hộp 4 bánh, dùng để biếu.", "GV-HOP-4", 450000,
                 new String[] { "gv-hop.jpg", "gv-hop-mo.jpg" },
                 "Set dẻo trứng muối", "Một hộp 4 bánh dẻo trứng muối. Giá bán thấp hơn giá gốc.", "790000", 2,
-                new String[] { "gv-set.jpg", "gv-set-2.jpg", "gv-hop-mo.jpg" });
+                new String[] { "gv-set.jpg", "gv-set-2.jpg" });
+        seedCakes("seller@anphu.vn",
+                "Bánh nướng sen An Phú", "Nhân sen, vỏ nướng.", "AP-SEN-150", 86000,
+                new String[] { "ap-sen.jpg", "ap-sen-2.jpg" },
+                "Bánh dẻo đậu xanh An Phú", "Vỏ dẻo, nhân đậu xanh.", "AP-DEO-DX-150", 92000,
+                new String[] { "ap-deo-dx.jpg", "ap-deo-dx-2.jpg" });
+        seedCakes("seller@minhnguyet.vn",
+                "Bánh nướng hạt dưa Minh Nguyệt", "Nhân hạt dưa rang.", "MN-HATDUA-150", 88000,
+                new String[] { "mn-hatdua.jpg", "mn-hatdua-2.jpg" },
+                "Bánh dẻo trứng muối Minh Nguyệt", "Vỏ dẻo, nhân trứng muối.", "MN-DEO-TM-150", 99000,
+                new String[] { "mn-deo-tm.jpg", "mn-deo-tm-2.jpg" });
+    }
+
+    private void seedCakes(String email,
+            String firstName, String firstDescription, String firstSku, int firstPrice, String[] firstImages,
+            String secondName, String secondDescription, String secondSku, int secondPrice, String[] secondImages) {
+        UUID firstVariant = seedCake(email, firstName, firstDescription, firstSku, firstPrice, firstImages);
+        UUID secondVariant = seedCake(email, secondName, secondDescription, secondSku, secondPrice, secondImages);
+        seedCakeOrders(email, firstVariant);
+        seedCakeOrders(email, secondVariant);
+        log.info("Seeded shop catalog for {}", email);
+    }
+
+    private UUID seedCake(String email, String name, String description, String sku, int price, String[] images) {
+        var product = productService.createProduct(email, ProductRequest.builder()
+                .name(name)
+                .description(description)
+                .productType(ProductType.LOOSE_CAKE)
+                .build());
+        var created = productService.addVariant(email, product.getId(), variant("1 trứng", sku, price, 30, 150, null));
+        productService.replaceImages(email, product.getId(), DemoAlbum.of(images));
+        publish(email, product.getId(), name, description, ProductType.LOOSE_CAKE, null);
+        return created.getId();
+    }
+
+    /** Tồn còn lại sau khi đóng set vẫn đủ: mỗi bánh giữ 7 đơn, hủy 1 đơn. */
+    private void seedCakeOrders(String seller, UUID variantId) {
+        place(seller, variantId, false, 2, 3);
+        place(seller, variantId, false, 1, 2);
+        place(seller, variantId, false, 1, 1);
+        place(seller, variantId, false, 1, 0);
+        repeat(2, () -> checkout(variantId, false));
+        repeat(1, () -> {
+            UUID orderId = checkout(variantId, false);
+            as(BUYER, () -> dummyPaymentService.cancel(orderId));
+        });
+    }
+
+    private void seedSetOrders(String seller, UUID setId, int setCount) {
+        place(seller, setId, true, 1, 3);
+        if (setCount >= 3) {
+            place(seller, setId, true, 1, 2);
+        }
+        int pending = setCount - 1 - (setCount >= 3 ? 1 : 0);
+        repeat(pending, () -> checkout(setId, true));
+    }
+
+    private void place(String seller, UUID targetId, boolean set, int count, int advances) {
+        repeat(count, () -> {
+            UUID orderId = checkout(targetId, set);
+            as(BUYER, () -> dummyPaymentService.pay(orderId));
+            if (advances > 0) {
+                as(seller, () -> {
+                    for (int step = 0; step < advances; step++) {
+                        dummyPaymentService.advance(orderId);
+                    }
+                });
+            }
+        });
+    }
+
+    private void repeat(int count, Runnable action) {
+        for (int index = 0; index < count; index++) {
+            action.run();
+        }
+    }
+
+    private UUID checkout(UUID targetId, boolean set) {
+        return as(BUYER, () -> {
+            AddCartItemRequest add = new AddCartItemRequest();
+            add.setQuantity(1);
+            if (set) {
+                add.setSetProductId(targetId);
+            } else {
+                add.setVariantId(targetId);
+            }
+            cartService.add(BUYER, add);
+            UpdateCartItemRequest selected = new UpdateCartItemRequest();
+            selected.setSelected(true);
+            cartService.update(BUYER, targetId, selected);
+            List<DummyOrderResponse> created = dummyPaymentService.checkout();
+            if (created.size() != 1) {
+                throw new IllegalStateException("Demo checkout expected one order");
+            }
+            return created.get(0).id();
+        });
+    }
+
+    private <T> T as(String email, java.util.function.Supplier<T> action) {
+        UserDetails user = userDetailsService.loadUserByUsername(email);
+        var previous = SecurityContextHolder.getContext().getAuthentication();
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities()));
+        try {
+            return action.get();
+        } finally {
+            if (previous == null) {
+                SecurityContextHolder.clearContext();
+            } else {
+                SecurityContextHolder.getContext().setAuthentication(previous);
+            }
+        }
+    }
+
+    private void as(String email, Runnable action) {
+        as(email, () -> {
+            action.run();
+            return null;
+        });
     }
 
     private void seedShop(String email,
@@ -89,14 +210,6 @@ public class DemoProductSeeder implements CommandLineRunner {
             String extraName, String extraDescription, String extraSku, int extraPrice, int extraStock, String[] extraImages,
             String boxName, String boxDescription, String boxSku, int boxPrice, String[] boxImages,
             String setName, String setDescription, String salePrice, int setCount, String[] setImages) {
-        List<Product> existing = productRepository.findByProviderEmailOrderByCreatedAtDesc(email);
-        if (!existing.isEmpty()) {
-            replace(existing, email, cakeName, cakeImages);
-            replace(existing, email, extraName, extraImages);
-            replace(existing, email, boxName, boxImages);
-            replace(existing, email, setName, setImages);
-            return;
-        }
         var cake = productService.createProduct(email, ProductRequest.builder()
                 .name(cakeName)
                 .description(cakeDescription)
@@ -112,7 +225,7 @@ public class DemoProductSeeder implements CommandLineRunner {
                 .description(extraDescription)
                 .productType(ProductType.LOOSE_CAKE)
                 .build());
-        productService.addVariant(email, extra.getId(),
+        var extraVariant = productService.addVariant(email, extra.getId(),
                 variant("2 trứng", extraSku, extraPrice, extraStock, 200, null));
         productService.replaceImages(email, extra.getId(), DemoAlbum.of(extraImages));
         publish(email, extra.getId(), extraName, extraDescription, ProductType.LOOSE_CAKE, null);
@@ -141,6 +254,9 @@ public class DemoProductSeeder implements CommandLineRunner {
         giftSetService.stockSets(email, set.getId(), stock);
         productService.replaceImages(email, set.getId(), DemoAlbum.of(setImages));
         publish(email, set.getId(), setName, setDescription, ProductType.GIFT_SET, new BigDecimal(salePrice));
+        seedCakeOrders(email, cakeVariant.getId());
+        seedCakeOrders(email, extraVariant.getId());
+        seedSetOrders(email, set.getId(), setCount);
         log.info("Seeded shop catalog for {}", email);
     }
 
@@ -160,7 +276,7 @@ public class DemoProductSeeder implements CommandLineRunner {
         productService.addVariant(SELLER, product.getId(), variant("1 trứng", "DEMO-THAPCAM-150-1T", 85000, 24, 150, null));
         productService.addVariant(SELLER, product.getId(), variant("2 trứng", "DEMO-THAPCAM-200-2T", 110000, 8, 200, null));
         productService.addVariant(SELLER, product.getId(), variant("Đậu xanh 1 trứng", "DEMO-DAUXANH-180", 95000, 1, 180, null));
-        productService.replaceImages(SELLER, product.getId(), DemoAlbum.of("thap-cam.jpg", "dau-xanh.jpg"));
+        productService.replaceImages(SELLER, product.getId(), DemoAlbum.of("thap-cam.jpg"));
         publish(product.getId(), "Bánh nướng thập cẩm", "Nhân thập cẩm, trứng muối, vỏ nướng vàng.",
                 ProductType.LOOSE_CAKE);
     }
@@ -229,23 +345,6 @@ public class DemoProductSeeder implements CommandLineRunner {
         publish(product.getId(), "Bánh nướng đậu xanh", "Cả hai cỡ đều hết, cửa hàng hiện hết hàng.", ProductType.LOOSE_CAKE);
         sellOut(product.getId(), small.getId());
         sellOut(product.getId(), large.getId());
-    }
-
-    private void refreshAlbums(List<Product> products) {
-        replace(products, SELLER, "Bánh nướng thập cẩm", "thap-cam.jpg", "dau-xanh.jpg");
-        replace(products, SELLER, "Hộp đoàn viên", "hop.jpg");
-        replace(products, SELLER, "Bánh dẻo hạt sen", "deo-sen.jpg");
-        replace(products, SELLER, "Bánh nướng gà quay", "ga-quay.jpg");
-        replace(products, SELLER, "Bánh nướng đậu xanh", "dau-xanh.jpg");
-        replace(products, SELLER, "Set đoàn viên", "set.jpg", "hop.jpg");
-        replace(products, SELLER, "Thiệp trung thu", "thiep-do.jpg", "thiep-vang.jpg");
-    }
-
-    private void replace(List<Product> products, String email, String name, String... files) {
-        products.stream()
-                .filter(product -> name.equals(product.getName()))
-                .findFirst()
-                .ifPresent(product -> productService.replaceImages(email, product.getId(), DemoAlbum.of(files)));
     }
 
     private void publish(java.util.UUID id, String name, String description, ProductType type) {

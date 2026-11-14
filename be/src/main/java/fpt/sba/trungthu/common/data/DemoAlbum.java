@@ -21,17 +21,20 @@ final class DemoAlbum {
         return ProductImagesRequest.builder().images(images).build();
     }
 
-    private static ProductImageRequest image(String file, boolean primary, int order) {
+    static byte[] bytes(String file) {
         try {
-            byte[] bytes = new ClassPathResource("demo/" + file).getContentAsByteArray();
-            String mime = file.endsWith(".png") ? "image/png" : "image/jpeg";
-            return ProductImageRequest.builder()
-                    .imageUrl("data:" + mime + ";base64," + Base64.getEncoder().encodeToString(bytes))
-                    .isPrimary(primary)
-                    .displayOrder(order)
-                    .build();
+            return new ClassPathResource("demo/" + file).getContentAsByteArray();
         } catch (Exception exception) {
             throw new IllegalStateException("Cannot read demo image " + file, exception);
         }
+    }
+
+    private static ProductImageRequest image(String file, boolean primary, int order) {
+        String mime = file.endsWith(".png") ? "image/png" : "image/jpeg";
+        return ProductImageRequest.builder()
+                .imageUrl("data:" + mime + ";base64," + Base64.getEncoder().encodeToString(bytes(file)))
+                .isPrimary(primary)
+                .displayOrder(order)
+                .build();
     }
 }

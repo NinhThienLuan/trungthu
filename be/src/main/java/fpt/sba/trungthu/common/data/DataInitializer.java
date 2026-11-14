@@ -38,23 +38,28 @@ public class DataInitializer implements CommandLineRunner {
                 "Bánh Trung Thu Đồng Khánh", "DONG KHANH", "1234567801");
         seedProvider("seller@givral.vn", "Givral", "0902000012",
                 "Bánh Trung Thu Givral", "GIVRAL", "1234567802");
+        seedProvider("seller@anphu.vn", "Nguyễn An Phú", "0902000013",
+                "Bánh Trung Thu An Phú", "AN PHU", "1234567803");
+        seedProvider("seller@minhnguyet.vn", "Trần Minh Nguyệt", "0902000014",
+                "Bánh Trung Thu Minh Nguyệt", "MINH NGUYET", "1234567804");
         seedSampleCustomer();
     }
 
     private void seedPlatformAdmin() {
         String adminEmail = "admin@trungthu.fpt.edu.vn";
-        if (userRepository.findByEmail(adminEmail).isEmpty()) {
-            User admin = User.builder()
-                    .email(adminEmail)
-                    .password(passwordEncoder.encode(defaultPassword))
-                    .fullName("Platform Administrator")
-                    .phone("0901000001")
-                    .role(UserRole.PLATFORM_ADMIN)
-                    .status(UserStatus.ACTIVE)
-                    .build();
-            userRepository.save(admin);
-            log.info("Default Platform Admin seeded: {}", adminEmail);
+        if (userRepository.findByEmail(adminEmail).isPresent()) {
+            return;
         }
+        User admin = User.builder()
+                .email(adminEmail)
+                .password(passwordEncoder.encode(defaultPassword))
+                .fullName("Platform Administrator")
+                .phone("0901000001")
+                .role(UserRole.PLATFORM_ADMIN)
+                .status(UserStatus.ACTIVE)
+                .build();
+        userRepository.save(admin);
+        log.info("Default Platform Admin seeded: {}", adminEmail);
     }
 
     private void seedSampleProvider() {
@@ -64,49 +69,49 @@ public class DataInitializer implements CommandLineRunner {
 
     private void seedProvider(String email, String fullName, String phone, String storeName,
             String bankAccountName, String bankAccountNumber) {
-        if (userRepository.findByEmail(email).isEmpty()) {
-            User seller = User.builder()
-                    .email(email)
-                    .password(passwordEncoder.encode(defaultPassword))
-                    .fullName(fullName)
-                    .phone(phone)
-                    .role(UserRole.PROVIDER)
-                    .storeName(storeName)
-                    .isComplianceApproved(true)
-                    .isSeasonActive(true)
-                    .bankCode("VCB")
-                    .bankAccountNumber(bankAccountNumber)
-                    .bankAccountName(bankAccountName)
-                    .status(UserStatus.ACTIVE)
-                    .build();
-            seller = userRepository.save(seller);
-            subscriptionRepository.save(Subscription.builder()
-                    .provider(seller)
-                    .planName("MVP")
-                    .price(BigDecimal.ZERO)
-                    .startDate(LocalDate.of(2026, 1, 1))
-                    .endDate(LocalDate.of(2026, 12, 31))
-                    .maxProductsAllowed(100)
-                    .status(SubscriptionStatus.ACTIVE)
-                    .build());
-            log.info("Default Provider seeded: {}", email);
+        if (userRepository.findByEmail(email).isPresent()) {
+            return;
         }
+        User seller = userRepository.save(User.builder()
+                .email(email)
+                .password(passwordEncoder.encode(defaultPassword))
+                .fullName(fullName)
+                .phone(phone)
+                .role(UserRole.PROVIDER)
+                .storeName(storeName)
+                .isComplianceApproved(true)
+                .isSeasonActive(true)
+                .bankCode("VCB")
+                .bankAccountNumber(bankAccountNumber)
+                .bankAccountName(bankAccountName)
+                .status(UserStatus.ACTIVE)
+                .build());
+        subscriptionRepository.save(Subscription.builder()
+                .provider(seller)
+                .planName("MVP")
+                .price(BigDecimal.ZERO)
+                .startDate(LocalDate.of(2026, 1, 1))
+                .endDate(LocalDate.of(2026, 12, 31))
+                .maxProductsAllowed(100)
+                .status(SubscriptionStatus.ACTIVE)
+                .build());
+        log.info("Default Provider seeded: {}", email);
     }
 
     private void seedSampleCustomer() {
         String buyerEmail = "buyer@gmail.com";
-        if (userRepository.findByEmail(buyerEmail).isEmpty()) {
-            User buyer = User.builder()
-                    .email(buyerEmail)
-                    .password(passwordEncoder.encode(defaultPassword))
-                    .fullName("Nguyễn Văn Mua")
-                    .phone("0903000003")
-                    .address("12 Lê Lợi, Quận 1, TP. Hồ Chí Minh")
-                    .role(UserRole.CUSTOMER)
-                    .status(UserStatus.ACTIVE)
-                    .build();
-            userRepository.save(buyer);
-            log.info("Default Customer seeded: {}", buyerEmail);
+        if (userRepository.findByEmail(buyerEmail).isPresent()) {
+            return;
         }
+        userRepository.save(User.builder()
+                .email(buyerEmail)
+                .password(passwordEncoder.encode(defaultPassword))
+                .fullName("Nguyễn Văn Mua")
+                .phone("0903000003")
+                .address("12 Lê Lợi, Quận 1, TP. Hồ Chí Minh")
+                .role(UserRole.CUSTOMER)
+                .status(UserStatus.ACTIVE)
+                .build());
+        log.info("Default Customer seeded: {}", buyerEmail);
     }
 }
