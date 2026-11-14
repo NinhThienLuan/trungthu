@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
 
 /**
  * Seller demo cần năng lực nướng thì checkout mới chạy (CAPACITY_MISSING).
- * Chạy mỗi lần khởi động: chỉ thêm ngày còn thiếu, không ghi đè cấu hình seller đã sửa.
+ * Ghi từ hôm nay đến 60 ngày sau. Bỏ qua ngày mà đơn mẫu vừa tạo khi checkout.
  */
 @Slf4j
 @Component
@@ -29,7 +29,9 @@ import java.util.stream.Collectors;
 @Order(105)
 @RequiredArgsConstructor
 public class DemoCheckoutSeeder implements CommandLineRunner {
-    private static final List<String> SELLERS = List.of("seller@kinhdo.vn", "seller@dongkhanh.vn", "seller@givral.vn");
+    private static final List<String> SELLERS = List.of(
+            "seller@kinhdo.vn", "seller@dongkhanh.vn", "seller@givral.vn",
+            "seller@anphu.vn", "seller@minhnguyet.vn");
     private static final int DAYS_AHEAD = 60;
     private static final int DAILY_CAPACITY = 500;
     private final UserRepository users;
@@ -40,20 +42,22 @@ public class DemoCheckoutSeeder implements CommandLineRunner {
     public void run(String... args) {
         LocalDate today = LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh"));
         for (String email : SELLERS) {
-            User seller = users.findByEmail(email).orElse(null);
-            if (seller == null) continue;
-            Set<LocalDate> have = capacities.findByProviderIdAndCapacityDateBetweenOrderByCapacityDateAsc(
+            User seller = users.findByEmail(email)
+                    .orElseThrow(() -> new IllegalStateException("Seller " + email + " is missing"));
+            Set<LocalDate> present = capacities.findByProviderIdAndCapacityDateBetweenOrderByCapacityDateAsc(
                     seller.getId(), today, today.plusDays(DAYS_AHEAD)).stream()
-                    .map(DailyCapacity::getCapacityDate).collect(Collectors.toSet());
-            List<DailyCapacity> missing = new ArrayList<>();
-            for (LocalDate d = today; !d.isAfter(today.plusDays(DAYS_AHEAD)); d = d.plusDays(1)) {
-                if (!have.contains(d)) {
-                    missing.add(DailyCapacity.builder().provider(seller).capacityDate(d)
-                            .maxQuantity(DAILY_CAPACITY).reservedQuantity(0).build());
+                    .map(DailyCapacity::getCapacityDate)
+                    .collect(Collectors.toSet());
+            List<DailyCapacity> days = new ArrayList<>();
+            for (LocalDate date = today; !date.isAfter(today.plusDays(DAYS_AHEAD)); date = date.plusDays(1)) {
+                if (present.contains(date)) {
+                    continue;
                 }
+                days.add(DailyCapacity.builder().provider(seller).capacityDate(date)
+                        .maxQuantity(DAILY_CAPACITY).reservedQuantity(0).build());
             }
-            capacities.saveAll(missing);
-            if (!missing.isEmpty()) log.info("Demo capacity seeded for {}: {} days", email, missing.size());
+            capacities.saveAll(days);
+            log.info("Demo capacity seeded for {}: {} days", email, days.size());
         }
     }
 }

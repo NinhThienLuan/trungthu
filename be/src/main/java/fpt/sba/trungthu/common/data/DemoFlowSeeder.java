@@ -12,10 +12,10 @@ import fpt.sba.trungthu.dto.response.DummyOrderResponse;
 import fpt.sba.trungthu.entity.Product;
 import fpt.sba.trungthu.entity.ProductVariant;
 import fpt.sba.trungthu.entity.enumeration.InventoryAuditType;
-import fpt.sba.trungthu.entity.enumeration.ProductStatus;
 import fpt.sba.trungthu.entity.enumeration.ProductType;
 import fpt.sba.trungthu.repository.OrderRepository;
 import fpt.sba.trungthu.repository.ProductRepository;
+import fpt.sba.trungthu.repository.UserRepository;
 import fpt.sba.trungthu.service.CartService;
 import fpt.sba.trungthu.service.InventoryService;
 import fpt.sba.trungthu.service.ProductService;
@@ -26,6 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.annotation.Order;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -52,6 +53,7 @@ public class DemoFlowSeeder implements CommandLineRunner {
 
     private final ProductRepository productRepository;
     private final OrderRepository orderRepository;
+    private final UserRepository users;
     private final InventoryService inventoryService;
     private final ProductService productService;
     private final GiftSetService giftSetService;
@@ -71,17 +73,18 @@ public class DemoFlowSeeder implements CommandLineRunner {
         if (!enabled) {
             return;
         }
-        publishDemoSetIfDraft();
-        if (orderRepository.count() > 0) {
+        var seller = users.findByEmail(SELLER).orElse(null);
+        if (seller != null && orderRepository.findProviderOrders(
+                seller.getId(), null, null, null, PageRequest.of(0, 1)).hasContent()) {
+            log.info("Skip demo flow, {} already has orders", SELLER);
             return;
         }
-        SkuRef cake150 = sku("DEMO-THAPCAM-150-1T") != null ? sku("DEMO-THAPCAM-150-1T") : sku("DEMO-THAPCAM-150");
-        SkuRef cake200 = sku("DEMO-THAPCAM-200-2T") != null ? sku("DEMO-THAPCAM-200-2T") : sku("DEMO-THAPCAM-200");
+        SkuRef cake150 = sku("DEMO-THAPCAM-150-1T");
+        SkuRef cake200 = sku("DEMO-THAPCAM-200-2T");
         SkuRef greenBean = sku("DEMO-DAUXANH-180");
         SkuRef giftBox = sku("DEMO-HOP-4");
         if (cake150 == null || cake200 == null || greenBean == null || giftBox == null) {
-            log.warn("Demo products are missing, skip flow seed");
-            return;
+            throw new IllegalStateException("Demo products for " + SELLER + " are missing");
         }
 
         as(SELLER, () -> {
@@ -134,22 +137,6 @@ public class DemoFlowSeeder implements CommandLineRunner {
                 SELLER, BUYER, waitingPayment, paid, cancelled, orderRepository.count());
     }
 
-    private void publishDemoSetIfDraft() {
-        productRepository.findByProviderEmailOrderByCreatedAtDesc(SELLER).stream()
-                .filter(product -> "Set đoàn viên".equals(product.getName()) && product.getStatus() == ProductStatus.DRAFT)
-                .findFirst()
-                .ifPresent(set -> as(SELLER, () -> {
-                    productService.replaceImages(SELLER, set.getId(), DemoAlbum.of("set.jpg", "hop.jpg"));
-                    productService.updateProduct(SELLER, set.getId(), ProductRequest.builder()
-                            .name("Set đoàn viên")
-                            .description("Một hộp 4 bánh thập cẩm 150 g. Giá bán 700.000 đ, thấp hơn giá gốc.")
-                            .productType(ProductType.GIFT_SET)
-                            .salePrice(new BigDecimal("700000"))
-                            .status("ACTIVE")
-                            .build());
-                }));
-    }
-
     private void seedGiftSet(SkuRef cake150, SkuRef giftBox) {
         var created = as(SELLER, () -> productService.createProduct(SELLER, ProductRequest.builder()
                 .name("Set đoàn viên")
@@ -159,7 +146,7 @@ public class DemoFlowSeeder implements CommandLineRunner {
         as(SELLER, () -> {
             giftSetService.saveComposition(SELLER, created.getId(), composition(giftBox.variantId(), cake150.variantId()));
             giftSetService.stockSets(SELLER, created.getId(), stock(4));
-            productService.replaceImages(SELLER, created.getId(), DemoAlbum.of("set.jpg", "hop.jpg"));
+            productService.replaceImages(SELLER, created.getId(), DemoAlbum.of("set.jpg"));
             productService.updateProduct(SELLER, created.getId(), ProductRequest.builder()
                     .name("Set đoàn viên")
                     .description("Một hộp 4 bánh thập cẩm 150 g. Giá bán 700.000 đ, thấp hơn giá gốc.")
